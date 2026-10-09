@@ -22,6 +22,18 @@ ninja -C build
 ctest --test-dir build --output-on-failure
 ```
 
+Once per clone, so `git push --recurse-submodules=check` (the house rule)
+accepts the json submodule: it's a shallow clone at upstream's `v3.12.0` tag,
+which no fetched branch contains, so the check can't otherwise see it's on
+GitHub.
+
+```bash
+git config push.recurseSubmodules check
+git -C external/json fetch --depth 1 origin +refs/tags/v3.12.0:refs/remotes/origin/v3.12.0
+```
+
+If the json pin ever moves to another tag, use that tag in the second line.
+
 Run it:
 
 ```bash
