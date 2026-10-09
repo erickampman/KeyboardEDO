@@ -67,6 +67,7 @@ private:
     void takeDialogResults();
     void updateTitle();
     void setPublish(bool on);
+    PlayConfig playConfig() const;
     int  tiledRowsFor(double height) const;
     void drawToolbar();
     void drawRoutingMenu();

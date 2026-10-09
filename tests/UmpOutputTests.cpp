@@ -26,6 +26,7 @@ OutputConfig config(uw::MidiProtocol p, bool pnm = false) {
     c.channel = 5;
     c.protocol = p;
     c.perNoteManagement = pnm;
+    c.midi1Expression = false;   // most tests check MIDI 2.0 expression; testMidi1Expression the default
     return c;
 }
 
@@ -231,6 +232,54 @@ void testAnyNote() {
     CHECK(m.size() == 1 && ump::noteNumber(m[0]) == 62);   // 61.5 rounds to 62
 }
 
+// The default, for DAWs (KeyEDO's behaviour): expression as MIDI 1.0 to a
+// MIDI 2.0 receiver, notes still MIDI 2.0.
+void testMidi1Expression() {
+    OutputConfig c = config(uw::MidiProtocol::Midi2);
+    c.midi1Expression = true;
+    CHECK(OutputConfig{}.midi1Expression);   // the default
+    UmpOutput out(c);
+
+    out.setup();   // bend range as CC 101/100/6/38; no per-note range
+    auto m = out.take();
+    CHECK(m.size() == 4);
+    for (const auto& msg : m) CHECK(ump::messageType(msg) == ump::MessageType::Midi1ChannelVoice);
+
+    out.noteOn(T.note(17), 0xFFFF);
+    m = out.take();
+    CHECK(m.size() == 1 && ump::messageType(m[0]) == ump::MessageType::Midi2ChannelVoice);
+    CHECK((m[0].words[0] & 0xFF) == 0x03);   // still Pitch 7.9
+
+    // Per-note or not, expression is channel-wide MIDI 1.0.
+    out.pitchBend(17, 0.0);
+    out.pitchBend(std::nullopt, 0.0);
+    out.controller(17, 74, 1.0);
+    out.pressure(std::nullopt, 0.5);
+    m = out.take();
+    CHECK(m.size() == 4);
+    for (const auto& msg : m) CHECK(ump::messageType(msg) == ump::MessageType::Midi1ChannelVoice);
+    CHECK(ump::status(m[0]) == ump::Status::PitchBend && (m[0].words[0] & 0x7F) == 0x40);
+    CHECK(ump::status(m[2]) == ump::Status::ControlChange && ((m[2].words[0] >> 8) & 0x7F) == 74 &&
+          (m[2].words[0] & 0x7F) == 127);
+    CHECK(ump::status(m[3]) == ump::Status::ChannelPressure);
+    // Polyphonic pressure stays per note, as MIDI 1.0 has it, on the MIDI 2.0 number.
+    out.pressure(17, 1.0);
+    m = out.take();
+    CHECK(m.size() == 1 && ump::status(m[0]) == ump::Status::PolyPressure &&
+          ump::messageType(m[0]) == ump::MessageType::Midi1ChannelVoice && ump::noteNumber(m[0]) == 17);
+
+    // Glides and notes off stay MIDI 2.0; All Notes Off's CC 123 is MIDI 1.0.
+    out.glide(17, 46.0);
+    out.allNotesOff();
+    m = out.take();
+    CHECK(m.size() == 3);
+    CHECK(ump::status(m[0]) == ump::Status::RegisteredPerNoteController &&
+          ump::messageType(m[0]) == ump::MessageType::Midi2ChannelVoice);
+    CHECK(ump::isNoteOff(m[1]) && ump::messageType(m[1]) == ump::MessageType::Midi2ChannelVoice);
+    CHECK(ump::status(m[2]) == ump::Status::ControlChange &&
+          ump::messageType(m[2]) == ump::MessageType::Midi1ChannelVoice);
+}
+
 void testSetup() {
     UmpOutput out(config(uw::MidiProtocol::Midi2));
     out.setup();
@@ -259,6 +308,7 @@ int main() {
     testGlide();
     testMidi1Fallback();
     testAnyNote();
+    testMidi1Expression();
     testSetup();
     return kedo::test::finish("UmpOutput");
 }

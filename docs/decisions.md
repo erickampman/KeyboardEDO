@@ -175,7 +175,8 @@ items in brackets):
   retriggered note has no per-note bend or controllers left over [5].
 - Fixed drag: **per-note** pitch bend, registered per-note controllers (the
   vertical controller number, e.g. 74 Brightness), and polyphonic pressure,
-  each finger on its own note [1, 4]. Channel-wide expression, as KeyEDO,
+  each finger on its own note [1, 4]. Only with "Expression as MIDI 1.0"
+  off (below, "Expression as MIDI 1.0"). Channel-wide expression, as KeyEDO,
   remains a setting (`perNoteExpression = false`): then the first pointer
   down drives the channel.
 - 32-bit channel pitch bend and controllers [6].
@@ -248,6 +249,36 @@ As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*
   KeyEDO). Milestone 11's stream messages are the place to fix it.
 - Linux has no MIDI output until uw-core's ALSA one (milestone 3b); the bar
   says so and the monitor still shows what would be sent.
+
+## Expression as MIDI 1.0 (decided 2026-10-09)
+
+The author had DAWs, Logic Pro first, mishandle MIDI 2.0 pitch bend and
+controllers from KeyEDO. KeyEDO's code shows the workaround it settled on
+(`sendPitchBend`, `sendCC`, `sendChannelPressure` in KeyboardMIDIManager.swift,
+commits "Vertical and horizontal MIDI messages" and "Updates from Polygraph
+Modular"): bend and CC always went out as MIDI 1.0 (MT 0x2 in a MIDI 1.0 event
+list), even to MIDI 2.0 destinations, "matching what Logic Pro does when
+forwarding to an AU plugin"; channel pressure even as raw MIDI 1.0 bytes,
+because Polygraph Modular's dispatcher dropped the UMP form. Notes stayed
+MIDI 2.0 with Pitch 7.9.
+
+So `OutputConfig::midi1Expression` (the panel's "Expression as MIDI 1.0"):
+- **On by default**, so Logic and REAPER work as with KeyEDO. **Off** for
+  receivers that handle MIDI 2.0 fully: StageHand and Umpire, where the
+  author means to make it work properly. Saved in the document.
+- On: pitch bend, controllers, pressure, the bend-range setup (CC
+  101/100/6/38) and All Notes Off's CC 123 go out as MIDI 1.0; per-note bend
+  and controllers fold to the channel, and the Performer drives channel
+  expression from the first finger (per-note expression is greyed out).
+  Polyphonic pressure stays per note. Notes, Pitch 7.25 glides and Per-Note
+  Management stay MIDI 2.0.
+- CoreMIDI converts the MIDI 1.0 messages for a MIDI 2.0 receiver, so such a
+  receiver still sees MT 0x4, converted as from a hardware keyboard (checked:
+  the bend-range CCs arrive as a MIDI 2.0 RPN). A MIDI 1.0 receiver (REAPER)
+  gets the bytes.
+- Not copied: KeyEDO's raw-bytes channel pressure (MIDISend), which existed
+  for Polygraph Modular. uw-core's output is UMP only; revisit if a receiver
+  drops MIDI 1.0 UMP pressure.
 
 ## Documents (decided 2026-10-09, roadmap milestone 5)
 

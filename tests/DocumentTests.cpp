@@ -86,6 +86,7 @@ void testRoundTrip() {
     d.output.channel = 4;
     d.output.perNoteManagement = false;
     d.output.perNoteBendRange = 48;
+    d.output.midi1Expression = false;
     d.destination = "Synth:In";
     d.locked = true;
     d.extras["arpBpm"] = "96.0";

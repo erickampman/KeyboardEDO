@@ -32,6 +32,15 @@ struct OutputConfig {
     // retriggered note starts with no per-note bend or controllers left over.
     bool perNoteManagement = true;
 
+    // Send expression (pitch bend, controllers, pressure, and the bend-range
+    // setup) as MIDI 1.0 messages even to a MIDI 2.0 receiver, as KeyEDO always
+    // did: Logic Pro (forwarding to an AU) and other DAWs mishandle MIDI 2.0
+    // bend and controllers. Per-note expression goes to the channel, as for a
+    // MIDI 1.0 receiver. Notes, glides and Per-Note Management stay MIDI 2.0.
+    // On by default; off for UMP-native receivers (StageHand, Umpire).
+    // decisions.md, "Expression as MIDI 1.0".
+    bool midi1Expression = true;
+
     bool operator==(const OutputConfig&) const = default;
 };
 
@@ -69,8 +78,17 @@ private:
     };
 
     bool midi2() const { return config_.protocol == uw::MidiProtocol::Midi2; }
+    // Whether expression goes out as MIDI 2.0.
+    bool midi2Expression() const { return midi2() && !config_.midi1Expression; }
+    // Made as MIDI 2.0, and sent as that or downconverted to MIDI 1.0: for
+    // notes, as the receiver's protocol says; for expression, as
+    // midi2Expression() says.
     void emit2(std::uint8_t group, std::uint8_t channel, std::uint8_t status, std::uint8_t index1,
-               std::uint8_t index2, std::uint32_t data);   // as MIDI 2.0, or downconverted
+               std::uint8_t index2, std::uint32_t data, bool asMidi2);
+    void emit2(std::uint8_t group, std::uint8_t channel, std::uint8_t status, std::uint8_t index1,
+               std::uint8_t index2, std::uint32_t data) {
+        emit2(group, channel, status, index1, index2, data, midi2());
+    }
     void emitChannel(std::uint8_t status, std::uint8_t index1, std::uint8_t index2, std::uint32_t data);
     void registeredController(std::uint8_t bank, std::uint8_t index, std::uint32_t value);
     const Sounding* sounding(int id) const;

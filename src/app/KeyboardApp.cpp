@@ -54,6 +54,15 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
     updateTitle();
 }
 
+// The Performer's settings: the document's, except that expression sent as
+// MIDI 1.0 is channel-wide, so one finger drives it (as KeyEDO) rather than
+// every finger bending the one channel.
+PlayConfig KeyboardApp::playConfig() const {
+    PlayConfig p = settings_.play;
+    if (settings_.output.midi1Expression) p.perNoteExpression = false;
+    return p;
+}
+
 void KeyboardApp::setPublish(bool on) {
     performer_.releaseAll();
     targets_.setPublish(on);
@@ -83,7 +92,7 @@ void KeyboardApp::rebuild(bool resetView) {
     auto layout = makeLayout(settings_.layout, settings_.tuning);
     performer_.setLayout(layout.get());
     layout_ = std::move(layout);
-    performer_.setConfig(settings_.play);
+    performer_.setConfig(playConfig());
 
     if (resetView) {
         // Start at zoom 1, the lowest keys at the left (Tiled: the origin).
@@ -244,7 +253,8 @@ void KeyboardApp::applySettings() {
         targets_.setConfig(settings_.output);
     }
     const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
-    if (!(settings_.play == applied_.play)) performer_.setConfig(settings_.play);
+    if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
+        performer_.setConfig(playConfig());
     if (keysChanged) {
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
                              settings_.layout.kind != applied_.layout.kind;
@@ -590,8 +600,13 @@ float KeyboardApp::drawPanel() {
             if (p.vertical == VerticalControl::Controller &&
                 ImGui::InputInt("Controller", &p.verticalController))
                 p.verticalController = std::clamp(p.verticalController, 0, 127);
+            ImGui::BeginDisabled(o.midi1Expression);
             ImGui::Checkbox("Per-note expression", &p.perNoteExpression);
-            ImGui::SetItemTooltip("Each finger bends and shapes only its own note (MIDI 2.0); off: the channel");
+            ImGui::EndDisabled();
+            ImGui::SetItemTooltip("%s", o.midi1Expression
+                                            ? "Off while expression is sent as MIDI 1.0 (MIDI section): MIDI 1.0 has\n"
+                                              "no per-note bend, so the first finger down drives the channel"
+                                            : "Each finger bends and shapes only its own note (MIDI 2.0); off: the channel");
         }
         ImGui::Checkbox("Strike velocity", &p.strikeVelocity);
         ImGui::SetItemTooltip("Louder toward the top of a key");
@@ -606,6 +621,13 @@ float KeyboardApp::drawPanel() {
         if (ImGui::InputFloat("Bend range", &bend, 1, 12, "%.0f st")) o.bendRange = std::clamp(double(bend), 0.0, 96.0);
         if (ImGui::InputFloat("Per-note bend", &perNoteBend, 1, 12, "%.0f st"))
             o.perNoteBendRange = std::clamp(double(perNoteBend), 0.0, 96.0);
+        ImGui::Checkbox("Expression as MIDI 1.0", &o.midi1Expression);
+        ImGui::SetItemTooltip(
+            "Send pitch bend, controllers and pressure as MIDI 1.0 messages, even to\n"
+            "a MIDI 2.0 receiver, as KeyEDO did: Logic Pro and other DAWs mishandle\n"
+            "MIDI 2.0 bend and controllers. Notes stay MIDI 2.0, with exact pitch.\n"
+            "Turn off for receivers that handle MIDI 2.0 fully (StageHand, Umpire),\n"
+            "to get 32-bit and per-note expression.");
         ImGui::Checkbox("Per-Note Management", &o.perNoteManagement);
         ImGui::SetItemTooltip("Reset a note's per-note bend and controllers when it's struck again (MIDI 2.0)");
         ImGui::TextDisabled("Where notes go: the antenna button.");

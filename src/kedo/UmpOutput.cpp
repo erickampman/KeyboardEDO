@@ -45,13 +45,13 @@ constexpr std::uint8_t kResetFlag = 0x01;          // Per-Note Management "S"
 UmpOutput::UmpOutput(const OutputConfig& config) : config_(config) {}
 
 void UmpOutput::emit2(std::uint8_t group, std::uint8_t channel, std::uint8_t status, std::uint8_t index1,
-                      std::uint8_t index2, std::uint32_t data) {
+                      std::uint8_t index2, std::uint32_t data, bool asMidi2) {
     uw::MidiMessage m;
     m.words[0] = (0x4u << 28) | (std::uint32_t(group & 0xF) << 24) | (std::uint32_t(status & 0xF) << 20) |
                  (std::uint32_t(channel & 0xF) << 16) | (std::uint32_t(index1) << 8) | index2;
     m.words[1] = data;
     m.wordCount = 2;
-    if (midi2()) {
+    if (asMidi2) {
         out_.push_back(m);
         return;
     }
@@ -60,8 +60,9 @@ void UmpOutput::emit2(std::uint8_t group, std::uint8_t channel, std::uint8_t sta
     out_.insert(out_.end(), converted, converted + n);
 }
 
+// Channel-wide messages are all expression or setup.
 void UmpOutput::emitChannel(std::uint8_t status, std::uint8_t index1, std::uint8_t index2, std::uint32_t data) {
-    emit2(config_.group, config_.channel, status, index1, index2, data);
+    emit2(config_.group, config_.channel, status, index1, index2, data, midi2Expression());
 }
 
 const UmpOutput::Sounding* UmpOutput::sounding(int id) const {
@@ -75,7 +76,7 @@ void UmpOutput::registeredController(std::uint8_t bank, std::uint8_t index, std:
 
 void UmpOutput::setup() {
     registeredController(0, 0, bendRangeValue(config_.bendRange));
-    if (midi2()) registeredController(0, 7, bendRangeValue(config_.perNoteBendRange));
+    if (midi2Expression()) registeredController(0, 7, bendRangeValue(config_.perNoteBendRange));
 }
 
 void UmpOutput::noteOn(const Note& note, std::uint16_t velocity) {
@@ -127,7 +128,7 @@ void UmpOutput::glide(int id, double pitch) {
 }
 
 void UmpOutput::pitchBend(std::optional<int> id, double value) {
-    if (id && midi2()) {
+    if (id && midi2Expression()) {
         if (const Sounding* s = sounding(*id))
             emit2(s->group, s->channel, st(Status::PerNotePitchBend), s->number, 0, bipolar32(value));
         return;
@@ -136,7 +137,7 @@ void UmpOutput::pitchBend(std::optional<int> id, double value) {
 }
 
 void UmpOutput::controller(std::optional<int> id, int number, double value) {
-    if (id && midi2()) {
+    if (id && midi2Expression()) {
         if (const Sounding* s = sounding(*id))
             emit2(s->group, s->channel, st(Status::RegisteredPerNoteController), s->number,
                   std::uint8_t(std::clamp(number, 0, 255)), unipolar32(value));
@@ -149,7 +150,8 @@ void UmpOutput::pressure(std::optional<int> id, double value) {
     if (id) {
         // Polyphonic pressure exists in both protocols.
         if (const Sounding* s = sounding(*id))
-            emit2(s->group, s->channel, st(Status::PolyPressure), s->number, 0, unipolar32(value));
+            emit2(s->group, s->channel, st(Status::PolyPressure), s->number, 0, unipolar32(value),
+                  midi2Expression());
         return;
     }
     emitChannel(st(Status::ChannelPressure), 0, 0, unipolar32(value));
@@ -159,7 +161,8 @@ void UmpOutput::allNotesOff() {
     std::set<std::pair<std::uint8_t, std::uint8_t>> channels{{config_.group, config_.channel}};
     for (const auto& [id, s] : sounding_) channels.insert({s.group, s.channel});
     while (!sounding_.empty()) noteOff(sounding_.begin()->first);
-    for (const auto& [group, channel] : channels) emit2(group, channel, st(Status::ControlChange), 123, 0, 0);
+    for (const auto& [group, channel] : channels)
+        emit2(group, channel, st(Status::ControlChange), 123, 0, 0, midi2Expression());   // a controller
 }
 
 std::vector<uw::MidiMessage> UmpOutput::take() {

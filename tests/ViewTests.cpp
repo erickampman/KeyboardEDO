@@ -90,6 +90,7 @@ void testUmpText() {
     t.edo = 17;
     OutputConfig c;
     c.perNoteManagement = true;
+    c.midi1Expression = false;
     UmpOutput out(c);
     out.noteOn(t.note(17), 0xFFFF);
     out.pitchBend(17, 0.5);

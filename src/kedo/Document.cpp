@@ -108,6 +108,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
     d.output.channel = std::uint8_t(std::clamp(channel, 0, 15));
     d.output.group = std::uint8_t(std::clamp(group, 0, 15));
     read(j, "perNoteManagement", d.output.perNoteManagement);
+    read(j, "midi1Expression", d.output.midi1Expression);
     read(j, "bendRange", d.output.bendRange);
     read(j, "perNoteBendRange", d.output.perNoteBendRange);
     read(j, "midiDestinationName", d.destination);
@@ -118,7 +119,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
         "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
-        "perNoteBendRange", "midiDestinationName",
+        "perNoteBendRange", "midiDestinationName", "midi1Expression",
     };
     for (const auto& [key, value] : j.items())
         if (!known.count(key)) d.extras[key] = value.dump();
@@ -157,6 +158,7 @@ std::string writeDocument(const Document& d) {
     j["midiChannel"] = d.output.channel;
     j["midiGroup"] = d.output.group;
     j["perNoteManagement"] = d.output.perNoteManagement;
+    j["midi1Expression"] = d.output.midi1Expression;
     j["bendRange"] = d.output.bendRange;
     j["perNoteBendRange"] = d.output.perNoteBendRange;
     if (d.destination.empty()) j.erase("midiDestinationName");
