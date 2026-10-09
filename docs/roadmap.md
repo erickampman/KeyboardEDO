@@ -92,9 +92,8 @@ step, from every tile.
 decisions.md, "Custom layout". A `CustomLayout` of placed keys; edit mode
 (drag, add, delete, duplicate, snap); the inspector, with pitch as EDO /
 octave / degree and a suggested, overridable note number; convert any layout
-to custom; save and load as JSON. Settle what degree 0 means and how
-auditioning works first. Maybe two sessions: the layout and its file, then
-the editor.
+to custom; save and load as JSON; auditioning edits through the output.
+Maybe two sessions: the layout and its file, then the editor.
 
 ## 9. Computer keyboard (KeyboardEDO)
 

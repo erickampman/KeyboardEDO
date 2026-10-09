@@ -117,17 +117,19 @@ Keys the player places and edits:
 - **What a key sends:** a note number, group and channel, and for a Pitch
   7.9 key, its pitch as **EDO / octave / degree** (e.g. 17-EDO, octave 3,
   degree 5), independent of the current tuning, so one layout can mix EDOs.
-  To decide when building it: what degree 0 is (C of that octave, or the
-  tuning's origin).
+  Degree 0 is the current tuning's origin note (decided 2026-10-09): with
+  the origin at A, 17-EDO / octave 3 / degree 5 is five 17-EDO steps above
+  A3.
 - **Note number:** the editor suggests one and the player can override it.
   The suggestion: the nearest 12-EDO note, so a receiver that ignores Pitch
   7.9 still plays close to the right pitch.
 - **Duplicates** (two keys, one note number, different pitches, on one
   channel) are left for later. MIDI 2.0 treats them as one note for per-note
   messages, so the editor will need to warn or allocate.
-- **Auditioning:** the edited key sounds when there's an output that can
-  play it (to confirm with the author: whether this means sounding while
-  editing, or a key whose pitch the output can't produce staying silent).
+- **Auditioning** (decided 2026-10-09): changing a key's values in the
+  inspector sends that key's note through the configured output, as playing
+  it would, so a DAW or synth listening there hears the change and can use
+  it. With no output, nothing is sent.
 
 ### Keys carry the note they play
 
