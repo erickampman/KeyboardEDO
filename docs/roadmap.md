@@ -36,10 +36,27 @@ Still to check by hand:
 
 ## 3. MIDI output in uw-core (uw-core)
 
-A `MidiOutput` seam beside `MidiInput`: list destinations, send UMP to one,
-and publish a named UMP endpoint with function blocks. ALSA sequencer UMP on
-Linux, CoreMIDI on macOS. Report each destination's protocol, so
-`OutputConfig::protocol` can follow it. Silent tests, as `BackendTests`.
+### 3a. The seam and CoreMIDI: done 2026-10-09 (uw-core `ee1dd11`)
+
+`uw::MidiOutput` beside `MidiInput`: list destinations with their protocol,
+`open()` one, `openVirtual()` a source other apps receive from (KeyEDO's
+"Publish"), `send()` UMP, and hotplug with `changes()` / `sync()`. It never
+translates: the caller sends what `protocol(handle)` asks for, which is
+`UmpOutput`'s job here. `CoreMidiOutput` implements it, and
+`test-coremidi-output` checks it silently on the Mac by looping back through
+`CoreMidiInput` (a virtual source, and MIDI 2.0 and 1.0 destinations).
+`PlatformMidiOutput.h` sets `UW_HAVE_MIDI_OUTPUT` to 0 where there's none.
+
+### 3b. The ALSA sequencer's (uw-core, on the Linux PC)
+
+`AlsaSeqOutput`: a UMP-enabled sequencer client with an output port per
+protocol, subscribing to a destination port, or published as a port others
+subscribe to. Extend `test-backends`. Needs a Linux machine; nothing here
+could compile it.
+
+Declaring a UMP endpoint and function blocks moved to milestone 8, with the
+rest of identity and discovery: on the Mac it needs CoreMIDI's Objective-C
+`MIDIUMPMutableEndpoint`.
 
 ## 4. The app plays (KeyboardEDO)
 
