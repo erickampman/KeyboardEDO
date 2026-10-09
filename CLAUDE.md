@@ -8,7 +8,10 @@ Related repos:
 - **KeyEDO** (`~/Dev-MIDI/KeyEDO`): the behaviour guide. Its
   `docs/controller-roadmap.md` lists the MIDI 2.0 features to implement.
 - **uw-core** (`~/Dev-Common/uw-core`, submodule at `external/uw-core`): UMP
-  types and the MIDI backends. It has no UI code.
+  types and the MIDI backends. It has no UI code. **Change it only in
+  `~/Dev-Common/uw-core`**: commit, test and push there, then
+  `git -C external/uw-core pull` and commit the pin here. Never commit inside
+  `external/uw-core` (decisions.md, "Working method").
 - **Umpire** (`~/Dev-MIDI/UmpireDAW`): its `docs/decisions.md` has the
   shared-code and DPF-fork decisions this repo follows.
 

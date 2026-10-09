@@ -91,6 +91,55 @@ The presets keep KeyEDO's names, re-expressed for the new lattice:
   fifth; right a whole tone / up-right a fourth). **To check** against the
   layouts the author intends.
 
+## Two layouts KeyEDO doesn't have (decided 2026-10-09)
+
+### Octave columns
+
+Each column holds one scale degree in every octave, stacked corner to corner
+as the diamond piano's columns: above A0 is A1. The column up and to the right
+holds the next degree (at 12-EDO, A#), and so on.
+
+It's a Tiled generator, not a new layout: up-right = 1 step and right =
+2 - EDO, so two rows straight up adds 2 x 1 - (2 - EDO) = EDO steps, an
+octave, and every direction keeps one interval (still isomorphic). It needs:
+- `TiledLayout` to accept a negative `right` (it clamps to 1 now, and its
+  range and `keyForStep` arithmetic assume positive);
+- rows enough for every octave (about 20 at 12-EDO), with vertical
+  scrolling, instead of rows fitted to the window's height.
+
+### Custom layout
+
+Keys the player places and edits:
+- **Edit mode:** drag keys to move them (snapping to a grid optional), add,
+  delete and duplicate them, and an inspector (ImGui) for the selected key's
+  label, colour, shape and size. Start blank or from any layout ("convert to
+  custom"). Saved as JSON.
+- **What a key sends:** a note number, group and channel, and for a Pitch
+  7.9 key, its pitch as **EDO / octave / degree** (e.g. 17-EDO, octave 3,
+  degree 5), independent of the current tuning, so one layout can mix EDOs.
+  To decide when building it: what degree 0 is (C of that octave, or the
+  tuning's origin).
+- **Note number:** the editor suggests one and the player can override it.
+  The suggestion: the nearest 12-EDO note, so a receiver that ignores Pitch
+  7.9 still plays close to the right pitch.
+- **Duplicates** (two keys, one note number, different pitches, on one
+  channel) are left for later. MIDI 2.0 treats them as one note for per-note
+  messages, so the editor will need to warn or allocate.
+- **Auditioning:** the edited key sounds when there's an output that can
+  play it (to confirm with the author: whether this means sounding while
+  editing, or a key whose pitch the output can't produce staying silent).
+
+### Keys carry the note they play
+
+Both, and the custom layout above all, need keys that aren't steps of one
+Tuning. So a `Key` will carry a `Note`: a stable identity, the note number,
+group and channel, and the pitch (12-EDO semitones above MIDI note 0, for
+Pitch 7.9 and 7.25). Tuning-based layouts fill it in from their step, as
+now; the custom layout stores what the player set. The Performer holds
+notes by identity, and `NoteSink` and `UmpOutput` take a `Note` instead of
+working the number and pitch out from a step. To do before the app sends
+real MIDI (roadmap, milestone 4), while little depends on steps.
+
 ## Note numbers and pitch
 
 As KeyEDO: at 12-EDO, standard MIDI note numbers; at other EDOs, steps are
@@ -178,3 +227,17 @@ As uw-core and Umpire: one milestone per session, about a day each. Each
 starts by reading this file and the roadmap. Tests are silent. The author
 commits to `main`; ask before pushing, and push uw-core before a pin that
 points at it (`git push --recurse-submodules=check`).
+
+**uw-core changes are made in `~/Dev-Common/uw-core`, never in
+`external/uw-core`** (decided 2026-10-09). Each clone is its own repository,
+so a commit made in the submodule doesn't show in the other clone until it
+goes through GitHub; one working clone avoids that. Commit, test and push
+there, then move the pin here:
+
+```bash
+git -C external/uw-core pull
+git add external/uw-core
+git commit
+```
+
+The submodule is only ever a checkout of a pushed commit.

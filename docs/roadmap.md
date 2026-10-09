@@ -54,11 +54,19 @@ protocol, subscribing to a destination port, or published as a port others
 subscribe to. Extend `test-backends`. Needs a Linux machine; nothing here
 could compile it.
 
-Declaring a UMP endpoint and function blocks moved to milestone 8, with the
+Declaring a UMP endpoint and function blocks moved to milestone 11, with the
 rest of identity and discovery: on the Mac it needs CoreMIDI's Objective-C
 `MIDIUMPMutableEndpoint`.
 
-## 4. The app plays (KeyboardEDO)
+## 4. Keys carry the note they play (KeyboardEDO)
+
+decisions.md, "Keys carry the note they play". A `Note` (identity, note
+number, group and channel, pitch) on every `Key`; the Performer, `NoteSink`
+and `UmpOutput` work from it. The three layouts fill it from their step, and
+behave exactly as before: the existing tests pass with only the types changed,
+plus tests that a key with any note number and pitch plays as given.
+
+## 5. The app plays (KeyboardEDO)
 
 Wire the Performer to `MidiOutput`: a destination menu, KeyEDO's "Publish"
 (our own endpoint, "KeyboardEDO", one output function block "Keyboard"),
@@ -66,24 +74,40 @@ group and channel. All notes off when the destination or tuning changes.
 Load and save the configuration as JSON with KeyEDO's field names, so its
 documents open here.
 
-## 5. Configuration and toolbar (KeyboardEDO)
+## 6. Configuration and toolbar (KeyboardEDO)
 
 KeyEDO's Configure sheet (tuning, layout, generator, tile colour, MIDI, drag
 and expression, velocity), the one-line synopsis across the top, the
 protocol badge, and the Lock and Latch buttons.
 
-## 6. Computer keyboard (KeyboardEDO)
+## 7. Octave columns (KeyboardEDO)
+
+decisions.md, "Octave columns": a Tiled generator with up-right 1 and right
+2 - EDO. `TiledLayout` accepts a negative `right`; rows cover every octave,
+and the view scrolls vertically. Tests: straight up is an octave, up-right a
+step, from every tile.
+
+## 8. Custom layout (KeyboardEDO)
+
+decisions.md, "Custom layout". A `CustomLayout` of placed keys; edit mode
+(drag, add, delete, duplicate, snap); the inspector, with pitch as EDO /
+octave / degree and a suggested, overridable note number; convert any layout
+to custom; save and load as JSON. Settle what degree 0 means and how
+auditioning works first. Maybe two sessions: the layout and its file, then
+the editor.
+
+## 9. Computer keyboard (KeyboardEDO)
 
 KeyEDO's QWERTY mappings: the classic DAW rows on the piano, and on Tiled an
 outlined region moved with the arrow keys. Shift latches. Hover expression
 (Control held) on the desktop.
 
-## 7. Arpeggiator (KeyboardEDO)
+## 10. Arpeggiator (KeyboardEDO)
 
 KeyEDO's `ArpeggiatorEngine` as a NoteSink between the Performer and the
 output: patterns, divisions, gate, octave span, velocity source, hold.
 
-## 8. Identity and discovery (uw-core, KeyboardEDO)
+## 11. Identity and discovery (uw-core, KeyboardEDO)
 
 KeyEDO's controller roadmap tier 2: endpoint info and function blocks as
 UMP stream messages, a Product Instance ID per installation or document,
