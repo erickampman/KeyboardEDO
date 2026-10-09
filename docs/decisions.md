@@ -1,0 +1,180 @@
+# Decisions
+
+Decisions about KeyboardEDO, made 2026-10-09 unless dated otherwise. The
+roadmap is [roadmap.md](roadmap.md).
+
+## What it is
+
+A cross-platform MIDI keyboard controller for equal divisions of the octave,
+after KeyEDO (`~/Dev-MIDI/KeyEDO`, Swift/SwiftUI, macOS and iPadOS). UMP is
+its only internal format, and MIDI 2.0 its primary protocol: it uses MIDI
+2.0-only features where they help, and makes MIDI 1.0 from them for MIDI 1.0
+destinations. KeyEDO's `docs/controller-roadmap.md` lists those features;
+this repo implements them.
+
+KeyEDO is the guide for behaviour: what the layouts look like, how touches
+play, what the settings are. Its code is not ported line by line.
+
+## Language, build and shared code
+
+- **C++20 and CMake**, as StageHand, Umpire and uw-core, so code can move
+  between them.
+- **uw-core** (`~/Dev-Common/uw-core`) is a git submodule at
+  `external/uw-core`, pinned to a commit, as Umpire's decisions.md describes.
+  The core uses only `uw::ump` (built with `UW_CORE_UMP_ONLY`): `MidiMessage`,
+  the status and attribute enums, `scaleUp`, and `downconvert` for the MIDI
+  1.0 fallback.
+- **uw-core has no UI code.** It is UMP, the CLAP host, and the MIDI and audio
+  backends. Umpire's UI is DGL and Dear ImGui from the DPF fork, a separate
+  repo (Umpire's decisions.md, "DPF fork"). This app's UI is its own choice
+  ("UI", below), and uw-core's part is the MIDI side.
+- **uw-core needs an output side.** `uw::midi` has only `MidiInput`. This app
+  needs a `MidiOutput` seam: send UMP to a chosen destination, and publish a
+  UMP endpoint of its own with a function block (ALSA sequencer:
+  `snd_seq_create_ump_endpoint` / `snd_seq_create_ump_block`; CoreMIDI:
+  `MIDIUMPMutableEndpoint`, macOS 15). It belongs in uw-core, where StageHand
+  and Umpire can use it too (roadmap, milestone 3).
+
+## The core is toolkit-free
+
+`kedo::core` (`src/kedo/`) holds the tuning, the layouts as geometry, the
+playing logic and UMP output, with no toolkit types: Umpire's view-model rule.
+The UI draws `Key`s and passes pointer events in layout coordinates; the
+transport sends what `UmpOutput::take()` returns.
+
+- `Tuning`: EDO, origin, frequencies, note numbers, labels, Pitch 7.9 and
+  7.25 encodings.
+- `Layout` and its three kinds (below), with `keyAt()` hit-testing.
+- `Performer`: KeyEDO's touch handling, once for all layouts. Each pointer is
+  tracked by id, so multitouch is the normal case, not an iOS special case.
+- `NoteSink`: what is played, before it's MIDI (note on/off, glide,
+  expression with or without a note). The arpeggiator will be a NoteSink
+  between the Performer and the output.
+- `UmpOutput`: a NoteSink that makes UMP.
+
+## Layouts
+
+The three KeyEDO keyboards stay:
+
+- **Piano at 12-EDO**: a standard piano (`PianoLayout`), KeyEDO's key sizes.
+- **Piano at any other EDO**: KeyEDO's diamond hybrid (`DiamondLayout`). One
+  column per 12-EDO semitone holds the steps that fall in it, stacked; black
+  columns sit half a diamond up so columns interlock like piano keys; E-F and
+  B-C are a white key apart. Semitones with no step (EDOs under 12) keep their
+  place. Steps are assigned to semitones arithmetically
+  (`floor(12 * step / edo)`), which fixes KeyEDO's grouping under 12-EDO,
+  where a skipped semitone shifted the columns after it.
+- **Tiled at any EDO**: an isomorphic lattice of diamonds (`TiledLayout`).
+
+### Tiled lattice
+
+KeyEDO's tiling shifted odd rows half a tile right and even rows not at all,
+with `step = col * g1 + row * g2`. Then up-right from an even row adds `g2`
+but from an odd row `g1 + g2`, so a chord's shape depends on the row it
+starts in: not isomorphic. (Visible in KeyEDO's 17-EDO Wicki-Hayden screen:
+F2 is +10 up-right of A#1, but D#3 is +13 up-right of F2.)
+
+Here each row is shifted half a tile further than the one below, so tile
+`(col, row)` plays `col * right + row * upRight` and every direction has one
+interval everywhere: right `right`, up-right `upRight`, up-left
+`upRight - right`. The playable keys form a band leaning to one side, with
+unplayable tiles drawn grey in the corners, as KeyEDO's.
+
+The presets keep KeyEDO's names, re-expressed for the new lattice:
+- Wicki-Hayden: right a whole tone, up-right a fifth, so up-left a fourth (the
+  standard hex layout).
+- Harmonic Table: up-right a major third, up-left a minor third, so two rows
+  up is a fifth (the standard one). KeyEDO's `g1 = maj3, g2 = min3` gave
+  up-left a descending semitone.
+- Janko: whole tones along a row, each row a step higher.
+- Bosanquet and Guitar (fourths): KeyEDO's numbers (right 1 / up-right a
+  fifth; right a whole tone / up-right a fourth). **To check** against the
+  layouts the author intends.
+
+## Note numbers and pitch
+
+As KeyEDO: at 12-EDO, standard MIDI note numbers; at other EDOs, steps are
+numbered from 0 at the origin (at most 128), and each note-on carries a Pitch
+7.9 attribute with the real pitch. A MIDI 1.0 destination gets the nearest
+12-EDO note instead.
+
+## MIDI 2.0 use
+
+What `UmpOutput` sends to a MIDI 2.0 destination (KeyEDO's controller roadmap
+items in brackets):
+- Note-on with 16-bit velocity and Pitch 7.9 (none at 12-EDO, where the note
+  number is the pitch). Velocity is at least 1: a MIDI 2.0 note-on with
+  velocity 0 isn't a note-off (KeyEDO's "To check").
+- Per-Note Management with Reset before each note-on, on by default, so a
+  retriggered note has no per-note bend or controllers left over [5].
+- Fixed drag: **per-note** pitch bend, registered per-note controllers (the
+  vertical controller number, e.g. 74 Brightness), and polyphonic pressure,
+  each finger on its own note [1, 4]. Channel-wide expression, as KeyEDO,
+  remains a setting (`perNoteExpression = false`): then the first pointer
+  down drives the channel.
+- 32-bit channel pitch bend and controllers [6].
+- Bend ranges with `setup()`: registered controller 0 and, for per-note bend,
+  7 [2].
+- Gliss with **glide** (a setting): the struck note keeps its number and its
+  pitch moves to each key passed over, with registered per-note controller 3
+  (Pitch 7.25), instead of a new note per key [3]. Stepwise for now: it lands
+  on each key's exact pitch, without sliding between them.
+- All Notes Off: a note-off for each sounding note, then CC 123, as KeyEDO.
+
+For a MIDI 1.0 destination it makes MT 0x2 messages: notes at the nearest
+12-EDO note with 7-bit velocity, per-note expression moved to the channel
+(polyphonic pressure stays per note), registered controllers as CC
+101/100/6/38 (uw-core's `downconvert`), and a glide restruck as note-off and
+note-on at the nearest note.
+
+The rest of KeyEDO's controller roadmap (endpoint and function blocks,
+Product Instance ID, stream configuration, timestamps, Property Exchange,
+Flex Data tempo, MPE fallback) needs the transport, so it's in the roadmap.
+
+## Behaviour kept from KeyEDO
+
+Gliss and Fixed drag; latch with Shift, and the Latch toggle (turning it off
+releases the latched notes); striking a latched note releases it; strike
+velocity (top 12% of a key loudest, falling to a minimum at the bottom);
+expression over 150 points of drag; gliss holds the note across the diamond
+layout's gaps (KeyEDO on the Mac). Two pointers on two tiles that play the
+same step hold one note, which ends when the last lets go.
+
+## UI: SDL3 and Dear ImGui (decided 2026-10-09)
+
+The author chose SDL3 with Dear ImGui over DGL, NanoVG and ImGui (Umpire's
+stack):
+- SDL3 gives multitouch on Linux (X11 and Wayland), Windows and iOS/Android
+  touchscreens, trackpad pinch on the Mac, and pen pressure, all of which a
+  keyboard controller needs. pugl has no touch events and no iOS.
+- This app hosts no plugins, so it doesn't need DGL's plugin-editor
+  embedding, the reason Umpire uses it.
+
+How it's set up:
+- **SDL 3.4.18 and ImGui 1.92.9b are git submodules** (`external/SDL`,
+  `external/imgui`), pinned to releases like uw-core, and built by our CMake
+  (SDL statically, without audio or camera). `KEDO_SYSTEM_SDL=ON` uses an
+  installed SDL3 instead. `KEDO_APP=OFF` builds only the core and its tests.
+- **Rendering: SDL_Renderer** through ImGui's `sdlrenderer3` backend. The
+  keyboard is drawn into ImGui's background draw list, so there is one
+  renderer and one draw pass.
+- **Only `src/app/` knows SDL and ImGui.** The core supplies the geometry
+  (`Layout`), the view transform (`Viewport`), colours and labels
+  (`KeyStyle`), and monitor text (`UmpText`).
+- **Input:** touchscreen fingers go to the Performer by finger id; the mouse
+  is pointer 0. SDL's mouse copies of touches (`SDL_TOUCH_MOUSEID`) are left
+  to ImGui, so panels still work by touch and no note is played twice.
+  Trackpad fingers (indirect touch devices) are ignored: they have no place
+  on the screen. Wheel scrolls, Ctrl or Cmd with the wheel zooms, and a
+  trackpad pinch zooms (SDL 3.4's pinch events). Lock stops both.
+- **Fonts:** ImGui's built-in vector font, and Cousine (from ImGui's
+  `misc/fonts`, embedded at configure time) for the MIDI monitor.
+- **Redraw on demand:** the loop waits for events, draws a few frames after
+  each, and draws every frame while a pointer is down.
+
+## Working method
+
+As uw-core and Umpire: one milestone per session, about a day each. Each
+starts by reading this file and the roadmap. Tests are silent. The author
+commits to `main`; ask before pushing, and push uw-core before a pin that
+points at it (`git push --recurse-submodules=check`).

@@ -1,0 +1,95 @@
+cmake_minimum_required(VERSION 3.21)
+
+project(KeyboardEDO VERSION 0.1.0 LANGUAGES CXX)
+
+# KeyboardEDO: a cross-platform, UMP-first EDO keyboard controller, after KeyEDO
+# (~/Dev-MIDI/KeyEDO). docs/decisions.md says why it's built this way and
+# docs/roadmap.md what comes next.
+#
+#   kedo::core   tuning, layouts, the playing logic and UMP output; no toolkit
+#   keyboardedo  the app: SDL3 and Dear ImGui (docs/decisions.md, "UI")
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(KEDO_TESTS "Build KeyboardEDO's tests" ${PROJECT_IS_TOP_LEVEL})
+option(KEDO_APP "Build the app (needs SDL3's platform dependencies)" ON)
+option(KEDO_SYSTEM_SDL "Use an installed SDL3 instead of external/SDL" OFF)
+
+# uw-core, a git submodule pinned to a commit. The core needs only its UMP
+# layer; the app will add uw::midi.
+set(UW_CORE_UMP_ONLY ON CACHE BOOL "" FORCE)
+add_subdirectory(external/uw-core)
+
+add_library(kedo-warnings INTERFACE)
+target_compile_options(kedo-warnings INTERFACE -Wall -Wextra -Wpedantic)
+
+add_library(kedo-core STATIC
+    src/kedo/Tuning.cpp
+    src/kedo/Generators.cpp
+    src/kedo/Layout.cpp
+    src/kedo/UmpOutput.cpp
+    src/kedo/Performer.cpp
+    src/kedo/Viewport.cpp
+    src/kedo/KeyStyle.cpp
+    src/kedo/UmpText.cpp
+)
+add_library(kedo::core ALIAS kedo-core)
+target_include_directories(kedo-core PUBLIC src)
+target_link_libraries(kedo-core PUBLIC uw::ump PRIVATE kedo-warnings)
+
+# Draws every layout to SVG, to check the geometry by eye without a UI.
+add_executable(kedo-layout-svg tools/LayoutSvg.cpp)
+target_link_libraries(kedo-layout-svg PRIVATE kedo::core kedo-warnings)
+
+if(KEDO_TESTS)
+    enable_testing()
+    foreach(t TuningTests LayoutTests UmpOutputTests PerformerTests ViewTests)
+        add_executable(${t} tests/${t}.cpp)
+        target_link_libraries(${t} PRIVATE kedo::core kedo-warnings)
+        add_test(NAME ${t} COMMAND ${t})
+    endforeach()
+endif()
+
+# --- The app ----------------------------------------------------------------------
+
+if(KEDO_APP)
+    # SDL3 and Dear ImGui are git submodules pinned to releases, as uw-core, so
+    # the build doesn't depend on what the package manager has.
+    if(KEDO_SYSTEM_SDL)
+        find_package(SDL3 REQUIRED CONFIG)
+    else()
+        set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+        set(SDL_STATIC ON CACHE BOOL "" FORCE)
+        set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+        set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+        set(SDL_AUDIO OFF CACHE BOOL "" FORCE)
+        set(SDL_CAMERA OFF CACHE BOOL "" FORCE)
+        add_subdirectory(external/SDL EXCLUDE_FROM_ALL)
+    endif()
+
+    set(IMGUI_DIR external/imgui)
+    add_library(kedo-imgui STATIC
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_sdlrenderer3.cpp
+    )
+    target_include_directories(kedo-imgui SYSTEM PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
+    target_link_libraries(kedo-imgui PUBLIC SDL3::SDL3)
+
+    include(cmake/EmbedFile.cmake)
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}/misc/fonts/Cousine-Regular.ttf
+               ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp kMonoFont)
+
+    add_executable(keyboardedo
+        src/app/main.cpp
+        src/app/KeyboardApp.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
+    )
+    target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
+endif()
