@@ -82,7 +82,8 @@ void testRoundTrip() {
     d.play.vertical = VerticalControl::Controller;
     d.play.verticalController = 74;
     d.play.glide = true;
-    d.play.perNoteExpression = false;
+    d.play.bendScope = ExpressionScope::Channel;
+    d.play.pressureScope = ExpressionScope::Channel;
     d.output.channel = 4;
     d.output.perNoteManagement = false;
     d.output.perNoteBendRange = 48;
@@ -119,6 +120,19 @@ void testWritesKeyEdoKeys() {
     CHECK(!ours.contains("midiDestinationName"));
 }
 
+void testScopes() {
+    // An earlier KeyboardEDO's single switch, off: everything for the channel.
+    auto d = parseDocument(R"({"perNoteExpression": false})");
+    CHECK(d && d->play.bendScope == ExpressionScope::Channel && d->play.controllerScope == ExpressionScope::Channel &&
+          d->play.pressureScope == ExpressionScope::Channel);
+    // Each on its own.
+    d = parseDocument(R"({"bendScope": "channel", "controllerScope": "note", "pressureScope": "bogus"})");
+    CHECK(d && d->play.bendScope == ExpressionScope::Channel && d->play.controllerScope == ExpressionScope::Note &&
+          d->play.pressureScope == ExpressionScope::Note);
+    const auto j = nlohmann::json::parse(writeDocument(*d));
+    CHECK(j["bendScope"] == "channel" && j["controllerScope"] == "note" && !j.contains("perNoteExpression"));
+}
+
 void testBadInput() {
     std::string error;
     CHECK(!parseDocument("not json", &error));
@@ -152,6 +166,7 @@ int main() {
     testMidiFields();
     testRoundTrip();
     testWritesKeyEdoKeys();
+    testScopes();
     testBadInput();
     testPreferences();
     return kedo::test::finish("Document");

@@ -23,6 +23,12 @@ enum class DragBehavior {
 enum class HorizontalControl { Off, PitchBend };
 enum class VerticalControl { Off, Controller, Pressure, PitchBend };
 
+// Where an expression message goes: the finger's own note (MIDI 2.0 per-note
+// pitch bend, a registered per-note controller, polyphonic pressure), or the
+// whole channel (pitch bend, CC, channel pressure), driven by the first
+// finger down, as KeyEDO.
+enum class ExpressionScope { Note, Channel };
+
 struct PlayConfig {
     DragBehavior drag = DragBehavior::Gliss;
 
@@ -37,9 +43,11 @@ struct PlayConfig {
     int               verticalController = 1;      // CC, or per-note controller
     double            expressionDistance = 150;
 
-    // Each pointer's expression goes to its own note (MIDI 2.0 per-note
-    // messages). Off: the first pointer down drives the whole channel, as KeyEDO.
-    bool perNoteExpression = true;
+    // The scope of each kind of message, chosen separately. Per-note pitch
+    // bend and controllers are MIDI 2.0 only; polyphonic pressure is in both.
+    ExpressionScope bendScope       = ExpressionScope::Note;
+    ExpressionScope controllerScope = ExpressionScope::Note;
+    ExpressionScope pressureScope   = ExpressionScope::Note;
 
     // Velocity: fixed, or from where in the key it was struck (top loudest).
     std::uint16_t velocity = 0xFFFF;
@@ -100,6 +108,7 @@ private:
     void strike(Touch& t, const Note& note, std::uint16_t velocity);
     void finish(Touch& t, bool latch);
     void expression(int id, Touch& t, Point p);
+    bool target(ExpressionScope scope, int id, const Touch& t, std::optional<int>& out) const;
     void resetExpression(int id, const Touch& t);
     std::uint16_t velocityFor(const Key& key, Point p) const;
 
@@ -115,7 +124,7 @@ private:
     std::map<int, Touch> keys_;          // by computer key
     std::map<int, int> latched_;         // Note::id -> the id it sounds as
     std::map<int, int> holds_;           // Note::id -> touches, keys and latches holding it
-    std::optional<int> expressionOwner_; // channel-wide expression: the pointer driving it
+    std::optional<int> expressionOwner_; // channel-scope expression: the pointer driving it
 };
 
 } // namespace kedo

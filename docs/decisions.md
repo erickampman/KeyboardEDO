@@ -175,8 +175,15 @@ items in brackets):
   retriggered note has no per-note bend or controllers left over [5].
 - Fixed drag: **per-note** pitch bend, registered per-note controllers (the
   vertical controller number, e.g. 74 Brightness), and polyphonic pressure,
-  each finger on its own note [1, 4]. Only with "Expression as MIDI 1.0"
-  off (below, "Expression as MIDI 1.0"). Channel-wide expression, as KeyEDO,
+  each finger on its own note [1, 4]. **Each message's scope is chosen
+  separately** (decided 2026-10-09): pitch bend per note or channel,
+  controller per note (registered per-note controller) or channel (CC),
+  pressure poly or channel. Channel-scope messages come from the first
+  finger down, as KeyEDO; per-note ones from each finger. Per-note bend and
+  controllers need "Expression as MIDI 1.0" off (below); poly pressure
+  doesn't, since MIDI 1.0 has it. Documents store `bendScope`,
+  `controllerScope` and `pressureScope` ("note" / "channel"), and read the
+  earlier single `perNoteExpression` switch. Channel-wide expression, as KeyEDO,
   remains a setting (`perNoteExpression = false`): then the first pointer
   down drives the channel.
 - 32-bit channel pitch bend and controllers [6].
@@ -267,10 +274,9 @@ So `OutputConfig::midi1Expression` (the panel's "Expression as MIDI 1.0"):
   receivers that handle MIDI 2.0 fully: StageHand and Umpire, where the
   author means to make it work properly. Saved in the document.
 - On: pitch bend, controllers, pressure, the bend-range setup (CC
-  101/100/6/38) and All Notes Off's CC 123 go out as MIDI 1.0; per-note bend
-  and controllers fold to the channel, and the Performer drives channel
-  expression from the first finger (per-note expression is greyed out).
-  Polyphonic pressure stays per note. Notes, Pitch 7.25 glides and Per-Note
+  101/100/6/38) and All Notes Off's CC 123 go out as MIDI 1.0; pitch bend and
+  controllers are channel scope (their scope controls are greyed out), driven
+  by the first finger. Pressure keeps its own scope: poly or channel. Notes, Pitch 7.25 glides and Per-Note
   Management stay MIDI 2.0.
 - CoreMIDI converts the MIDI 1.0 messages for a MIDI 2.0 receiver, so such a
   receiver still sees MT 0x4, converted as from a hardware keyboard (checked:

@@ -99,7 +99,21 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
     read(j, "strikeVelocityMin", d.play.strikeVelocityMin);
     d.play.strikeVelocityMin = std::clamp(d.play.strikeVelocityMin, 1, 126);
     read(j, "glide", d.play.glide);
-    read(j, "perNoteExpression", d.play.perNoteExpression);
+    // Each expression message's scope, "note" or "channel". An earlier
+    // KeyboardEDO wrote one switch for all three, perNoteExpression.
+    bool perNote = true;
+    read(j, "perNoteExpression", perNote);
+    if (!perNote)
+        d.play.bendScope = d.play.controllerScope = d.play.pressureScope = ExpressionScope::Channel;
+    auto scope = [&](const char* key, ExpressionScope& value) {
+        std::string text;
+        read(j, key, text);
+        if (text == "note") value = ExpressionScope::Note;
+        else if (text == "channel") value = ExpressionScope::Channel;
+    };
+    scope("bendScope", d.play.bendScope);
+    scope("controllerScope", d.play.controllerScope);
+    scope("pressureScope", d.play.pressureScope);
 
     // MIDI
     int channel = d.output.channel, group = d.output.group;
@@ -118,7 +132,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
         "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
         "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
-        "perNoteExpression", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
+        "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
         "perNoteBendRange", "midiDestinationName", "midi1Expression",
     };
     for (const auto& [key, value] : j.items())
@@ -153,7 +167,10 @@ std::string writeDocument(const Document& d) {
     j["isStrikeVelocityEnabled"] = d.play.strikeVelocity;
     j["strikeVelocityMin"] = d.play.strikeVelocityMin;
     j["glide"] = d.play.glide;
-    j["perNoteExpression"] = d.play.perNoteExpression;
+    auto scopeName = [](ExpressionScope s) { return s == ExpressionScope::Note ? "note" : "channel"; };
+    j["bendScope"] = scopeName(d.play.bendScope);
+    j["controllerScope"] = scopeName(d.play.controllerScope);
+    j["pressureScope"] = scopeName(d.play.pressureScope);
 
     j["midiChannel"] = d.output.channel;
     j["midiGroup"] = d.output.group;

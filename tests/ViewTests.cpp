@@ -133,7 +133,10 @@ void testSynopsis() {
     live.destination = "Synth";
     live.destinationFound = false;
     CHECK(synopsis(d, live) == "17-EDO" + dot + "A1" + dot + "Diamond piano" + dot +
-                                   "Fixed (H bend, V CC 74, per note)" + dot + "to Synth (not found)");
+                                   "Fixed (H note bend, V note controller 74)" + dot + "to Synth (not found)");
+    d.play.bendScope = ExpressionScope::Channel;
+    d.play.vertical = VerticalControl::Pressure;
+    CHECK(synopsis(d, {}).find("Fixed (H bend, V poly pressure)") != std::string::npos);
 }
 
 } // namespace

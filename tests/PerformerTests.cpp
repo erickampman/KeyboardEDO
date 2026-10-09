@@ -165,7 +165,7 @@ void testFixedChannel() {
     PlayConfig c;
     c.drag = DragBehavior::Fixed;
     c.horizontal = HorizontalControl::PitchBend;
-    c.perNoteExpression = false;
+    c.bendScope = ExpressionScope::Channel;
     r.performer.setConfig(c);
     r.performer.pointerDown(1, r.at(0, 0));
     r.performer.pointerDown(2, r.at(1, 0));
@@ -175,6 +175,33 @@ void testFixedChannel() {
     CHECK(r.sink.take().empty());
     r.performer.pointerMove(1, {r.at(0, 0).x + 20, r.at(0, 0).y});
     CHECK((r.sink.take() == Log{"bend ch"}));
+}
+
+// Each message's scope is its own: here the bend goes to the channel, from
+// the first finger only, while pressure stays on each finger's note.
+void testMixedScopes() {
+    Rig r;
+    PlayConfig c;
+    c.drag = DragBehavior::Fixed;
+    c.horizontal = HorizontalControl::PitchBend;
+    c.vertical = VerticalControl::Pressure;
+    c.bendScope = ExpressionScope::Channel;
+    c.pressureScope = ExpressionScope::Note;
+    c.expressionDistance = 100;
+    r.performer.setConfig(c);
+    const Point a = r.at(0, 0), b = r.at(0, 2);
+    r.performer.pointerDown(1, a);
+    r.performer.pointerDown(2, b);
+    r.sink.take();
+    r.performer.pointerMove(2, {b.x + 50, b.y - 50});   // not the first finger: no bend
+    CHECK((r.sink.take() == Log{"pressure 20"}));
+    r.performer.pointerMove(1, {a.x + 50, a.y - 50});
+    CHECK((r.sink.take() == Log{"bend ch", "pressure 0"}));
+    // The first finger lifts; the channel isn't handed on mid-gesture.
+    r.performer.pointerUp(1);
+    CHECK((r.sink.take() == Log{"bend ch", "pressure 0", "off 0"}));
+    r.performer.pointerMove(2, {b.x + 60, b.y - 60});
+    CHECK((r.sink.take() == Log{"pressure 20"}));
 }
 
 void testStrikeVelocity() {
@@ -255,6 +282,7 @@ int main() {
     testGlide();
     testFixedPerNote();
     testFixedChannel();
+    testMixedScopes();
     testStrikeVelocity();
     testKeysAndRelease();
     testNotesPassThrough();

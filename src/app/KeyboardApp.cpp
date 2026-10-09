@@ -54,12 +54,14 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
     updateTitle();
 }
 
-// The Performer's settings: the document's, except that expression sent as
-// MIDI 1.0 is channel-wide, so one finger drives it (as KeyEDO) rather than
-// every finger bending the one channel.
+// The Performer's settings: the document's, except that with expression sent
+// as MIDI 1.0, pitch bend and controllers can only be channel-wide (MIDI 1.0
+// has no per-note forms), so the first finger drives them rather than every
+// finger bending the one channel. Polyphonic pressure is MIDI 1.0 too.
 PlayConfig KeyboardApp::playConfig() const {
     PlayConfig p = settings_.play;
-    if (settings_.output.midi1Expression) p.perNoteExpression = false;
+    if (settings_.output.midi1Expression)
+        p.bendScope = p.controllerScope = ExpressionScope::Channel;
     return p;
 }
 
@@ -536,6 +538,8 @@ float KeyboardApp::drawPanel() {
     static const char* const kDrags[] = {"Gliss", "Fixed"};
     static const char* const kHorizontal[] = {"Off", "Pitch Bend"};
     static const char* const kVertical[] = {"Off", "Controller", "Pressure", "Pitch Bend"};
+    static const char* const kScopes[] = {"Per note", "Channel"};
+    static const char* const kPressureScopes[] = {"Poly", "Channel"};
 
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     const float em = ImGui::GetFontSize();
@@ -600,13 +604,33 @@ float KeyboardApp::drawPanel() {
             if (p.vertical == VerticalControl::Controller &&
                 ImGui::InputInt("Controller", &p.verticalController))
                 p.verticalController = std::clamp(p.verticalController, 0, 127);
-            ImGui::BeginDisabled(o.midi1Expression);
-            ImGui::Checkbox("Per-note expression", &p.perNoteExpression);
-            ImGui::EndDisabled();
-            ImGui::SetItemTooltip("%s", o.midi1Expression
-                                            ? "Off while expression is sent as MIDI 1.0 (MIDI section): MIDI 1.0 has\n"
-                                              "no per-note bend, so the first finger down drives the channel"
-                                            : "Each finger bends and shapes only its own note (MIDI 2.0); off: the channel");
+            // Each message in use: per note or for the channel.
+            const bool bends = p.horizontal == HorizontalControl::PitchBend || p.vertical == VerticalControl::PitchBend;
+            const char* const midi1Only = "Channel only while expression is sent as MIDI 1.0 (MIDI section):\n"
+                                          "MIDI 1.0 has no per-note form, so the first finger down drives it";
+            if (bends) {
+                ExpressionScope shown = o.midi1Expression ? ExpressionScope::Channel : p.bendScope;
+                ImGui::BeginDisabled(o.midi1Expression);
+                if (enumCombo("Bend scope", shown, kScopes, ImGui::CalcItemWidth())) p.bendScope = shown;
+                ImGui::EndDisabled();
+                ImGui::SetItemTooltip("%s", o.midi1Expression ? midi1Only
+                                                              : "Per note: each finger bends only its own note (MIDI 2.0\n"
+                                                                "per-note pitch bend). Channel: the first finger bends all");
+            }
+            if (p.vertical == VerticalControl::Controller) {
+                ExpressionScope shown = o.midi1Expression ? ExpressionScope::Channel : p.controllerScope;
+                ImGui::BeginDisabled(o.midi1Expression);
+                if (enumCombo("Controller scope", shown, kScopes, ImGui::CalcItemWidth())) p.controllerScope = shown;
+                ImGui::EndDisabled();
+                ImGui::SetItemTooltip("%s", o.midi1Expression ? midi1Only
+                                                              : "Per note: a registered per-note controller (MIDI 2.0).\n"
+                                                                "Channel: a CC, from the first finger");
+            }
+            if (p.vertical == VerticalControl::Pressure) {
+                enumCombo("Pressure scope", p.pressureScope, kPressureScopes, ImGui::CalcItemWidth());
+                ImGui::SetItemTooltip("Poly: each finger's own note (polyphonic key pressure).\n"
+                                      "Channel: channel pressure, from the first finger");
+            }
         }
         ImGui::Checkbox("Strike velocity", &p.strikeVelocity);
         ImGui::SetItemTooltip("Louder toward the top of a key");

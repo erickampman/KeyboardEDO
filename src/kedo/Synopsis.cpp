@@ -4,12 +4,6 @@
 
 namespace kedo {
 
-namespace {
-
-const char* const kVertical[] = {"", "CC", "pressure", "bend"};
-
-} // namespace
-
 std::string synopsis(const Document& d, const LiveState& live) {
     std::vector<std::string> parts;
     const Tuning& t = d.tuning;
@@ -33,16 +27,20 @@ std::string synopsis(const Document& d, const LiveState& live) {
         parts.push_back(p.glide ? "Gliss with glide" : "Gliss");
     } else {
         std::string fixed = "Fixed";
+        // Each axis, and whether its message is per note or for the channel.
+        const bool noteBend = p.bendScope == ExpressionScope::Note;
         std::vector<std::string> axes;
-        if (p.horizontal == HorizontalControl::PitchBend) axes.push_back("H bend");
+        if (p.horizontal == HorizontalControl::PitchBend) axes.push_back(noteBend ? "H note bend" : "H bend");
+        if (p.vertical == VerticalControl::PitchBend) axes.push_back(noteBend ? "V note bend" : "V bend");
         if (p.vertical == VerticalControl::Controller)
-            axes.push_back("V CC " + std::to_string(p.verticalController));
-        else if (p.vertical != VerticalControl::Off)
-            axes.push_back(std::string("V ") + kVertical[int(p.vertical)]);
+            axes.push_back((p.controllerScope == ExpressionScope::Note ? "V note controller " : "V CC ") +
+                           std::to_string(p.verticalController));
+        if (p.vertical == VerticalControl::Pressure)
+            axes.push_back(p.pressureScope == ExpressionScope::Note ? "V poly pressure" : "V channel pressure");
         if (!axes.empty()) {
             fixed += " (";
             for (size_t i = 0; i < axes.size(); ++i) fixed += (i ? ", " : "") + axes[i];
-            fixed += p.perNoteExpression ? ", per note)" : ")";
+            fixed += ")";
         }
         parts.push_back(fixed);
     }

@@ -87,8 +87,7 @@ void Performer::pointerDown(int id, Point p, Modifiers) {
     Touch& t = touches_[id];
     t.start = p;
     if (const auto key = layout_->keyAt(p)) press(t, *key, p);
-    if (config_.drag == DragBehavior::Fixed && !config_.perNoteExpression && !expressionOwner_)
-        expressionOwner_ = id;
+    if (config_.drag == DragBehavior::Fixed && !expressionOwner_) expressionOwner_ = id;
 }
 
 void Performer::pointerMove(int id, Point p) {
@@ -140,46 +139,47 @@ void Performer::pointerCancel(int id) {
 
 // --- Expression -------------------------------------------------------------------
 
-void Performer::expression(int id, Touch& t, Point p) {
-    std::optional<int> target;
-    if (config_.perNoteExpression) {
-        if (!t.note) return;
-        target = t.note->id;
-    } else if (expressionOwner_ != id) {
-        return;
+// Where a message of `scope` from pointer `id` goes: its own note, or the
+// channel if it's the pointer driving the channel. False: nowhere.
+bool Performer::target(ExpressionScope scope, int id, const Touch& t, std::optional<int>& out) const {
+    if (scope == ExpressionScope::Note) {
+        if (!t.note) return false;
+        out = t.note->id;
+        return true;
     }
+    if (expressionOwner_ != id) return false;
+    out.reset();
+    return true;
+}
 
+void Performer::expression(int id, Touch& t, Point p) {
     const double d = config_.expressionDistance > 0 ? config_.expressionDistance : 150;
     const double right = (p.x - t.start.x) / d;
     const double up = -(p.y - t.start.y) / d;   // y is down
 
+    std::optional<int> to;
     const bool hBend = config_.horizontal == HorizontalControl::PitchBend;
     const bool vBend = config_.vertical == VerticalControl::PitchBend;
-    if (hBend || vBend)
-        sink_.pitchBend(target, std::clamp((hBend ? right : 0) + (vBend ? up : 0), -1.0, 1.0));
+    if ((hBend || vBend) && target(config_.bendScope, id, t, to))
+        sink_.pitchBend(to, std::clamp((hBend ? right : 0) + (vBend ? up : 0), -1.0, 1.0));
 
     const double v = std::clamp(up, 0.0, 1.0);
-    if (config_.vertical == VerticalControl::Controller)
-        sink_.controller(target, config_.verticalController, v);
-    else if (config_.vertical == VerticalControl::Pressure)
-        sink_.pressure(target, v);
+    if (config_.vertical == VerticalControl::Controller && target(config_.controllerScope, id, t, to))
+        sink_.controller(to, config_.verticalController, v);
+    else if (config_.vertical == VerticalControl::Pressure && target(config_.pressureScope, id, t, to))
+        sink_.pressure(to, v);
 }
 
 void Performer::resetExpression(int id, const Touch& t) {
     if (config_.drag != DragBehavior::Fixed) return;
-    std::optional<int> target;
-    if (config_.perNoteExpression) {
-        if (!t.note) return;
-        target = t.note->id;
-    } else if (expressionOwner_ != id) {
-        return;
-    }
-    if (config_.horizontal == HorizontalControl::PitchBend || config_.vertical == VerticalControl::PitchBend)
-        sink_.pitchBend(target, 0.0);
-    if (config_.vertical == VerticalControl::Controller)
-        sink_.controller(target, config_.verticalController, 0.0);
-    else if (config_.vertical == VerticalControl::Pressure)
-        sink_.pressure(target, 0.0);
+    std::optional<int> to;
+    if ((config_.horizontal == HorizontalControl::PitchBend || config_.vertical == VerticalControl::PitchBend) &&
+        target(config_.bendScope, id, t, to))
+        sink_.pitchBend(to, 0.0);
+    if (config_.vertical == VerticalControl::Controller && target(config_.controllerScope, id, t, to))
+        sink_.controller(to, config_.verticalController, 0.0);
+    else if (config_.vertical == VerticalControl::Pressure && target(config_.pressureScope, id, t, to))
+        sink_.pressure(to, 0.0);
 }
 
 // --- Computer keys ---------------------------------------------------------------
