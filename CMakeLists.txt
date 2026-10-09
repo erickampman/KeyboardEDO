@@ -44,6 +44,7 @@ add_library(kedo-core STATIC
     src/kedo/UmpText.cpp
     src/kedo/Document.cpp
     src/kedo/Preferences.cpp
+    src/kedo/Synopsis.cpp
 )
 add_library(kedo::core ALIAS kedo-core)
 target_include_directories(kedo-core PUBLIC src)
@@ -102,6 +103,7 @@ if(KEDO_APP)
         src/app/main.cpp
         src/app/KeyboardApp.cpp
         src/app/MidiTargets.cpp
+        src/app/Icons.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)

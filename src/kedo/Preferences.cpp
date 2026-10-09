@@ -12,14 +12,20 @@ Preferences loadPreferences(const std::string& path) {
     if (!in) return p;
     try {
         const auto j = nlohmann::json::parse(in);
-        if (j.contains("publish") && j["publish"].is_boolean()) p.publish = j["publish"].get<bool>();
+        auto flag = [&](const char* key, bool& value) {
+            if (j.contains(key) && j[key].is_boolean()) value = j[key].get<bool>();
+        };
+        flag("publish", p.publish);
+        flag("panelOpen", p.panelOpen);
+        flag("monitorOpen", p.monitorOpen);
     } catch (const nlohmann::json::exception&) {
     }
     return p;
 }
 
 bool savePreferences(const std::string& path, const Preferences& p) {
-    const nlohmann::json j = {{"publish", p.publish}};
+    const nlohmann::json j = {
+        {"publish", p.publish}, {"panelOpen", p.panelOpen}, {"monitorOpen", p.monitorOpen}};
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (out) out << j.dump(2) << "\n";
     return bool(out);

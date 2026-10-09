@@ -89,14 +89,16 @@ KeyEDO documents open and re-save. New `DocumentTests`.
 Still to check by hand: a real synth or DAW on each target; a device
 unplugged and plugged back in; the file dialogs.
 
-## 6. Configuration and toolbar (KeyboardEDO)
+## 6. Toolbar, settings panel and synopsis (KeyboardEDO): done 2026-10-09
 
-The settings bar shows only what the current layout uses (decisions.md,
-"The settings bar follows the layout").
-
-KeyEDO's Configure sheet (tuning, layout, generator, tile colour, MIDI, drag
-and expression, velocity), the one-line synopsis across the top, the
-protocol badge, and the Lock and Latch buttons.
+decisions.md, "The window". The three rows of settings became KeyEDO's
+arrangement, with the author's choices: a toolbar of icon buttons (drawn,
+not a font), a **side panel** for the settings that can stay open while
+playing, and a **toggleable** MIDI monitor; both remembered as preferences.
+KeyEDO's synopsis line under the toolbar (`Synopsis.*`, tested), the
+protocol badge centred, the routing menu on the antenna button. The panel
+shows only what the layout uses. Two-finger scrolling now follows the
+fingers. `keyboardedo --tap X,Y` presses and releases, for buttons.
 
 ## 7. Octave columns (KeyboardEDO)
 

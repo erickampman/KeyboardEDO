@@ -2,6 +2,7 @@
 
 #include "Check.h"
 #include "kedo/KeyStyle.h"
+#include "kedo/Synopsis.h"
 #include "kedo/UmpOutput.h"
 #include "kedo/UmpText.h"
 #include "kedo/Viewport.h"
@@ -106,11 +107,40 @@ void testUmpText() {
     CHECK(describeUmp(m[0]) == "1.0 g1  ch1  Note On      n45  v127");
 }
 
+void testSynopsis() {
+    const std::string dot = "  \u00B7  ";
+    Document d;   // 12-EDO piano
+    CHECK(synopsis(d, {}) == "12-EDO" + dot + "Piano" + dot + "Gliss");
+
+    d.tuning.edo = 17;
+    d.layout.kind = LayoutKind::Tiled;
+    d.play.strikeVelocity = true;
+    LiveState live;
+    live.latch = true;
+    live.destination = "IAC Bus 1";
+    live.publishing = true;
+    CHECK(synopsis(d, live) == "17-EDO" + dot + "A1" + dot + "Tiled: Wicki-Hayden" + dot + "Gliss" + dot +
+                                   "Strike Vel" + dot + "Latch" + dot + "to IAC Bus 1" + dot + "Published");
+
+    d.layout.kind = LayoutKind::Piano;
+    d.play = {};
+    d.play.drag = DragBehavior::Fixed;
+    d.play.horizontal = HorizontalControl::PitchBend;
+    d.play.vertical = VerticalControl::Controller;
+    d.play.verticalController = 74;
+    live = {};
+    live.destination = "Synth";
+    live.destinationFound = false;
+    CHECK(synopsis(d, live) == "17-EDO" + dot + "A1" + dot + "Diamond piano" + dot +
+                                   "Fixed (H bend, V CC 74, per note)" + dot + "to Synth (not found)");
+}
+
 } // namespace
 
 int main() {
     testViewport();
     testKeyLook();
     testUmpText();
+    testSynopsis();
     return kedo::test::finish("View");
 }

@@ -150,12 +150,12 @@ way, it's a plain note-on. A MIDI 1.0 destination gets the nearest 12-EDO
 note to the pitch. All Notes Off now reaches every group and channel a note
 used, as well as the output's.
 
-### The settings bar follows the layout
+### The settings follow the layout
 
 Some settings don't apply to every layout: a custom layout can mix EDOs, so
 the global EDO, Generator and Tile Color don't apply to it, though the
-origin does (it's degree 0). The bar should show only what the current
-layout uses (roadmap, milestones 6 and 8).
+origin does (it's degree 0). The settings panel shows only what the current
+layout uses (done in milestone 6; the custom layout's in milestone 8).
 
 ## Note numbers and pitch
 
@@ -196,6 +196,27 @@ note-on at the nearest note.
 The rest of KeyEDO's controller roadmap (endpoint and function blocks,
 Product Instance ID, stream configuration, timestamps, Property Exchange,
 Flex Data tempo, MPE fallback) needs the transport, so it's in the roadmap.
+
+## The window (decided 2026-10-09, roadmap milestone 6)
+
+- **Toolbar** across the top, as KeyEDO's: Open and Save on the left; the
+  protocol badge in the middle (what the destination gets, or MIDI 2.0 when
+  only publishing); on the right, routing (a popup: Send to, Publish),
+  Lock, Latch, All Notes Off, the monitor and the settings panel.
+- **Icon buttons**, drawn with ImGui's draw list (`src/app/Icons.*`) after
+  KeyEDO's SF Symbols, rather than an icon font: no new dependency, sharp at
+  any scale. Each has a tooltip.
+- **Synopsis** under the toolbar: KeyEDO's one line (`Synopsis.*`), with the
+  routing added.
+- **Settings in a side panel** on the right (the author's choice over a
+  modal sheet), so changes can be heard while it's open: Tuning, Layout,
+  Playing, MIDI, File, each section showing only what the current layout
+  uses ("The settings follow the layout", above).
+- **The MIDI monitor is toggleable**, under the keyboard. Whether the panel
+  and the monitor are open are preferences, remembered.
+- **Scrolling follows the fingers:** SDL's wheel values already carry the
+  system's direction ("natural" on the Mac), so the view moves by them, not
+  against them.
 
 ## Sending MIDI (decided 2026-10-09, roadmap milestone 5)
 

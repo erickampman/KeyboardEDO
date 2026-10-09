@@ -68,8 +68,11 @@ private:
     void updateTitle();
     void setPublish(bool on);
     int  tiledRowsFor(double height) const;
-    void drawSettings();
-    void drawMonitor();
+    void drawToolbar();
+    void drawRoutingMenu();
+    float drawPanel();                 // returns its width
+    float drawMonitor(float width);    // returns its height
+    void setPanes(bool panel, bool monitor);
     void drawKeyboard(ImDrawList* list);
 
     bool inKeyboard(Point p) const { return viewport_.screen.contains(p); }

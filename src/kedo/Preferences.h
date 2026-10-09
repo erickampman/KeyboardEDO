@@ -11,6 +11,11 @@ struct Preferences {
     // Offer the published "KeyboardEDO" source. Off until turned on once.
     bool publish = false;
 
+    // The window's panes: the settings panel (open at first, to find things)
+    // and the MIDI monitor.
+    bool panelOpen   = true;
+    bool monitorOpen = false;
+
     bool operator==(const Preferences&) const = default;
 };
 

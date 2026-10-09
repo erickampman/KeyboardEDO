@@ -72,7 +72,8 @@ To see the layouts without a UI:
 | `src/kedo/UmpOutput.*` | NoteSink calls to UMP, MIDI 2.0 or 1.0 |
 | `src/kedo/Viewport.*`, `KeyStyle.*`, `UmpText.*` | the view transform, key colours and labels, UMP as text |
 | `src/kedo/Document.*` | KeyEDO-compatible JSON documents |
-| `src/app/` | the app: SDL and ImGui (`KeyboardApp`), MIDI targets (`MidiTargets`) |
+| `src/kedo/Synopsis.*`, `Preferences.*` | the one-line synopsis; app preferences |
+| `src/app/` | the app: SDL and ImGui (`KeyboardApp`, `Icons`), MIDI targets (`MidiTargets`) |
 | `external/uw-core` | shared UMP code (submodule) |
 | `external/SDL`, `external/imgui` | SDL 3.4 and Dear ImGui 1.92 (submodules) |
 | `tools/LayoutSvg.cpp` | draws layouts to SVG |

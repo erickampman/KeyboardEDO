@@ -137,8 +137,10 @@ void testPreferences() {
     const std::string path = "kedo-test-prefs.json";   // in the test's working directory
     std::remove(path.c_str());
     CHECK(!loadPreferences(path).publish);   // none yet: defaults
-    CHECK(savePreferences(path, {.publish = true}));
-    CHECK(loadPreferences(path).publish);
+    CHECK(loadPreferences(path).panelOpen && !loadPreferences(path).monitorOpen);
+    CHECK(savePreferences(path, {.publish = true, .panelOpen = false, .monitorOpen = true}));
+    const Preferences back = loadPreferences(path);
+    CHECK(back.publish && !back.panelOpen && back.monitorOpen);
     std::remove(path.c_str());
 }
 

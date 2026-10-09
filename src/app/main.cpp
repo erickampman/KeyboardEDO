@@ -25,10 +25,11 @@ void usage() {
     std::fprintf(stderr,
                  "usage: keyboardedo [DOCUMENT.json] [--edo N] [--origin NOTE] [--octave N]\n"
                  "                   [--layout piano|tiled] [--destination NAME] [--publish]\n"
-                 "                   [--snapshot FILE.png [--click X,Y] [--wait SECONDS]]\n"
+                 "                   [--snapshot FILE.png [--click X,Y | --tap X,Y] [--wait SECONDS]]\n"
                  "  DOCUMENT     a KeyboardEDO or KeyEDO document; the options override it\n"
                  "  --snapshot   draw a few frames, save the window as PNG, and quit\n"
                  "  --click      with --snapshot: press the mouse at X,Y (window points) first\n"
+                 "  --tap        the same, and release it (for buttons)\n"
                  "  --wait       with --snapshot: wait this long first (e.g. for other apps to\n"
                  "               see a published source)\n");
 }
@@ -40,6 +41,7 @@ int main(int argc, char** argv) {
     kedo::Document& doc = start.document;
     std::string snapshot;
     float clickX = -1, clickY = -1;
+    bool tap = false;   // --tap: release the click too
     double wait = 0;   // seconds before the click and snapshot
     // The document first, so the options can override it.
     int first = 1;
@@ -69,6 +71,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(arg, "--destination")) doc.destination = value;
         else if (!std::strcmp(arg, "--snapshot")) snapshot = value;
         else if (!std::strcmp(arg, "--click") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) {}
+        else if (!std::strcmp(arg, "--tap") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) tap = true;
         else if (!std::strcmp(arg, "--wait")) wait = std::atof(value);
         else { usage(); return 2; }
     }
@@ -187,6 +190,17 @@ int main(int argc, char** argv) {
             press.button.x = clickX;
             press.button.y = clickY;
             SDL_PushEvent(&press);
+        }
+        if (!snapshot.empty() && tap && snapshotFrames == 4) {
+            SDL_Event release{};
+            release.type = SDL_EVENT_MOUSE_BUTTON_UP;
+            release.button.windowID = SDL_GetWindowID(window);
+            release.button.which = 1;
+            release.button.button = SDL_BUTTON_LEFT;
+            release.button.down = false;
+            release.button.x = clickX;
+            release.button.y = clickY;
+            SDL_PushEvent(&release);
         }
         SDL_RenderPresent(renderer);
     }
