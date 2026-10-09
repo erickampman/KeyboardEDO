@@ -5,7 +5,6 @@
 #include <cmath>
 
 #include "imgui.h"
-#include "kedo/UmpText.h"
 
 namespace kedo::app {
 
@@ -33,13 +32,26 @@ bool enumCombo(const char* label, E& value, const char* const (&names)[N], float
 } // namespace
 
 KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& start)
-    : window_(window), monoFont_(monoFont), output_(settings_.output), performer_(output_) {
-    settings_.tuning = start.tuning;
-    settings_.layout.kind = start.layout;
-    settings_.layout.pianoLowest = 36;   // C2, as KeyEDO's screenshot
+    : window_(window),
+      monoFont_(monoFont),
+      settings_(start.document),
+      applied_(start.document),
+      saved_(start.document),
+      path_(start.path),
+      targets_(start.document.output),
+      performer_(targets_.sink()) {
     rebuild(true);
-    applied_ = settings_;
-    output_.setup();
+    targets_.setConfig(settings_.output);
+    targets_.setDestination(settings_.destination);
+    targets_.setPublish(settings_.publish);
+    updateTitle();
+}
+
+KeyboardApp::~KeyboardApp() {
+    // Release what's held while the outputs still exist; their destructor
+    // then sends All Notes Off.
+    performer_.releaseAll();
+    flush();
 }
 
 // --- Building the keyboard --------------------------------------------------------
@@ -152,9 +164,19 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         break;
     }
 
-    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_DOWN: {
         if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) performer_.releaseAll();
+        // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as.
+        const bool command = (e.key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL)) != 0;
+        if (command && !e.key.repeat) {
+            if (e.key.key == SDLK_O) showDialog(Dialog::Open);
+            if (e.key.key == SDLK_S) {
+                if ((e.key.mod & SDL_KMOD_SHIFT) || path_.empty()) showDialog(Dialog::SaveAs);
+                else save(path_);
+            }
+        }
         break;
+    }
 
     case SDL_EVENT_WINDOW_FOCUS_LOST:
         // A release we'll never see would leave a note stuck.
@@ -176,14 +198,32 @@ void KeyboardApp::frame() {
     drawMonitor();
     viewport_.screen = {0, barHeight_, double(w), std::max(0.0, double(h) - barHeight_ - kMonitorHeight)};
 
-    // Apply what the settings bar changed.
-    const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
+    takeDialogResults();
+    applySettings();
+    targets_.poll();
+
+    viewport_.clampTo(layout_->bounds());
+    drawKeyboard(ImGui::GetBackgroundDrawList());
+    flush();
+    updateTitle();
+}
+
+void KeyboardApp::flush() { targets_.flush(monitor_, kMonitorLines); }
+
+// Apply what the settings bar (or a document) changed.
+void KeyboardApp::applySettings() {
+    // A new destination or publishing starts from silence: notes held now
+    // would never get their note-off there.
+    if (settings_.destination != applied_.destination || settings_.publish != applied_.publish) {
+        performer_.releaseAll();
+        targets_.setDestination(settings_.destination);
+        targets_.setPublish(settings_.publish);
+    }
     if (!(settings_.output == applied_.output)) {
         performer_.releaseAll();
-        output_.allNotesOff();
-        output_.setConfig(settings_.output);
-        output_.setup();
+        targets_.setConfig(settings_.output);
     }
+    const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
     if (!(settings_.play == applied_.play)) performer_.setConfig(settings_.play);
     if (keysChanged) {
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
@@ -194,17 +234,84 @@ void KeyboardApp::frame() {
         rebuild(false);   // the window or zoom changed how many rows fit
     }
     applied_ = settings_;
-
-    viewport_.clampTo(layout_->bounds());
-    drawKeyboard(ImGui::GetBackgroundDrawList());
-    drainOutput();
 }
 
-void KeyboardApp::drainOutput() {
-    for (const auto& m : output_.take()) {
-        monitor_.push_back(describeUmp(m));
-        if (monitor_.size() > kMonitorLines) monitor_.pop_front();
+// --- Documents ----------------------------------------------------------------------
+
+void KeyboardApp::open(const std::string& path) {
+    std::string error;
+    const auto document = loadDocument(path, &error);
+    if (!document) {
+        status_ = error;
+        return;
     }
+    status_.clear();
+    settings_ = *document;
+    saved_ = *document;
+    path_ = path;
+    applySettings();
+    rebuild(true);
+}
+
+bool KeyboardApp::save(const std::string& path) {
+    std::string error;
+    if (!saveDocument(path, settings_, &error)) {
+        status_ = error;
+        return false;
+    }
+    status_.clear();
+    saved_ = settings_;
+    path_ = path;
+    return true;
+}
+
+void KeyboardApp::showDialog(Dialog dialog) {
+    static const SDL_DialogFileFilter kFilters[] = {{"Keyboard documents (JSON)", "json"}};
+    struct Request {
+        KeyboardApp* app;
+        Dialog dialog;
+    };
+    // SDL calls back once, perhaps on another thread; the request lives until then.
+    auto* request = new Request{this, dialog};
+    const auto callback = [](void* user, const char* const* files, int) {
+        std::unique_ptr<Request> r(static_cast<Request*>(user));
+        if (!files || !files[0]) return;   // cancelled, or failed
+        std::lock_guard<std::mutex> g(r->app->dialogLock_);
+        r->app->dialogResults_.emplace_back(r->dialog, files[0]);
+    };
+    if (dialog == Dialog::Open)
+        SDL_ShowOpenFileDialog(callback, request, window_, kFilters, 1, nullptr, false);
+    else
+        SDL_ShowSaveFileDialog(callback, request, window_, kFilters, 1, path_.empty() ? nullptr : path_.c_str());
+}
+
+void KeyboardApp::takeDialogResults() {
+    std::vector<std::pair<Dialog, std::string>> results;
+    {
+        std::lock_guard<std::mutex> g(dialogLock_);
+        results.swap(dialogResults_);
+    }
+    for (auto& [dialog, path] : results) {
+        if (dialog == Dialog::Open) {
+            open(path);
+        } else {
+            if (path.size() < 5 || path.compare(path.size() - 5, 5, ".json") != 0) path += ".json";
+            save(path);
+        }
+    }
+}
+
+void KeyboardApp::updateTitle() {
+    std::string name = "Untitled";
+    if (!path_.empty()) {
+        const auto slash = path_.find_last_of("/\\");
+        name = slash == std::string::npos ? path_ : path_.substr(slash + 1);
+    }
+    // Tiled's row count follows the window, so it isn't an edit.
+    Document current = settings_;
+    current.layout.tiledRows = saved_.layout.tiledRows;
+    std::string title = name + (current == saved_ ? "" : " (edited)") + " - KeyboardEDO";
+    if (title != SDL_GetWindowTitle(window_)) SDL_SetWindowTitle(window_, title.c_str());
 }
 
 // --- Drawing --------------------------------------------------------------------------
@@ -264,7 +371,6 @@ void KeyboardApp::drawSettings() {
     static const char* const kDrags[] = {"Gliss", "Fixed"};
     static const char* const kHorizontal[] = {"Off", "Pitch Bend"};
     static const char* const kVertical[] = {"Off", "Controller", "Pressure", "Pitch Bend"};
-    static const char* const kProtocols[] = {"MIDI 1.0", "MIDI 2.0"};
 
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->Pos);
@@ -342,11 +448,53 @@ void KeyboardApp::drawSettings() {
     bool latch = performer_.latchMode();
     if (ImGui::Checkbox("Latch", &latch)) performer_.setLatchMode(latch);
 
-    // Output.
-    int protocol = o.protocol == uw::MidiProtocol::Midi2 ? 1 : 0;
-    ImGui::SetNextItemWidth(6 * em);
-    if (ImGui::Combo("Protocol", &protocol, kProtocols, 2))
-        o.protocol = protocol ? uw::MidiProtocol::Midi2 : uw::MidiProtocol::Midi1;
+    // Documents and output.
+    if (ImGui::Button("Open...")) showDialog(Dialog::Open);
+    ImGui::SameLine();
+    if (ImGui::Button("Save")) {
+        if (path_.empty()) showDialog(Dialog::SaveAs);
+        else save(path_);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Save As...")) showDialog(Dialog::SaveAs);
+    ImGui::SameLine();
+    ImGui::TextDisabled("|");
+    ImGui::SameLine();
+
+    if (targets_.available()) {
+        // The destination: KeyEDO's "Send to". One that's wanted but absent
+        // (unplugged, or named by a document) stays chosen, marked missing.
+        const auto& list = targets_.destinations();
+        std::string current = "None";
+        if (!settings_.destination.empty()) {
+            current = settings_.destination + " (not found)";
+            for (const auto& d : list)
+                if (d.id == settings_.destination || d.name == settings_.destination) current = d.name;
+        }
+        ImGui::SetNextItemWidth(14 * em);
+        if (ImGui::BeginCombo("Send to", current.c_str())) {
+            if (ImGui::Selectable("None", settings_.destination.empty())) settings_.destination.clear();
+            for (const auto& d : list) {
+                const std::string label =
+                    d.name + (d.protocol == uw::MidiProtocol::Midi2 ? "  (2.0)" : "  (1.0)") + "##" + d.id;
+                if (ImGui::Selectable(label.c_str(), d.id == settings_.destination)) settings_.destination = d.id;
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine();
+        ImGui::Checkbox("Publish", &settings_.publish);
+        ImGui::SetItemTooltip("Offer a \"%s\" MIDI 2.0 source that other apps can receive from",
+                              MidiTargets::kPublishedName);
+        ImGui::SameLine();
+        // KeyEDO's protocol badge: what the destination gets.
+        if (targets_.destinationOpen())
+            ImGui::TextColored({0.5f, 0.8f, 1.0f, 1.0f}, "%s",
+                               targets_.destinationProtocol() == uw::MidiProtocol::Midi2 ? "MIDI 2.0" : "MIDI 1.0");
+        else
+            ImGui::TextDisabled("no destination");
+    } else {
+        ImGui::TextDisabled("(no MIDI output on this platform yet: the monitor shows what would be sent)");
+    }
     ImGui::SameLine();
     int group = o.group + 1, channel = o.channel + 1;
     ImGui::SetNextItemWidth(5 * em);
@@ -359,10 +507,12 @@ void KeyboardApp::drawSettings() {
     ImGui::SameLine();
     if (ImGui::Button("All Notes Off")) {
         performer_.releaseAll();
-        output_.allNotesOff();
+        targets_.allNotesOff();
     }
-    ImGui::SameLine();
-    ImGui::TextDisabled("(no MIDI output yet: the monitor shows what would be sent)");
+    if (!status_.empty()) {
+        ImGui::SameLine();
+        ImGui::TextColored({1.0f, 0.45f, 0.4f, 1.0f}, "%s", status_.c_str());
+    }
 
     barHeight_ = ImGui::GetWindowHeight();
     ImGui::End();

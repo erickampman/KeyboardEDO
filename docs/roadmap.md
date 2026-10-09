@@ -69,13 +69,25 @@ number and pitch is sent as given (Pitch 7.9 only when they differ), on its
 own group and channel; MIDI 1.0 plays the nearest note to the pitch; the
 Performer passes Notes through untouched; glides go to the exact pitch.
 
-## 5. The app plays (KeyboardEDO)
+## 5. The app plays (KeyboardEDO): done on the Mac 2026-10-09
 
-Wire the Performer to `MidiOutput`: a destination menu, KeyEDO's "Publish"
-(our own endpoint, "KeyboardEDO", one output function block "Keyboard"),
-group and channel. All notes off when the destination or tuning changes.
-Load and save the configuration as JSON with KeyEDO's field names, so its
-documents open here.
+decisions.md, "Sending MIDI" and "Documents". "Send to" a destination and
+"Publish" a KeyboardEDO source through uw-core's `CoreMidiOutput`, each in
+its own protocol; group and channel; notes off when the targets or tuning
+change, and on quit. KeyEDO-compatible JSON documents, opened from the
+command line or with native dialogs. The UMP endpoint and function block
+are milestone 11.
+
+Checked on the Mac with `kedo-midi-listen` (a new tool that prints what a
+source sends, or acts as a destination of either protocol) and
+`keyboardedo --snapshot --click --wait`: a click reaches the published
+source as MIDI 2.0 with Pitch 7.9, a MIDI 2.0 destination the same, and a
+MIDI 1.0 destination as the nearest 12-EDO note with the bend range as CC
+101/100/6/38; quitting sends the note-off and CC 123. All 25 of the author's
+KeyEDO documents open and re-save. New `DocumentTests`.
+
+Still to check by hand: a real synth or DAW on each target; a device
+unplugged and plugged back in; the file dialogs.
 
 ## 6. Configuration and toolbar (KeyboardEDO)
 

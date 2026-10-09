@@ -19,8 +19,15 @@ option(KEDO_APP "Build the app (needs SDL3's platform dependencies)" ON)
 option(KEDO_SYSTEM_SDL "Use an installed SDL3 instead of external/SDL" OFF)
 
 # uw-core, a git submodule pinned to a commit. The core needs only its UMP
-# layer; the app will add uw::midi.
-set(UW_CORE_UMP_ONLY ON CACHE BOOL "" FORCE)
+# layer; the app adds uw::midi where it has a MIDI output (macOS so far; the
+# ALSA sequencer's is roadmap milestone 3b). Building uw::midi also builds
+# uw::base and the CLAP host, which need uw-core's own submodule
+# (git submodule update --init --recursive).
+if(APPLE AND KEDO_APP)
+    set(UW_CORE_UMP_ONLY OFF CACHE BOOL "" FORCE)
+else()
+    set(UW_CORE_UMP_ONLY ON CACHE BOOL "" FORCE)
+endif()
 add_subdirectory(external/uw-core)
 
 add_library(kedo-warnings INTERFACE)
@@ -35,10 +42,13 @@ add_library(kedo-core STATIC
     src/kedo/Viewport.cpp
     src/kedo/KeyStyle.cpp
     src/kedo/UmpText.cpp
+    src/kedo/Document.cpp
 )
 add_library(kedo::core ALIAS kedo-core)
 target_include_directories(kedo-core PUBLIC src)
 target_link_libraries(kedo-core PUBLIC uw::ump PRIVATE kedo-warnings)
+# nlohmann/json (a shallow submodule pinned to v3.12.0), for documents.
+target_include_directories(kedo-core SYSTEM PRIVATE external/json/single_include)
 
 # Draws every layout to SVG, to check the geometry by eye without a UI.
 add_executable(kedo-layout-svg tools/LayoutSvg.cpp)
@@ -46,9 +56,10 @@ target_link_libraries(kedo-layout-svg PRIVATE kedo::core kedo-warnings)
 
 if(KEDO_TESTS)
     enable_testing()
-    foreach(t TuningTests LayoutTests UmpOutputTests PerformerTests ViewTests)
+    foreach(t TuningTests LayoutTests UmpOutputTests PerformerTests ViewTests DocumentTests)
         add_executable(${t} tests/${t}.cpp)
         target_link_libraries(${t} PRIVATE kedo::core kedo-warnings)
+        target_include_directories(${t} SYSTEM PRIVATE external/json/single_include)
         add_test(NAME ${t} COMMAND ${t})
     endforeach()
 endif()
@@ -89,7 +100,14 @@ if(KEDO_APP)
     add_executable(keyboardedo
         src/app/main.cpp
         src/app/KeyboardApp.cpp
+        src/app/MidiTargets.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
+    if(TARGET uw::midi)
+        target_link_libraries(keyboardedo PRIVATE uw::midi)
+        # Prints what a source sends: checks that notes leave the app.
+        add_executable(kedo-midi-listen tools/MidiListen.cpp)
+        target_link_libraries(kedo-midi-listen PRIVATE kedo::core uw::midi kedo-warnings)
+    endif()
 endif()

@@ -197,6 +197,45 @@ The rest of KeyEDO's controller roadmap (endpoint and function blocks,
 Product Instance ID, stream configuration, timestamps, Property Exchange,
 Flex Data tempo, MPE fallback) needs the transport, so it's in the roadmap.
 
+## Sending MIDI (decided 2026-10-09, roadmap milestone 5)
+
+As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*`):
+- **Send to** one destination. Its own protocol decides what it gets: a MIDI
+  2.0 destination gets MIDI 2.0, a MIDI 1.0 one the fallback. The protocol
+  is no longer a setting; the bar shows it as KeyEDO's badge does.
+- **Publish** a "KeyboardEDO" source other apps receive from, always MIDI
+  2.0 (CoreMIDI converts for MIDI 1.0 receivers).
+- Each has its own `UmpOutput`, fed by one Performer through a tee; with
+  neither, a preview output keeps the monitor working.
+- A destination is remembered by id or name (KeyEDO documents name it):
+  if it's missing, it stays chosen, shown "(not found)", and opens when it
+  appears. One that disappears is reopened when it comes back.
+- Notes go out right after each batch of input events, before drawing.
+- Changing the destination, publishing, or the MIDI settings releases what's
+  held first; quitting sends note-offs and All Notes Off.
+- Known gap: the bend-range setup goes out when a target opens, so a
+  receiver that connects to the published source later misses it (as with
+  KeyEDO). Milestone 11's stream messages are the place to fix it.
+- Linux has no MIDI output until uw-core's ALSA one (milestone 3b); the bar
+  says so and the monitor still shows what would be sent.
+
+## Documents (decided 2026-10-09, roadmap milestone 5)
+
+- **KeyEDO's JSON, KeyEDO's field names** (`src/kedo/Document.*`, with
+  nlohmann/json as a shallow submodule pinned to v3.12.0). All 25 of the
+  author's KeyEDO documents open.
+- Missing fields keep defaults and bad ones are clamped, so any KeyEDO file
+  opens. Fields this version doesn't use (the arpeggiator's, hover
+  expression) are kept and written back unchanged.
+- Every key KeyEDO reads is written, with KeyEDO's defaults where we have no
+  value, so KeyEDO can open our files. Our own fields (`glide`,
+  `perNoteExpression`, `perNoteManagement`, `bendRange`, `perNoteBendRange`,
+  `publish`, `locked`, `pianoLowest`, `pianoHighest`) are extra keys, which
+  KeyEDO ignores.
+- Open, Save and Save As use SDL3's native file dialogs, also on Cmd/Ctrl-O,
+  S and Shift-S. The window title shows the file and "(edited)". There's no
+  "save changes?" on quit yet.
+
 ## Behaviour kept from KeyEDO
 
 Gliss and Fixed drag; latch with Shift, and the Latch toggle (turning it off
