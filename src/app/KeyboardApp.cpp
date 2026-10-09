@@ -551,14 +551,14 @@ float KeyboardApp::drawPanel() {
         ImGui::TextDisabled("Origin: %s%d, %.2f Hz", kNotes[t.originPitchClass], t.originOctave, t.originFrequency());
     }
 
+    // The combo inside has the same label: "##kind" gives it its own ID.
     if (ImGui::CollapsingHeader("Layout", ImGuiTreeNodeFlags_DefaultOpen)) {
-        enumCombo("Layout", l.kind, kLayouts, ImGui::CalcItemWidth());
-        if (l.kind == LayoutKind::Piano)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-                ImGui::TextWrapped("%s", t.edo == 12 ? "A standard piano." : "Diamonds: each piano key's steps, stacked.");
-                ImGui::PopStyleColor();
-            }
+        enumCombo("Layout##kind", l.kind, kLayouts, ImGui::CalcItemWidth());
+        if (l.kind == LayoutKind::Piano) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("%s", t.edo == 12 ? "A standard piano." : "Diamonds: each piano key's steps, stacked.");
+            ImGui::PopStyleColor();
+        }
         if (l.kind == LayoutKind::Tiled) {
             const auto presets = generatorPresets(t.edo);
             if (l.generatorIndex >= int(presets.size())) l.generatorIndex = 0;
