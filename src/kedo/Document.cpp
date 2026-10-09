@@ -111,7 +111,6 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
     read(j, "bendRange", d.output.bendRange);
     read(j, "perNoteBendRange", d.output.perNoteBendRange);
     read(j, "midiDestinationName", d.destination);
-    read(j, "publish", d.publish);
 
     // Everything else, kept as it was.
     static const std::set<std::string> known = {
@@ -119,7 +118,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
         "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
-        "perNoteBendRange", "midiDestinationName", "publish",
+        "perNoteBendRange", "midiDestinationName",
     };
     for (const auto& [key, value] : j.items())
         if (!known.count(key)) d.extras[key] = value.dump();
@@ -162,7 +161,6 @@ std::string writeDocument(const Document& d) {
     j["perNoteBendRange"] = d.output.perNoteBendRange;
     if (d.destination.empty()) j.erase("midiDestinationName");
     else j["midiDestinationName"] = d.destination;
-    j["publish"] = d.publish;
 
     return j.dump(2) + "\n";
 }

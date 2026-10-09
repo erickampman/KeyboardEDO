@@ -22,10 +22,9 @@ struct Document {
     OutputConfig output;          // group, channel, bend ranges, Per-Note Management
     bool         locked = false;
 
-    // Where it plays: a destination's id ("" for none), and whether it
-    // publishes its own source.
+    // Where it plays: a destination's id or name ("" for none). Publishing
+    // is an app preference, not the document's (Preferences.h).
     std::string destination;
-    bool        publish = false;
 
     // Fields this version doesn't use (KeyEDO's arpeggiator, hover
     // expression), as JSON text by key, written back unchanged on save.

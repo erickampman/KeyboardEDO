@@ -11,6 +11,7 @@
 
 #include "MidiTargets.h"
 #include "kedo/Document.h"
+#include "kedo/Preferences.h"
 #include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 #include "kedo/Performer.h"
@@ -31,6 +32,7 @@ public:
     struct Start {
         Document    document;
         std::string path;
+        bool        publish = false;   // --publish: on for this run, whatever the preference
     };
 
     // `monoFont`: the MIDI monitor's font.
@@ -64,6 +66,7 @@ private:
     void showDialog(Dialog dialog);
     void takeDialogResults();
     void updateTitle();
+    void setPublish(bool on);
     int  tiledRowsFor(double height) const;
     void drawSettings();
     void drawMonitor();
@@ -78,6 +81,8 @@ private:
     Document applied_;        // what the keyboard and outputs were last set from
     Document saved_;          // as last opened or saved, for the title's "edited"
     std::string path_;        // the document's file; empty until saved
+    Preferences prefs_;       // app-level, remembered (publishing)
+    std::string prefsPath_;   // in SDL's per-user preferences folder; empty if none
 
     std::unique_ptr<Layout> layout_;
     MidiTargets targets_;     // before performer_, which plays into it

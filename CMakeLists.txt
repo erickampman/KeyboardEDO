@@ -43,6 +43,7 @@ add_library(kedo-core STATIC
     src/kedo/KeyStyle.cpp
     src/kedo/UmpText.cpp
     src/kedo/Document.cpp
+    src/kedo/Preferences.cpp
 )
 add_library(kedo::core ALIAS kedo-core)
 target_include_directories(kedo-core PUBLIC src)

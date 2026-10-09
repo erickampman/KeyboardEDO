@@ -1,6 +1,7 @@
 // Documents: KeyEDO's files open, ours keep KeyEDO's keys, and what this
 // version doesn't use survives a save.
 
+#include <cstdio>
 #include <set>
 #include <string>
 
@@ -8,6 +9,7 @@
 
 #include "Check.h"
 #include "kedo/Document.h"
+#include "kedo/Preferences.h"
 
 using namespace kedo;
 
@@ -85,7 +87,6 @@ void testRoundTrip() {
     d.output.perNoteManagement = false;
     d.output.perNoteBendRange = 48;
     d.destination = "Synth:In";
-    d.publish = true;
     d.locked = true;
     d.extras["arpBpm"] = "96.0";
     const auto back = parseDocument(writeDocument(d));
@@ -132,6 +133,15 @@ void testBadInput() {
     CHECK(d->output.channel == 15);
 }
 
+void testPreferences() {
+    const std::string path = "kedo-test-prefs.json";   // in the test's working directory
+    std::remove(path.c_str());
+    CHECK(!loadPreferences(path).publish);   // none yet: defaults
+    CHECK(savePreferences(path, {.publish = true}));
+    CHECK(loadPreferences(path).publish);
+    std::remove(path.c_str());
+}
+
 } // namespace
 
 int main() {
@@ -140,5 +150,6 @@ int main() {
     testRoundTrip();
     testWritesKeyEdoKeys();
     testBadInput();
+    testPreferences();
     return kedo::test::finish("Document");
 }

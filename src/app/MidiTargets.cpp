@@ -81,7 +81,7 @@ bool MidiTargets::setPublish(bool on) {
         return true;
     }
     // Always MIDI 2.0: CoreMIDI converts for MIDI 1.0 receivers.
-    pubHandle_ = midi_->openVirtual(kPublishedName, uw::MidiProtocol::Midi2);
+    pubHandle_ = midi_->openVirtual(kPublishedName, uw::MidiProtocol::Midi2, kPublishedId);
     if (publishing()) pub_.setup();
     return publishing();
 }
@@ -92,11 +92,12 @@ void MidiTargets::setConfig(const OutputConfig& config) {
     dest_.setConfig(withProtocol(destinationOpen() ? midi_->protocol(destHandle_) : config.protocol));
     pub_.setConfig(withProtocol(uw::MidiProtocol::Midi2));
     preview_.setConfig(config);
-    for (UmpOutput* o : {&dest_, &pub_, &preview_}) o->setup();
+    // Only targets in use get messages; one opened later gets its setup then.
+    tee_.each([](UmpOutput& o) { o.setup(); });
 }
 
 void MidiTargets::allNotesOff() {
-    for (UmpOutput* o : {&dest_, &pub_, &preview_}) o->allNotesOff();
+    tee_.each([](UmpOutput& o) { o.allNotesOff(); });
 }
 
 void MidiTargets::flush(std::deque<std::string>& monitor, std::size_t monitorLines) {

@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     for (int i = first; i < argc; ++i) {
         const char* arg = argv[i];
         if (!std::strcmp(arg, "--publish")) {
-            doc.publish = true;
+            start.publish = true;
             continue;
         }
         const char* value = i + 1 < argc ? argv[++i] : nullptr;

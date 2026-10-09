@@ -40,11 +40,23 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
       path_(start.path),
       targets_(start.document.output),
       performer_(targets_.sink()) {
+    if (char* folder = SDL_GetPrefPath("unlikelyware", "KeyboardEDO")) {
+        prefsPath_ = std::string(folder) + "preferences.json";
+        SDL_free(folder);
+        prefs_ = loadPreferences(prefsPath_);
+    }
     rebuild(true);
     targets_.setConfig(settings_.output);
     targets_.setDestination(settings_.destination);
-    targets_.setPublish(settings_.publish);
+    targets_.setPublish(prefs_.publish || start.publish);
     updateTitle();
+}
+
+void KeyboardApp::setPublish(bool on) {
+    performer_.releaseAll();
+    targets_.setPublish(on);
+    prefs_.publish = on;
+    if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
 }
 
 KeyboardApp::~KeyboardApp() {
@@ -214,10 +226,9 @@ void KeyboardApp::flush() { targets_.flush(monitor_, kMonitorLines); }
 void KeyboardApp::applySettings() {
     // A new destination or publishing starts from silence: notes held now
     // would never get their note-off there.
-    if (settings_.destination != applied_.destination || settings_.publish != applied_.publish) {
+    if (settings_.destination != applied_.destination) {
         performer_.releaseAll();
         targets_.setDestination(settings_.destination);
-        targets_.setPublish(settings_.publish);
     }
     if (!(settings_.output == applied_.output)) {
         performer_.releaseAll();
@@ -462,7 +473,7 @@ void KeyboardApp::drawSettings() {
     ImGui::SameLine();
 
     if (targets_.available()) {
-        // The destination: KeyEDO's "Send to". One that's wanted but absent
+        // Send to: KeyEDO's routing menu. A destination that's wanted but absent
         // (unplugged, or named by a document) stays chosen, marked missing.
         const auto& list = targets_.destinations();
         std::string current = "None";
@@ -471,8 +482,11 @@ void KeyboardApp::drawSettings() {
             for (const auto& d : list)
                 if (d.id == settings_.destination || d.name == settings_.destination) current = d.name;
         }
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Send to");
+        ImGui::SameLine();
         ImGui::SetNextItemWidth(14 * em);
-        if (ImGui::BeginCombo("Send to", current.c_str())) {
+        if (ImGui::BeginCombo("##destination", current.c_str())) {
             if (ImGui::Selectable("None", settings_.destination.empty())) settings_.destination.clear();
             for (const auto& d : list) {
                 const std::string label =
@@ -481,17 +495,30 @@ void KeyboardApp::drawSettings() {
             }
             ImGui::EndCombo();
         }
-        ImGui::SameLine();
-        ImGui::Checkbox("Publish", &settings_.publish);
-        ImGui::SetItemTooltip("Offer a \"%s\" MIDI 2.0 source that other apps can receive from",
-                              MidiTargets::kPublishedName);
-        ImGui::SameLine();
         // KeyEDO's protocol badge: what the destination gets.
-        if (targets_.destinationOpen())
+        if (targets_.destinationOpen()) {
+            ImGui::SameLine();
             ImGui::TextColored({0.5f, 0.8f, 1.0f, 1.0f}, "%s",
                                targets_.destinationProtocol() == uw::MidiProtocol::Midi2 ? "MIDI 2.0" : "MIDI 1.0");
-        else
-            ImGui::TextDisabled("no destination");
+        }
+
+        ImGui::SameLine();
+        ImGui::TextDisabled("|");
+        ImGui::SameLine();
+        // Publish: our own source, for apps that open sources (DAWs such as
+        // REAPER, which list it as a MIDI input). Remembered across launches.
+        bool publish = targets_.publishing();
+        if (ImGui::Checkbox("Publish as \"KeyboardEDO\"", &publish)) setPublish(publish);
+        ImGui::SetItemTooltip(
+            "Offers a MIDI source named \"%s\" that other apps can receive from: in\n"
+            "REAPER, it's a MIDI input device. It keeps the same identity from one\n"
+            "launch to the next, and this setting is remembered. An app that was\n"
+            "already running when it appeared may need to rescan its MIDI devices\n"
+            "(REAPER: Preferences > MIDI Inputs > Reset all MIDI devices).",
+            MidiTargets::kPublishedName);
+        ImGui::SameLine();
+        if (targets_.publishing()) ImGui::TextColored({0.45f, 0.85f, 0.45f, 1.0f}, "on");
+        else ImGui::TextDisabled("off");
     } else {
         ImGui::TextDisabled("(no MIDI output on this platform yet: the monitor shows what would be sent)");
     }

@@ -21,8 +21,11 @@ namespace kedo::app {
 
 class MidiTargets {
 public:
-    // The name other apps see our published source by.
+    // The name other apps see our published source by, and its CoreMIDI
+    // unique ID ("KBED"), fixed so hosts remember it from one launch to the
+    // next, as KeyEDO's "KEDO". Different from KeyEDO's, so both can run.
     static constexpr const char* kPublishedName = "KeyboardEDO";
+    static constexpr std::int32_t kPublishedId = 0x4B424544;
 
     explicit MidiTargets(const OutputConfig& config);
     ~MidiTargets();

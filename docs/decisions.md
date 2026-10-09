@@ -204,7 +204,16 @@ As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*
   2.0 destination gets MIDI 2.0, a MIDI 1.0 one the fallback. The protocol
   is no longer a setting; the bar shows it as KeyEDO's badge does.
 - **Publish** a "KeyboardEDO" source other apps receive from, always MIDI
-  2.0 (CoreMIDI converts for MIDI 1.0 receivers).
+  2.0 (CoreMIDI converts for MIDI 1.0 receivers such as REAPER). As KeyEDO
+  (decided 2026-10-09, after it worked only sometimes with REAPER):
+  - it has a fixed CoreMIDI unique ID, "KBED" (KeyEDO's is "KEDO"), through
+    uw-core's `openVirtual(name, protocol, persistentId)`, so a host sees the
+    same device on every launch instead of a new one;
+  - whether to publish is an **app preference**, remembered across launches
+    in SDL's per-user preferences folder (`Preferences.h`), not part of the
+    document; so once on, the source is there whenever the app runs;
+  - an app already running when the source appears may still need to rescan
+    (REAPER: Reset all MIDI devices); the Publish tooltip says so.
 - Each has its own `UmpOutput`, fed by one Performer through a tee; with
   neither, a preview output keeps the monitor working.
 - A destination is remembered by id or name (KeyEDO documents name it):
@@ -230,8 +239,8 @@ As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*
 - Every key KeyEDO reads is written, with KeyEDO's defaults where we have no
   value, so KeyEDO can open our files. Our own fields (`glide`,
   `perNoteExpression`, `perNoteManagement`, `bendRange`, `perNoteBendRange`,
-  `publish`, `locked`, `pianoLowest`, `pianoHighest`) are extra keys, which
-  KeyEDO ignores.
+  `locked`, `pianoLowest`, `pianoHighest`) are extra keys, which KeyEDO
+  ignores.
 - Open, Save and Save As use SDL3's native file dialogs, also on Cmd/Ctrl-O,
   S and Shift-S. The window title shows the file and "(edited)". There's no
   "save changes?" on quit yet.
