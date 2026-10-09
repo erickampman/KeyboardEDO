@@ -58,13 +58,16 @@ Declaring a UMP endpoint and function blocks moved to milestone 11, with the
 rest of identity and discovery: on the Mac it needs CoreMIDI's Objective-C
 `MIDIUMPMutableEndpoint`.
 
-## 4. Keys carry the note they play (KeyboardEDO)
+## 4. Keys carry the note they play (KeyboardEDO): done 2026-10-09
 
-decisions.md, "Keys carry the note they play". A `Note` (identity, note
-number, group and channel, pitch) on every `Key`; the Performer, `NoteSink`
-and `UmpOutput` work from it. The three layouts fill it from their step, and
-behave exactly as before: the existing tests pass with only the types changed,
-plus tests that a key with any note number and pitch plays as given.
+decisions.md, "Keys carry the note they play". A `Note` (id, note number,
+group and channel, pitch) on every `Key`; the Performer, `NoteSink` and
+`UmpOutput` work from it, and `UmpOutput` no longer takes a `Tuning`. The
+three layouts behave as before: the existing tests pass with only the types
+changed. New tests: each layout's keys carry their tuning's note; any note
+number and pitch is sent as given (Pitch 7.9 only when they differ), on its
+own group and channel; MIDI 1.0 plays the nearest note to the pitch; the
+Performer passes Notes through untouched; glides go to the exact pitch.
 
 ## 5. The app plays (KeyboardEDO)
 
@@ -75,6 +78,9 @@ Load and save the configuration as JSON with KeyEDO's field names, so its
 documents open here.
 
 ## 6. Configuration and toolbar (KeyboardEDO)
+
+The settings bar shows only what the current layout uses (decisions.md,
+"The settings bar follows the layout").
 
 KeyEDO's Configure sheet (tuning, layout, generator, tile colour, MIDI, drag
 and expression, velocity), the one-line synopsis across the top, the

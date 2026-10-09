@@ -41,6 +41,7 @@ To see the layouts without a UI:
 
 | Path | What |
 |---|---|
+| `src/kedo/Note.h` | what a key plays: id, note number, group and channel, pitch |
 | `src/kedo/Tuning.*` | EDO, origin, frequencies, note numbers, Pitch 7.9 / 7.25 |
 | `src/kedo/Generators.*` | Tiled generator presets |
 | `src/kedo/Layout.*` | `PianoLayout`, `DiamondLayout`, `TiledLayout`: geometry and hit-testing |

@@ -89,10 +89,10 @@ void testUmpText() {
     t.edo = 17;
     OutputConfig c;
     c.perNoteManagement = true;
-    UmpOutput out(t, c);
-    out.noteOn(17, 0xFFFF);
+    UmpOutput out(c);
+    out.noteOn(t.note(17), 0xFFFF);
     out.pitchBend(17, 0.5);
-    out.glide(17, 18);
+    out.glide(17, t.semitones(18));
     auto m = out.take();
     CHECK(describeUmp(m[0]).find("Note Mgmt") != std::string::npos);
     CHECK(describeUmp(m[1]) == "2.0 g1  ch1  Note On      n17  v100.0%  pitch 45.000");
@@ -100,8 +100,8 @@ void testUmpText() {
     CHECK(describeUmp(m[3]).find("Note Pitch") != std::string::npos);
 
     c.protocol = uw::MidiProtocol::Midi1;
-    UmpOutput out1(t, c);
-    out1.noteOn(17, 0xFFFF);
+    UmpOutput out1(c);
+    out1.noteOn(t.note(17), 0xFFFF);
     m = out1.take();
     CHECK(describeUmp(m[0]) == "1.0 g1  ch1  Note On      n45  v127");
 }

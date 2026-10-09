@@ -74,36 +74,37 @@ public:
     void pointerUp(int id, Modifiers mods = {});
     void pointerCancel(int id);        // released without latching
 
-    // Computer keys, already mapped to a step (QwertyMap). `key` identifies
-    // the physical key.
-    void keyDown(int key, int step, Modifiers mods = {});
+    // Computer keys, already mapped to a note (the QWERTY mapping, which only
+    // passes playable ones). `key` identifies the physical key.
+    void keyDown(int key, const Note& note, Modifiers mods = {});
     void keyUp(int key, Modifiers mods = {});
 
     void releaseAllLatched();
     void releaseAll();
 
-    // For drawing: whether `step` is sounding (under a pointer or key, or
-    // latched), and whether it's latched.
-    bool isSounding(int step) const;
-    bool isLatched(int step) const;
+    // For drawing, by Note::id: whether a note is sounding (under a pointer or
+    // key, or latched), and whether it's latched. After a glide, the note
+    // glided to shows as sounding, not the one struck.
+    bool isSounding(int id) const;
+    bool isLatched(int id) const;
 
 private:
     struct Touch {
         Point start;
-        std::optional<int> note;   // the step it struck; none after unlatching a key
-        int  step  = 0;            // the step it sounds now (differs after a glide)
+        std::optional<Note> note;  // what it struck; none after unlatching a key
+        int  shows = 0;            // the Note::id it sounds now (differs after a glide)
         long keyId = -1;           // the key it is over, for Gliss
     };
 
     void press(Touch& t, const Key& key, Point p);
-    void strike(Touch& t, int step, std::uint16_t velocity);
+    void strike(Touch& t, const Note& note, std::uint16_t velocity);
     void finish(Touch& t, bool latch);
     void expression(int id, Touch& t, Point p);
     void resetExpression(int id, const Touch& t);
     std::uint16_t velocityFor(const Key& key, Point p) const;
 
-    void acquire(int note, std::uint16_t velocity);
-    void release(int note);
+    void acquire(const Note& note, std::uint16_t velocity);
+    void release(int id);
 
     NoteSink& sink_;
     const Layout* layout_ = nullptr;
@@ -112,8 +113,8 @@ private:
 
     std::map<int, Touch> touches_;       // by pointer id
     std::map<int, Touch> keys_;          // by computer key
-    std::map<int, int> latched_;         // note -> the step it sounds
-    std::map<int, int> holds_;           // note -> touches, keys and latches holding it
+    std::map<int, int> latched_;         // Note::id -> the id it sounds as
+    std::map<int, int> holds_;           // Note::id -> touches, keys and latches holding it
     std::optional<int> expressionOwner_; // channel-wide expression: the pointer driving it
 };
 

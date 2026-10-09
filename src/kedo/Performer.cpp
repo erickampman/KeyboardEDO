@@ -25,16 +25,16 @@ void Performer::setLatchMode(bool on) {
 // Tiled repeats steps, so two fingers can hold the same note. It sounds once,
 // from the first hold, and stops when the last hold goes.
 
-void Performer::acquire(int note, std::uint16_t velocity) {
-    if (holds_[note]++ == 0) sink_.noteOn(note, velocity);
+void Performer::acquire(const Note& note, std::uint16_t velocity) {
+    if (holds_[note.id]++ == 0) sink_.noteOn(note, velocity);
 }
 
-void Performer::release(int note) {
-    const auto it = holds_.find(note);
+void Performer::release(int id) {
+    const auto it = holds_.find(id);
     if (it == holds_.end()) return;
     if (--it->second == 0) {
         holds_.erase(it);
-        sink_.noteOff(note);
+        sink_.noteOff(id);
     }
 }
 
@@ -50,31 +50,31 @@ std::uint16_t Performer::velocityFor(const Key& key, Point p) const {
     return std::uint16_t(std::lround(0xFFFF + t * (minimum - 0xFFFF)));
 }
 
-void Performer::strike(Touch& t, int step, std::uint16_t velocity) {
-    if (const auto it = latched_.find(step); it != latched_.end()) {
+void Performer::strike(Touch& t, const Note& note, std::uint16_t velocity) {
+    if (const auto it = latched_.find(note.id); it != latched_.end()) {
         // Striking a latched note releases it; the pointer then plays nothing.
         latched_.erase(it);
-        release(step);
+        release(note.id);
         t.note.reset();
         return;
     }
-    acquire(step, velocity);
-    t.note = step;
-    t.step = step;
+    acquire(note, velocity);
+    t.note = note;
+    t.shows = note.id;
 }
 
 void Performer::press(Touch& t, const Key& key, Point p) {
     t.keyId = key.id();
-    if (key.playable) strike(t, key.step, velocityFor(key, p));
+    if (key.playable) strike(t, key.note, velocityFor(key, p));
 }
 
 void Performer::finish(Touch& t, bool latch) {
     if (!t.note) return;
-    const int note = *t.note;
-    if (latch && !latched_.count(note)) {
-        latched_[note] = t.step;   // the latch takes over this hold
+    const int id = t.note->id;
+    if (latch && !latched_.count(id)) {
+        latched_[id] = t.shows;   // the latch takes over this hold
     } else {
-        release(note);
+        release(id);
     }
     t.note.reset();
 }
@@ -107,17 +107,17 @@ void Performer::pointerMove(int id, Point p) {
     if (!key || !key->playable || key->id() == t.keyId) return;
     t.keyId = key->id();
 
-    const bool canGlide = config_.glide && t.note && holds_[*t.note] == 1 && !latched_.count(key->step);
+    const bool canGlide = config_.glide && t.note && holds_[t.note->id] == 1 && !latched_.count(key->note.id);
     if (canGlide) {
-        sink_.glide(*t.note, key->step);
-        t.step = key->step;
+        sink_.glide(t.note->id, key->note.pitch);
+        t.shows = key->note.id;
         return;
     }
     if (t.note) {
-        release(*t.note);
+        release(t.note->id);
         t.note.reset();
     }
-    strike(t, key->step, velocityFor(*key, p));
+    strike(t, key->note, velocityFor(*key, p));
 }
 
 void Performer::pointerUp(int id, Modifiers mods) {
@@ -144,7 +144,7 @@ void Performer::expression(int id, Touch& t, Point p) {
     std::optional<int> target;
     if (config_.perNoteExpression) {
         if (!t.note) return;
-        target = t.note;
+        target = t.note->id;
     } else if (expressionOwner_ != id) {
         return;
     }
@@ -170,7 +170,7 @@ void Performer::resetExpression(int id, const Touch& t) {
     std::optional<int> target;
     if (config_.perNoteExpression) {
         if (!t.note) return;
-        target = t.note;
+        target = t.note->id;
     } else if (expressionOwner_ != id) {
         return;
     }
@@ -184,13 +184,11 @@ void Performer::resetExpression(int id, const Touch& t) {
 
 // --- Computer keys ---------------------------------------------------------------
 
-void Performer::keyDown(int key, int step, Modifiers) {
+void Performer::keyDown(int key, const Note& note, Modifiers) {
     if (keys_.count(key)) return;   // auto-repeat
     Touch& t = keys_[key];
-    const auto k = layout_ ? layout_->keyForStep(step) : std::nullopt;
-    if (!k || !k->playable) return;
     // Computer keys have no strike position: KeyEDO's QWERTY velocity.
-    strike(t, step, config_.strikeVelocity ? 0x7F00 : config_.velocity);
+    strike(t, note, config_.strikeVelocity ? 0x7F00 : config_.velocity);
 }
 
 void Performer::keyUp(int key, Modifiers mods) {
@@ -204,9 +202,9 @@ void Performer::keyUp(int key, Modifiers mods) {
 
 void Performer::releaseAllLatched() {
     while (!latched_.empty()) {
-        const int note = latched_.begin()->first;
+        const int id = latched_.begin()->first;
         latched_.erase(latched_.begin());
-        release(note);
+        release(id);
     }
 }
 
@@ -219,16 +217,16 @@ void Performer::releaseAll() {
 
 // --- Drawing state -----------------------------------------------------------------
 
-bool Performer::isSounding(int step) const {
+bool Performer::isSounding(int id) const {
     for (const auto* m : {&touches_, &keys_})
-        for (const auto& [id, t] : *m)
-            if (t.note && t.step == step) return true;
-    return isLatched(step);
+        for (const auto& [pointer, t] : *m)
+            if (t.note && t.shows == id) return true;
+    return isLatched(id);
 }
 
-bool Performer::isLatched(int step) const {
-    for (const auto& [note, sounding] : latched_)
-        if (sounding == step) return true;
+bool Performer::isLatched(int id) const {
+    for (const auto& [held, shows] : latched_)
+        if (shows == id) return true;
     return false;
 }
 

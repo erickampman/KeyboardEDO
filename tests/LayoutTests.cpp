@@ -29,11 +29,20 @@ void checkConsistent(const Layout& layout) {
     }
 }
 
+// Every key carries its tuning's note for its step.
+void checkNotes(const Layout& layout, const Tuning& t) {
+    for (const auto& k : layout.keysIn(layout.bounds())) CHECK(k.note == t.note(k.step));
+}
+
 void testPiano() {
     Tuning t;   // 12-EDO from A1
     PianoLayout piano(t, 24, 108);   // C1..C8
     CHECK(near(piano.bounds().w, 50 * PianoLayout::kWhiteWidth));
     checkConsistent(piano);
+    checkNotes(piano, t);
+    // At 12-EDO the note is plain: its number is its pitch.
+    const auto a4 = piano.keyForStep(36);
+    CHECK(a4 && a4->note.number == 69 && !a4->note.needsPitchAttribute());
 
     // C1 is the first white key, two octaves and a third below A1... 9 steps.
     const auto c1 = piano.keyAt({PianoLayout::kWhiteWidth / 2, PianoLayout::kWhiteHeight - 1});
@@ -65,6 +74,8 @@ void testDiamondSeventeen() {
     t.edo = 17;   // from A1, as KeyEDO's screenshot
     DiamondLayout d(t);
     checkConsistent(d);
+    checkNotes(d, t);
+    CHECK(d.keyForStep(1)->note.needsPitchAttribute());
 
     // Steps 0 and 1 are in A's column (a 17-EDO step is 70.6 cents), stacked.
     const auto s0 = d.keyForStep(0), s1 = d.keyForStep(1), s2 = d.keyForStep(2);
@@ -118,6 +129,9 @@ void testTiledIsomorphic() {
     const Generator wh{"Wicki-Hayden", 3, 10};
     TiledLayout tiled(t, wh, 8);
     checkConsistent(tiled);
+    checkNotes(tiled, t);
+    // Two tiles on one step carry one note.
+    CHECK(tiled.keyAtLattice(10, 0).note == tiled.keyAtLattice(0, 3).note);
 
     // The same interval in the same direction from every tile, whatever its row.
     for (int row = 0; row < 7; ++row) {

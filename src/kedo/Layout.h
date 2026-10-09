@@ -41,7 +41,8 @@ enum class KeyShape { Rectangle, Diamond };
 enum class KeyShade { White, Black };
 
 struct Key {
-    int      step     = 0;        // the step it plays (Tuning)
+    Note     note;                // what it plays
+    int      step     = 0;        // the Tuning step it's on, for labels and colours
     bool     playable = false;    // false: drawn, but silent (outside Tuning's range)
     KeyShape shape    = KeyShape::Rectangle;
     KeyShade shade    = KeyShade::White;

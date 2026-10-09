@@ -69,8 +69,17 @@ std::uint8_t Tuning::nearestMidi1Note(int step) const {
     return std::uint8_t(std::clamp(int(std::lround(semitones(step))), 0, 127));
 }
 
-StepLabel Tuning::label(int step) const {
-    const double st = semitones(step);
+Note Tuning::note(int step) const {
+    Note n;
+    n.id = step;
+    n.number = noteNumber(step);
+    n.pitch = semitones(step);
+    return n;
+}
+
+StepLabel Tuning::label(int step) const { return labelOfPitch(semitones(step)); }
+
+StepLabel labelOfPitch(double st) {
     const int nearest = int(std::lround(st));
     StepLabel l;
     l.pitchClass = ((nearest % 12) + 12) % 12;

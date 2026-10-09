@@ -48,6 +48,7 @@ PianoLayout::PianoLayout(const Tuning& tuning, int lowest, int highest) {
         const int pc = note % 12;
         Key k;
         k.step = note - tuning.originMidiNote();
+        k.note = tuning.note(k.step);
         k.playable = tuning.isPlayable(k.step);
         k.shape = KeyShape::Rectangle;
         if (!isBlackPitchClass(pc)) {
@@ -124,6 +125,7 @@ DiamondLayout::DiamondLayout(const Tuning& tuning) {
         for (int i = 0; i < int(it->second.size()); ++i) {
             Key k;
             k.step = it->second[i];
+            k.note = tuning.note(k.step);
             k.playable = true;
             k.shape = KeyShape::Diamond;
             k.shade = black ? KeyShade::Black : KeyShade::White;
@@ -185,6 +187,7 @@ Key TiledLayout::keyAtLattice(int col, int row) const {
     const double h = kKeySize * kSqrt2 / 2;
     Key k;
     k.step = col * generator_.right + row * generator_.upRight;
+    k.note = tuning_.note(k.step);
     k.playable = tuning_.isPlayable(k.step);
     k.shape = KeyShape::Diamond;
     k.shade = KeyShade::White;

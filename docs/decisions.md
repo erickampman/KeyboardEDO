@@ -131,16 +131,31 @@ Keys the player places and edits:
   it would, so a DAW or synth listening there hears the change and can use
   it. With no output, nothing is sent.
 
-### Keys carry the note they play
+### Keys carry the note they play (done 2026-10-09, roadmap milestone 4)
 
 Both, and the custom layout above all, need keys that aren't steps of one
-Tuning. So a `Key` will carry a `Note`: a stable identity, the note number,
-group and channel, and the pitch (12-EDO semitones above MIDI note 0, for
-Pitch 7.9 and 7.25). Tuning-based layouts fill it in from their step, as
-now; the custom layout stores what the player set. The Performer holds
-notes by identity, and `NoteSink` and `UmpOutput` take a `Note` instead of
-working the number and pitch out from a step. To do before the app sends
-real MIDI (roadmap, milestone 4), while little depends on steps.
+Tuning. So every `Key` carries a `Note` (`src/kedo/Note.h`):
+- `id`: names the note while it sounds. The Performer holds notes by it, and
+  NoteSink calls after `noteOn` refer to it. Keys that play the same note
+  share it (Tiled's repeated steps); tuning-based layouts use the step.
+- `number`, and `group` and `channel` (unset: the output's).
+- `pitch`: 12-EDO semitones above MIDI note 0, for Pitch 7.9 and 7.25.
+
+Tuning-based layouts fill it in with `Tuning::note(step)`; the custom layout
+will store what the player set. `Key::step` stays, for labels and colours.
+`UmpOutput` no longer knows the tuning: everything it sends comes from the
+Note. The 12-EDO rule became general: **a note-on carries Pitch 7.9 unless
+its pitch equals its number**, so at 12-EDO, and for any custom key set that
+way, it's a plain note-on. A MIDI 1.0 destination gets the nearest 12-EDO
+note to the pitch. All Notes Off now reaches every group and channel a note
+used, as well as the output's.
+
+### The settings bar follows the layout
+
+Some settings don't apply to every layout: a custom layout can mix EDOs, so
+the global EDO, Generator and Tile Color don't apply to it, though the
+origin does (it's degree 0). The bar should show only what the current
+layout uses (roadmap, milestones 6 and 8).
 
 ## Note numbers and pitch
 

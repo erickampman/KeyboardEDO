@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Check.h"
+#include "kedo/Tuning.h"
 #include "kedo/UmpOutput.h"
 #include "uw/ump/Ump.h"
 
@@ -17,6 +18,8 @@ Tuning seventeen() {
     return t;
 }
 
+const Tuning T = seventeen();   // most tests play 17-EDO from A1
+
 OutputConfig config(uw::MidiProtocol p, bool pnm = false) {
     OutputConfig c;
     c.group = 2;
@@ -27,8 +30,8 @@ OutputConfig config(uw::MidiProtocol p, bool pnm = false) {
 }
 
 void testNoteOnMidi2() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2));
-    out.noteOn(17, 0x8000);   // A2
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(T.note(17), 0x8000);   // A2
     const auto m = out.take();
     CHECK(m.size() == 1);
     CHECK(ump::messageType(m[0]) == ump::MessageType::Midi2ChannelVoice);
@@ -43,8 +46,8 @@ void testNoteOnMidi2() {
 }
 
 void testNoteOnTwelve() {
-    UmpOutput out(Tuning{}, config(uw::MidiProtocol::Midi2));
-    out.noteOn(36, 0xFFFF);
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(Tuning{}.note(36), 0xFFFF);
     const auto m = out.take();
     CHECK(m.size() == 1);
     CHECK(ump::noteNumber(m[0]) == 69);        // the standard note number
@@ -52,15 +55,15 @@ void testNoteOnTwelve() {
 }
 
 void testVelocityFloor() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2));
-    out.noteOn(0, 0);
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(T.note(0), 0);
     const auto m = out.take();
     CHECK((m[0].words[1] >> 16) == 1);   // MIDI 2.0 note-on 0 isn't a note-off
 }
 
 void testPerNoteManagement() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2, true));
-    out.noteOn(3, 0xFFFF);
+    UmpOutput out(config(uw::MidiProtocol::Midi2, true));
+    out.noteOn(T.note(3), 0xFFFF);
     const auto m = out.take();
     CHECK(m.size() == 2);
     CHECK(ump::status(m[0]) == ump::Status::PerNoteManagement);
@@ -70,9 +73,9 @@ void testPerNoteManagement() {
 }
 
 void testNoteOffAndAllNotesOff() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2));
-    out.noteOn(1, 0xFFFF);
-    out.noteOn(2, 0xFFFF);
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(T.note(1), 0xFFFF);
+    out.noteOn(T.note(2), 0xFFFF);
     out.take();
     out.noteOff(1);
     auto m = out.take();
@@ -88,8 +91,8 @@ void testNoteOffAndAllNotesOff() {
 }
 
 void testPerNoteExpression() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2));
-    out.noteOn(4, 0xFFFF);
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(T.note(4), 0xFFFF);
     out.take();
 
     out.pitchBend(4, 0.0);
@@ -126,10 +129,10 @@ void testPerNoteExpression() {
 
 void testGlide() {
     const Tuning t = seventeen();
-    UmpOutput out(t, config(uw::MidiProtocol::Midi2));
-    out.noteOn(0, 0xFFFF);
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    out.noteOn(T.note(0), 0xFFFF);
     out.take();
-    out.glide(0, 5);
+    out.glide(0, t.semitones(5));
     const auto m = out.take();
     CHECK(m.size() == 1);
     CHECK(ump::status(m[0]) == ump::Status::RegisteredPerNoteController);
@@ -139,8 +142,8 @@ void testGlide() {
 }
 
 void testMidi1Fallback() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi1, true));
-    out.noteOn(17, 0xFFFF);   // A2
+    UmpOutput out(config(uw::MidiProtocol::Midi1, true));
+    out.noteOn(T.note(17), 0xFFFF);   // A2
     auto m = out.take();
     CHECK(m.size() == 1);     // no Per-Note Management in MIDI 1.0
     CHECK(ump::messageType(m[0]) == ump::MessageType::Midi1ChannelVoice);
@@ -155,7 +158,7 @@ void testMidi1Fallback() {
     CHECK(((m[0].words[0] >> 8) & 0x7F) == 0x00 && (m[0].words[0] & 0x7F) == 0x40);
 
     // A glide restrikes at the nearest note, and the note-off follows it.
-    out.glide(17, 18);   // 1 step up: 70.6 cents, nearest A#2 (46)
+    out.glide(17, T.semitones(18));   // 1 step up: 70.6 cents, nearest A#2 (46)
     m = out.take();
     CHECK(m.size() == 2);
     CHECK(ump::isNoteOff(m[0]) && ump::noteNumber(m[0]) == 45);
@@ -165,8 +168,71 @@ void testMidi1Fallback() {
     CHECK(m.size() == 1 && ump::noteNumber(m[0]) == 46);
 }
 
+// Notes no tuning would make: the custom layout's (decisions.md, "Keys carry
+// the note they play").
+void testAnyNote() {
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
+    Note n;
+    n.id = 1000;
+    n.number = 60;
+    n.pitch = 61.5;   // a quarter tone above C#4, on note number 60
+    out.noteOn(n, 0xFFFF);
+    auto m = out.take();
+    CHECK(m.size() == 1 && ump::noteNumber(m[0]) == 60);
+    CHECK((m[0].words[0] & 0xFF) == 0x03);
+    CHECK((m[0].words[1] & 0xFFFF) == encodePitch7_9(61.5));
+
+    // Its own pitch on its own number: a plain note-on, at any EDO.
+    Note plain;
+    plain.id = 1001;
+    plain.number = 64;
+    plain.pitch = 64.0;
+    out.noteOn(plain, 0xFFFF);
+    m = out.take();
+    CHECK(m.size() == 1 && (m[0].words[0] & 0xFF) == 0);
+
+    // Its own group and channel, for the note and everything addressed to it.
+    Note routed;
+    routed.id = 1002;
+    routed.number = 70;
+    routed.pitch = 70.25;
+    routed.group = 3;
+    routed.channel = 9;
+    out.noteOn(routed, 0xFFFF);
+    out.pitchBend(1002, 0.5);
+    out.glide(1002, 72.0);
+    out.noteOff(1002);
+    m = out.take();
+    CHECK(m.size() == 4);
+    for (const auto& msg : m) CHECK(ump::group(msg) == 3 && ump::channel(msg) == 9 && ump::noteNumber(msg) == 70);
+    // Channel-wide expression stays on the output's channel.
+    out.pitchBend(std::nullopt, 0.5);
+    m = out.take();
+    CHECK(ump::group(m[0]) == 2 && ump::channel(m[0]) == 5);
+
+    // All Notes Off reaches every channel a note used, and the output's.
+    out.noteOn(routed, 0xFFFF);
+    out.take();
+    out.allNotesOff();
+    m = out.take();
+    int cc123 = 0;
+    bool routedOff = false;
+    for (const auto& msg : m) {
+        if (ump::status(msg) == ump::Status::ControlChange) ++cc123;
+        if (ump::isNoteOff(msg) && ump::channel(msg) == 9) routedOff = true;
+    }
+    CHECK(cc123 == 2);
+    CHECK(routedOff);
+
+    // MIDI 1.0: the nearest 12-EDO note to the pitch, not the number.
+    UmpOutput out1(config(uw::MidiProtocol::Midi1));
+    out1.noteOn(n, 0xFFFF);
+    m = out1.take();
+    CHECK(m.size() == 1 && ump::noteNumber(m[0]) == 62);   // 61.5 rounds to 62
+}
+
 void testSetup() {
-    UmpOutput out(seventeen(), config(uw::MidiProtocol::Midi2));
+    UmpOutput out(config(uw::MidiProtocol::Midi2));
     out.setup();
     auto m = out.take();
     CHECK(m.size() == 2);
@@ -175,7 +241,7 @@ void testSetup() {
     CHECK(m[0].words[1] == (2u << 25));
     CHECK((m[1].words[0] & 0x7F) == 7);   // per-note pitch bend sensitivity
 
-    UmpOutput out1(seventeen(), config(uw::MidiProtocol::Midi1));
+    UmpOutput out1(config(uw::MidiProtocol::Midi1));
     out1.setup();
     m = out1.take();
     CHECK(m.size() == 4);   // CC 101, 100, 6, 38
@@ -192,6 +258,7 @@ int main() {
     testPerNoteExpression();
     testGlide();
     testMidi1Fallback();
+    testAnyNote();
     testSetup();
     return kedo::test::finish("UmpOutput");
 }

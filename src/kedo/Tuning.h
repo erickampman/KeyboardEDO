@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "kedo/Note.h"
+
 // An equal division of the octave and where it starts. Everything else in the
 // keyboard (layouts, note numbers, UMP) works in *steps*: whole EDO steps
 // counted up from the origin note, so step 0 is the origin.
@@ -54,10 +56,17 @@ struct Tuning {
     // The nearest 12-EDO note: the MIDI 1.0 fallback's note number.
     std::uint8_t nearestMidi1Note(int step) const;
 
+    // What a key on `step` plays: id `step`, noteNumber(), semitones(), and
+    // the output's group and channel.
+    Note note(int step) const;
+
     StepLabel label(int step) const;
 
     bool operator==(const Tuning&) const = default;
 };
+
+// The label for a pitch in semitones above MIDI note 0.
+StepLabel labelOfPitch(double semitones);
 
 // Pitch encodings. `semitones` is a pitch above MIDI note 0 (8.18 Hz).
 std::uint16_t encodePitch7_9(double semitones);     // note-on attribute

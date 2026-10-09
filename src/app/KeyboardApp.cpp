@@ -33,7 +33,7 @@ bool enumCombo(const char* label, E& value, const char* const (&names)[N], float
 } // namespace
 
 KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& start)
-    : window_(window), monoFont_(monoFont), output_(start.tuning, settings_.output), performer_(output_) {
+    : window_(window), monoFont_(monoFont), output_(settings_.output), performer_(output_) {
     settings_.tuning = start.tuning;
     settings_.layout.kind = start.layout;
     settings_.layout.pianoLowest = 36;   // C2, as KeyEDO's screenshot
@@ -57,7 +57,6 @@ void KeyboardApp::rebuild(bool resetView) {
     auto layout = makeLayout(settings_.layout, settings_.tuning);
     performer_.setLayout(layout.get());
     layout_ = std::move(layout);
-    output_.setTuning(settings_.tuning);
     performer_.setConfig(settings_.play);
 
     if (resetView) {
@@ -221,7 +220,7 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     const float zoom = float(viewport_.zoom);
     for (const Key& k : layout_->keysIn(viewport_.visible())) {
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
-                                     performer_.isSounding(k.step), performer_.isLatched(k.step));
+                                     performer_.isSounding(k.note.id), performer_.isLatched(k.note.id));
         const ImVec2 c = vec(viewport_.toScreen(k.center));
         const float hw = float(k.halfWidth) * zoom, hh = float(k.halfHeight) * zoom;
 

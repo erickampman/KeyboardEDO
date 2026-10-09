@@ -17,9 +17,18 @@ struct Recorder final : NoteSink {
     std::vector<double> values;
 
     static std::string who(std::optional<int> n) { return n ? std::to_string(*n) : "ch"; }
-    void noteOn(int n, std::uint16_t v) override { log.push_back("on " + std::to_string(n)); values.push_back(v); }
+    std::vector<Note> notes;   // every noteOn's Note
+    void noteOn(const Note& n, std::uint16_t v) override {
+        log.push_back("on " + std::to_string(n.id));
+        values.push_back(v);
+        notes.push_back(n);
+    }
     void noteOff(int n) override { log.push_back("off " + std::to_string(n)); }
-    void glide(int n, int s) override { log.push_back("glide " + std::to_string(n) + " " + std::to_string(s)); }
+    std::vector<double> glides;   // every glide's pitch
+    void glide(int n, double pitch) override {
+        log.push_back("glide " + std::to_string(n));
+        glides.push_back(pitch);
+    }
     void pitchBend(std::optional<int> n, double v) override { log.push_back("bend " + who(n)); values.push_back(v); }
     void controller(std::optional<int> n, int c, double v) override {
         log.push_back("cc " + who(n) + " " + std::to_string(c));
@@ -113,7 +122,13 @@ void testGlide() {
     r.performer.pointerMove(1, r.at(1, 1));
     CHECK(r.performer.isSounding(13) && !r.performer.isSounding(0));
     r.performer.pointerUp(1);
-    CHECK((r.sink.take() == Log{"on 0", "glide 0 3", "glide 0 13", "off 0"}));
+    CHECK((r.sink.log == Log{"on 0", "glide 0", "glide 0", "off 0"}));
+    // Each glide goes to the exact pitch of the key reached.
+    CHECK(r.sink.glides.size() == 2);
+    CHECK(kedo::test::near(r.sink.glides[0], r.tuning.semitones(3)));
+    CHECK(kedo::test::near(r.sink.glides[1], r.tuning.semitones(13)));
+    r.sink.take();
+    r.sink.glides.clear();
 }
 
 void testFixedPerNote() {
@@ -178,9 +193,8 @@ void testStrikeVelocity() {
 
 void testKeysAndRelease() {
     Rig r;
-    r.performer.keyDown('z', 0);
-    r.performer.keyDown('z', 0);   // auto-repeat
-    r.performer.keyDown('x', 999); // out of range
+    r.performer.keyDown('z', r.tuning.note(0));
+    r.performer.keyDown('z', r.tuning.note(0));   // auto-repeat
     r.performer.pointerDown(1, r.at(1, 0));
     CHECK((r.sink.take() == Log{"on 0", "on 3"}));
     r.performer.releaseAll();
@@ -193,6 +207,28 @@ void testKeysAndRelease() {
     TiledLayout other(r.tuning, Generator{"Bosanquet", 1, 10}, 4);
     r.performer.setLayout(&other);
     CHECK((r.sink.take() == Log{"off 0"}));
+}
+
+// The Performer passes each key's Note through as it is: number, pitch,
+// group and channel, whatever made them.
+void testNotesPassThrough() {
+    Rig r;
+    r.performer.pointerDown(1, r.at(2, 1));   // step 16
+    CHECK(r.sink.notes.size() == 1);
+    CHECK(r.sink.notes[0] == r.tuning.note(16));
+    r.performer.pointerUp(1);
+
+    Note custom;
+    custom.id = 500;
+    custom.number = 61;
+    custom.pitch = 61.3;
+    custom.channel = 4;
+    r.sink.notes.clear();
+    r.performer.keyDown('q', custom);
+    CHECK(r.sink.notes.size() == 1 && r.sink.notes[0] == custom);
+    CHECK(r.performer.isSounding(500));
+    r.performer.keyUp('q');
+    CHECK((r.sink.take() == Log{"on 16", "off 16", "on 500", "off 500"}));
 }
 
 void testDiamondGaps() {
@@ -221,6 +257,7 @@ int main() {
     testFixedChannel();
     testStrikeVelocity();
     testKeysAndRelease();
+    testNotesPassThrough();
     testDiamondGaps();
     return kedo::test::finish("Performer");
 }
