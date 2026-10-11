@@ -138,9 +138,8 @@ time, ALSA real-time events).
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).
 - Tuning as a Property Exchange resource for Umpire (`X-` prefix), and
   arpeggiator tempo from Flex Data (controller roadmap 11, 12).
-- MPE fallback for MIDI 1.0 synths: rotate notes across channels with
-  per-channel bend, so microtonal playing works on them (controller
-  roadmap 13).
+- Not planned: an MPE fallback or MIDI Tuning Standard SysEx for MIDI 1.0
+  synths (decisions.md, "No MPE").
 - Glide that slides continuously between keys, not only from key to key.
 - Pressure from Force Touch trackpads and pen tablets.
 - iPad and Android, if the toolkit chosen in milestone 2 allows.

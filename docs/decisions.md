@@ -203,7 +203,8 @@ note-on at the nearest note.
 
 The rest of KeyEDO's controller roadmap (endpoint and function blocks,
 Product Instance ID, stream configuration, timestamps, Property Exchange,
-Flex Data tempo, MPE fallback) needs the transport, so it's in the roadmap.
+Flex Data tempo) needs the transport, so it's in the roadmap. Its MPE fallback
+(controller roadmap 13) is rejected: see "No MPE".
 
 ## The window (decided 2026-10-09, roadmap milestone 6)
 
@@ -285,6 +286,30 @@ So `OutputConfig::midi1Expression` (the panel's "Expression as MIDI 1.0"):
 - Not copied: KeyEDO's raw-bytes channel pressure (MIDISend), which existed
   for Polygraph Modular. uw-core's output is UMP only; revisit if a receiver
   drops MIDI 1.0 UMP pressure.
+
+## No MPE (decided 2026-10-11)
+
+KeyboardEDO doesn't send MPE, in any mode. It mainly drives the author's own
+MIDI 2.0 stack (PlainOldSynth and the other synths, StageHand, Umpire), and
+two aims set the line: push toward MIDI 2.0, and keep support for transitional
+MIDI 1.0 schemes small. The policy across the projects is to support no MPE
+feature that MIDI 2.0 duplicates: the synths accept MPE as a compatibility
+input, StageHand passes it through, Umpire converts it to MIDI 2.0 on input,
+and nothing originates it.
+
+- **The MIDI 1.0 fallback stays minimal**, as described under "MIDI 2.0 use":
+  notes at the nearest 12-EDO note, expression on the channel. A MIDI-1.0-only
+  synth therefore plays EDO layouts rounded to 12-EDO. That's accepted.
+- **Rejected: the MPE fallback** (KeyEDO's controller roadmap 13): rotating
+  notes across channels with a bend each, so microtonal playing works on
+  MIDI 1.0 synths. It's the scheme MIDI 2.0's Pitch 7.9 and per-note pitch bend
+  replace.
+- **Rejected: MIDI Tuning Standard SysEx** (per-key retuning for MIDI 1.0
+  synths). Not MPE, but another MIDI 1.0 workaround for what Pitch 7.9 does,
+  with the same support cost.
+- **Unaffected: "Expression as MIDI 1.0"** (above). It works around DAWs that
+  mishandle MIDI 2.0 bend and controllers; it doesn't spread notes across
+  channels.
 
 ## Documents (decided 2026-10-09, roadmap milestone 5)
 
