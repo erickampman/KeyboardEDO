@@ -287,6 +287,23 @@ So `OutputConfig::midi1Expression` (the panel's "Expression as MIDI 1.0"):
   for Polygraph Modular. uw-core's output is UMP only; revisit if a receiver
   drops MIDI 1.0 UMP pressure.
 
+## What the synths do with it (2026-10-12)
+
+The author's CLAP synths (PlainOldSynth, StruckSynth, IFSynth, in `~/Dev-Audio`) were brought up to
+date with what `UmpOutput` sends, so they are the receivers to test against:
+- Pitch 7.9 notes; notes matched on note number, channel and group.
+- Registered controllers 0 and 7 set the channel and per-note bend ranges, per channel, and survive a
+  host's `reset()`. With no registered controller 7 the per-note range is the channel's (M2-104
+  §4.2.12), so at KeyboardEDO's defaults (±2 and ±2) the "known gap" above is harmless: a synth that
+  connects after the setup still bends the right amount.
+- Per-note pitch bend, after the synth's glide, and Pitch 7.25 (registered per-note controller 3) as
+  an absolute pitch for the sounding note, which both bends offset. Per-Note Management Reset clears
+  both, as the reset before each note-on intends.
+- A MIDI 2.0 note-on with velocity 0 is a note-on in all three now. Keep the velocity floor of 1
+  anyway: with velocity → loudness on, a velocity of 0 is silent.
+- Polyphonic pressure and per-note controller 74: PlainOldSynth routes them as modulation sources and
+  StruckSynth to its Expression panel; IFSynth doesn't use them yet.
+
 ## No MPE (decided 2026-10-11)
 
 KeyboardEDO doesn't send MPE, in any mode. It mainly drives the author's own
