@@ -29,8 +29,15 @@ window, and quits: a check without a person at the screen. Checked that way
 on the Mac (Retina): the three keyboards, and a click on a tile and on a
 piano key reaching the monitor as the right note.
 
+Built on Linux 2026-10-12 (Ubuntu, GCC 15, a Wayland session) with no code
+changes: the core and app compile without warnings, the tests pass, and
+`--snapshot` draws the three keyboards, with `--click` pressing the right
+tile, under both `SDL_VIDEO_DRIVER=wayland` and `x11` (XWayland).
+
 Still to check by hand:
-- the Linux build (X11 and Wayland) and two-finger playing on a touchscreen;
+- on Linux: two-finger playing on a touchscreen (Wayland and X11), a real
+  mouse, resizing and libdecor's decorations, HiDPI scaling, and a native
+  X11 session rather than XWayland;
 - trackpad pinch and scroll direction on the Mac;
 - Shift-latch and Fixed-drag expression with a real mouse.
 

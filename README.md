@@ -49,9 +49,15 @@ run this alongside it with Publish on:
 ./build/kedo-midi-listen KeyboardEDO 60
 ```
 
-Linux needs SDL3's build dependencies (X11 and/or Wayland development
-packages; see `external/SDL/docs/README-linux.md`). To build only the core and
-its tests, configure with `-DKEDO_APP=OFF`.
+Linux needs SDL3's build dependencies (`external/SDL/docs/README-linux.md`).
+On Ubuntu, for X11 with touch and Wayland:
+
+```bash
+sudo apt install ninja-build pkg-config libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libdecor-0-dev libudev-dev libdbus-1-dev libibus-1.0-dev
+```
+
+To build only the core and its tests, configure with `-DKEDO_APP=OFF`; that
+needs none of these.
 
 To see the layouts without a UI:
 

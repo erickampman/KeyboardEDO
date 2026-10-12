@@ -385,6 +385,11 @@ How it's set up:
   `misc/fonts`, embedded at configure time) for the MIDI monitor.
 - **Redraw on demand:** the loop waits for events, draws a few frames after
   each, and draws every frame while a pointer is down.
+- **Linux** (first built 2026-10-12, Ubuntu with GCC 15): SDL is built with
+  both X11 (XInput2 multitouch) and Wayland (libdecor for window
+  decorations), and picks Wayland when the session has it;
+  `SDL_VIDEO_DRIVER=x11` forces X11. The app code needed no changes. The
+  packages SDL needs beyond a desktop's usual X11 ones are in the README.
 
 ## Working method
 
