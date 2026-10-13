@@ -4,6 +4,8 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -34,6 +36,7 @@ public:
         Document    document;
         std::string path;
         bool        publish = false;   // --publish: on for this run, whatever the preference
+        bool        ownPreferences = false;   // --snapshot: the defaults, the person's left alone
     };
 
     // `monoFont`: the MIDI monitor's font.
@@ -53,9 +56,10 @@ public:
     // Builds the frame's ImGui windows and keyboard drawing.
     void frame();
 
-    // True while something is moving (a pointer is down), so the loop keeps
-    // drawing at the display's rate instead of waiting for events.
-    bool animating() const { return !pointers_.empty() || mouseDown_; }
+    // True while something is moving (a pointer is down, a key is dragged, an
+    // audition is to end), so the loop keeps drawing at the display's rate
+    // instead of waiting for events.
+    bool animating() const { return !pointers_.empty() || mouseDown_ || dragging_ || auditionId_.has_value(); }
 
 private:
     enum class Dialog { Open, Import, SaveAs };
@@ -72,6 +76,27 @@ private:
     void setEditing(bool on);
     void drawLayoutMenu(float width);
     void drawLayoutsSection();
+
+    // The custom layout editor: Edit mode on a custom layout (decisions.md,
+    // "Custom layout"). A click selects keys instead of playing them.
+    bool editingKeys() const { return prefs_.editing && settings_.layout.kind == LayoutKind::Custom; }
+    std::vector<CustomKey>& keys() { return settings_.layout.customKeys; }
+    void resetEditor();
+    void editPress(Point screen, bool shift, bool doubleClick);
+    void editDrag(Point screen);
+    bool editKey(const SDL_KeyboardEvent& key);   // true if it was the editor's
+    void pushUndo();
+    void undo();
+    void redo();
+    double gridStep() const;
+    Point snapped(Point p) const;
+    void addKeyAt(Point at);
+    void deleteSelected();
+    void duplicateSelected();
+    void nudge(double dx, double dy);
+    void pitchChanged(int index, double oldPitch);   // re-suggest the number, follow the label
+    void audition(int index);
+    void drawKeyInspector();
     void open(const std::string& path);
     bool save(const std::string& path);
     void showDialog(Dialog dialog);
@@ -118,6 +143,26 @@ private:
     std::mutex dialogLock_;
     std::vector<std::pair<Dialog, std::string>> dialogResults_;
     std::string status_;      // the last file error, shown in the bar
+
+    // The editor's state. Undo keeps the keys and the selection.
+    struct EditState {
+        std::vector<CustomKey> keys;
+        std::set<int> selected;
+        bool operator==(const EditState&) const = default;
+    };
+    void pushUndo(EditState state);
+    std::set<int> selected_;          // indices into keys()
+    bool dragging_ = false;
+    bool dragMoved_ = false;
+    Point dragFrom_;                  // where the drag began, in layout units
+    int dragAnchor_ = -1;             // the key grabbed: it snaps, the others follow
+    std::vector<Point> dragOrigins_;  // the selected keys' centres when it began
+    bool shiftDown_ = false;          // from Shift's own key events, beside SDL's modifier state
+    bool snap_ = true;
+    bool halfGrid_ = false;           // snap to half the grid step
+    std::vector<EditState> undo_, redo_;
+    std::optional<int> auditionId_;   // the note an inspector change is sounding
+    Uint64 auditionOff_ = 0;          // when it stops (SDL ticks)
 
     std::deque<std::string> monitor_;
     bool monitorFollow_ = true;

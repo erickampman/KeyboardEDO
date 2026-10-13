@@ -318,6 +318,28 @@ void testConvertToCustom() {
         CHECK(custom != nullptr);
         if (!custom) continue;
 
+        // The 12-EDO piano becomes diamonds, in the diamond piano's places:
+        // each piano key's note on one diamond, of its shade.
+        if (c.kind == LayoutKind::Piano && c.edo == 12) {
+            std::map<int, const Key*> byNumber;
+            for (const Key& k : custom->keys()) {
+                CHECK(k.shape == KeyShape::Diamond && k.playable);
+                CHECK(byNumber.emplace(k.note.number, &k).second);   // one each
+            }
+            int keys = 0;
+            for (const Key& k : original->keysIn(original->bounds())) {
+                ++keys;
+                const auto it = byNumber.find(k.note.number);
+                CHECK(it != byNumber.end());
+                if (it == byNumber.end()) continue;
+                CHECK(it->second->shade == k.shade);
+                CHECK(std::abs(it->second->note.pitch - k.note.pitch) < 1e-9);
+            }
+            CHECK(keys == int(custom->keys().size()));
+            checkConsistent(*custom);
+            continue;
+        }
+
         std::map<int, int> idFor;   // the original's note ids -> the custom's
         int playable = 0;
         for (const Key& k : original->keysIn(original->bounds())) {

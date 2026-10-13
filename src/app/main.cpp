@@ -5,6 +5,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <SDL3/SDL.h>
 
@@ -25,14 +26,124 @@ void usage() {
     std::fprintf(stderr,
                  "usage: keyboardedo [DOCUMENT] [--edo N] [--origin NOTE] [--octave N]\n"
                  "                   [--layout piano|tiled] [--destination NAME] [--publish]\n"
-                 "                   [--snapshot FILE.png [--click X,Y | --tap X,Y] [--wait SECONDS]]\n"
+                 "                   [--snapshot FILE.png [--wait SECONDS] [STEP...]]\n"
                  "  DOCUMENT     a .kedo document, or a KeyEDO .json (imported); the options\n"
                  "               change its showing layout (--destination, the document's)\n"
                  "  --snapshot   draw a few frames, save the window as PNG, and quit\n"
-                 "  --click      with --snapshot: press the mouse at X,Y (window points) first\n"
-                 "  --tap        the same, and release it (for buttons)\n"
+                 "  --snapshot   (also: the app's default preferences, neither read nor saved)\n"
                  "  --wait       with --snapshot: wait this long first (e.g. for other apps to\n"
-                 "               see a published source)\n");
+                 "               see a published source)\n"
+                 "  STEP         with --snapshot, done in order before the picture (window points):\n"
+                 "    --click X,Y              press the mouse there, and hold it\n"
+                 "    --tap [shift+]X,Y        press and release (Shift held, with shift+)\n"
+                 "    --double X,Y             a double click\n"
+                 "    --drag X1,Y1,X2,Y2       press, move, release\n"
+                 "    --key [ctrl+][shift+]NAME  a key, by SDL's name (z, delete, right...)\n");
+}
+
+// --snapshot's own mouse: while it has steps, the real mouse's events are
+// left out, so the pointer's real place (maybe over the window) can't join in.
+constexpr SDL_MouseID kStepMouse = 0x5EED;
+
+// One input --snapshot gives the app, through the same path as a real one.
+struct Step {
+    enum Kind { Click, Tap, Double, Drag, Key } kind = Tap;
+    float x = 0, y = 0, x2 = 0, y2 = 0;
+    SDL_Keymod mod = SDL_KMOD_NONE;   // held during it
+    SDL_Keycode key = SDLK_UNKNOWN;
+};
+
+// Modifier prefixes ("ctrl+", "shift+") off the front of `text`.
+SDL_Keymod takeMods(std::string& text) {
+    SDL_Keymod mod = SDL_KMOD_NONE;
+    for (;;) {
+        if (text.rfind("ctrl+", 0) == 0) mod |= SDL_KMOD_LCTRL, text.erase(0, 5);
+        else if (text.rfind("shift+", 0) == 0) mod |= SDL_KMOD_LSHIFT, text.erase(0, 6);
+        else return mod;
+    }
+}
+
+void pushMouse(SDL_Window* window, Uint32 type, float x, float y, Uint8 clicks = 1) {
+    SDL_Event e{};
+    e.type = type;
+    if (type == SDL_EVENT_MOUSE_MOTION) {
+        e.motion.windowID = SDL_GetWindowID(window);
+        e.motion.which = kStepMouse;
+        e.motion.x = x;
+        e.motion.y = y;
+    } else {
+        e.button.windowID = SDL_GetWindowID(window);
+        e.button.which = kStepMouse;
+        e.button.button = SDL_BUTTON_LEFT;
+        e.button.down = type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+        e.button.clicks = clicks;
+        e.button.x = x;
+        e.button.y = y;
+    }
+    SDL_PushEvent(&e);
+}
+
+// Frame `frame` of `step`; true when it's done. A press moves the pointer
+// there first, as a real one would, so ImGui's idea of the mouse (from the
+// real cursor, maybe over the settings bar) doesn't decide who gets it.
+void pushKey(SDL_Window* window, SDL_Keycode key, SDL_Keymod mod, bool down) {
+    SDL_Event e{};
+    e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
+    e.key.windowID = SDL_GetWindowID(window);
+    e.key.key = key;
+    e.key.mod = mod;
+    e.key.down = down;
+    SDL_PushEvent(&e);
+}
+
+// A step's modifiers, as key presses (SDL's own modifier state follows the
+// real keyboard, under Wayland at least).
+void pushMods(SDL_Window* window, SDL_Keymod mod, bool down) {
+    if (mod & SDL_KMOD_LSHIFT) pushKey(window, SDLK_LSHIFT, down ? mod : SDL_KMOD_NONE, down);
+    if (mod & SDL_KMOD_LCTRL) pushKey(window, SDLK_LCTRL, down ? mod : SDL_KMOD_NONE, down);
+}
+
+bool runStep(SDL_Window* window, const Step& s, int frame) {
+    if (frame == 0 && s.kind != Step::Key) pushMods(window, s.mod, true);
+    auto done = [&](bool finished) {
+        if (finished && s.kind != Step::Key) pushMods(window, s.mod, false);
+        return finished;
+    };
+    auto press = [&](float x, float y, Uint8 clicks) {
+        SDL_WarpMouseInWindow(window, x, y);
+        pushMouse(window, SDL_EVENT_MOUSE_MOTION, x, y);
+        pushMouse(window, SDL_EVENT_MOUSE_BUTTON_DOWN, x, y, clicks);
+    };
+    switch (s.kind) {
+    case Step::Click:
+        press(s.x, s.y, 1);
+        return done(true);
+    case Step::Tap:
+        if (frame == 0) press(s.x, s.y, 1);
+        else pushMouse(window, SDL_EVENT_MOUSE_BUTTON_UP, s.x, s.y);
+        return done(frame == 1);
+    case Step::Double:
+        if (frame == 0 || frame == 2) press(s.x, s.y, Uint8(frame / 2 + 1));
+        else pushMouse(window, SDL_EVENT_MOUSE_BUTTON_UP, s.x, s.y, Uint8(frame / 2 + 1));
+        return done(frame == 3);
+    case Step::Drag: {
+        constexpr int kMoves = 6;
+        if (frame == 0) {
+            press(s.x, s.y, 1);
+        } else if (frame <= kMoves) {
+            const float t = float(frame) / kMoves;
+            SDL_WarpMouseInWindow(window, s.x + (s.x2 - s.x) * t, s.y + (s.y2 - s.y) * t);
+            pushMouse(window, SDL_EVENT_MOUSE_MOTION, s.x + (s.x2 - s.x) * t, s.y + (s.y2 - s.y) * t);
+        } else {
+            pushMouse(window, SDL_EVENT_MOUSE_BUTTON_UP, s.x2, s.y2);
+        }
+        return done(frame > kMoves);
+    }
+    case Step::Key:
+        pushKey(window, s.key, s.mod, frame == 0);
+        return frame == 1;
+    }
+    return true;
 }
 
 } // namespace
@@ -41,9 +152,8 @@ int main(int argc, char** argv) {
     kedo::app::KeyboardApp::Start start;
     kedo::Document& document = start.document;
     std::string snapshot;
-    float clickX = -1, clickY = -1;
-    bool tap = false;   // --tap: release the click too
-    double wait = 0;   // seconds before the click and snapshot
+    std::vector<Step> steps;   // --click, --tap, --double, --drag, --key: in order
+    double wait = 0;   // seconds before the steps and snapshot
     // The document first, so the options can override it.
     int first = 1;
     if (argc > 1 && argv[1][0] != '-') {
@@ -72,9 +182,25 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(arg, "--layout")) doc.layout.kind = !std::strcmp(value, "tiled") ? kedo::LayoutKind::Tiled : kedo::LayoutKind::Piano;
         else if (!std::strcmp(arg, "--destination")) document.destination = value;
         else if (!std::strcmp(arg, "--snapshot")) snapshot = value;
-        else if (!std::strcmp(arg, "--click") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) {}
-        else if (!std::strcmp(arg, "--tap") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) tap = true;
         else if (!std::strcmp(arg, "--wait")) wait = std::atof(value);
+        else if (!std::strcmp(arg, "--click") || !std::strcmp(arg, "--tap") || !std::strcmp(arg, "--double") ||
+                 !std::strcmp(arg, "--drag") || !std::strcmp(arg, "--key")) {
+            Step s;
+            std::string text = value;
+            s.mod = takeMods(text);
+            if (!std::strcmp(arg, "--key")) {
+                s.kind = Step::Key;
+                s.key = SDL_GetKeyFromName(text.c_str());
+                if (s.key == SDLK_UNKNOWN) { usage(); return 2; }
+            } else if (!std::strcmp(arg, "--drag")) {
+                s.kind = Step::Drag;
+                if (std::sscanf(text.c_str(), "%f,%f,%f,%f", &s.x, &s.y, &s.x2, &s.y2) != 4) { usage(); return 2; }
+            } else {
+                s.kind = !std::strcmp(arg, "--click") ? Step::Click : !std::strcmp(arg, "--tap") ? Step::Tap : Step::Double;
+                if (std::sscanf(text.c_str(), "%f,%f", &s.x, &s.y) != 2) { usage(); return 2; }
+            }
+            steps.push_back(s);
+        }
         else { usage(); return 2; }
     }
     if (doc.tuning.edo < kedo::Tuning::kMinEdo || doc.tuning.edo > kedo::Tuning::kMaxEdo ||
@@ -120,6 +246,7 @@ int main(int argc, char** argv) {
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
+    start.ownPreferences = !snapshot.empty();
     auto app = std::make_unique<kedo::app::KeyboardApp>(window, monoFont, start);
 
     // Draw only when something happens: a few frames after each event (ImGui
@@ -129,12 +256,23 @@ int main(int argc, char** argv) {
     // click comes after a few, and the picture a few after that.
     int snapshotFrames = 0;
     const Uint64 snapshotFrom = SDL_GetTicks() + Uint64(wait * 1000);
-    bool clicked = false;
+    std::size_t step = 0;   // the step being done, and its frame
+    int stepFrame = 0;
+    int stepsDoneAt = steps.empty() ? 3 : -1;   // the frame the last one finished
     bool running = true;
     while (running) {
         SDL_Event e;
         bool got = framesToDraw > 0 || app->animating() ? SDL_PollEvent(&e) : SDL_WaitEventTimeout(&e, 500);
         while (got) {
+            const bool realMouse =
+                (e.type == SDL_EVENT_MOUSE_MOTION && e.motion.which != kStepMouse) ||
+                ((e.type == SDL_EVENT_MOUSE_BUTTON_DOWN || e.type == SDL_EVENT_MOUSE_BUTTON_UP) &&
+                 e.button.which != kStepMouse) ||
+                e.type == SDL_EVENT_MOUSE_WHEEL;
+            if (!steps.empty() && realMouse) {
+                got = SDL_PollEvent(&e);
+                continue;
+            }
             ImGui_ImplSDL3_ProcessEvent(&e);
             if (e.type == SDL_EVENT_QUIT ||
                 (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && e.window.windowID == SDL_GetWindowID(window)))
@@ -161,7 +299,7 @@ int main(int argc, char** argv) {
         SDL_RenderClear(renderer);
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), renderer);
         if (!snapshot.empty() && SDL_GetTicks() >= snapshotFrom) ++snapshotFrames;
-        if (!snapshot.empty() && snapshotFrames == 6) {
+        if (!snapshot.empty() && stepsDoneAt >= 0 && snapshotFrames == stepsDoneAt + 3) {
             SDL_Surface* shot = SDL_RenderReadPixels(renderer, nullptr);
             const bool saved = shot && SDL_SavePNG(shot, snapshot.c_str());
             if (!saved) std::fprintf(stderr, "snapshot: %s\n", SDL_GetError());
@@ -169,40 +307,18 @@ int main(int argc, char** argv) {
             running = false;
         }
         if (!snapshot.empty()) framesToDraw = 1;
-        if (!snapshot.empty() && clickX >= 0 && snapshotFrames == 3 && !clicked) {
-            clicked = true;
-            // A synthetic press, through the same path as a real one. It moves
-            // the pointer there first, as a real click would, so ImGui's idea
-            // of the mouse (from the real cursor, maybe over the settings bar)
-            // doesn't decide who gets it.
-            SDL_WarpMouseInWindow(window, clickX, clickY);
-            SDL_Event move{};
-            move.type = SDL_EVENT_MOUSE_MOTION;
-            move.motion.windowID = SDL_GetWindowID(window);
-            move.motion.which = 1;
-            move.motion.x = clickX;
-            move.motion.y = clickY;
-            SDL_PushEvent(&move);
-            SDL_Event press{};
-            press.type = SDL_EVENT_MOUSE_BUTTON_DOWN;
-            press.button.windowID = SDL_GetWindowID(window);
-            press.button.which = 1;
-            press.button.button = SDL_BUTTON_LEFT;
-            press.button.down = true;
-            press.button.x = clickX;
-            press.button.y = clickY;
-            SDL_PushEvent(&press);
-        }
-        if (!snapshot.empty() && tap && snapshotFrames == 4) {
-            SDL_Event release{};
-            release.type = SDL_EVENT_MOUSE_BUTTON_UP;
-            release.button.windowID = SDL_GetWindowID(window);
-            release.button.which = 1;
-            release.button.button = SDL_BUTTON_LEFT;
-            release.button.down = false;
-            release.button.x = clickX;
-            release.button.y = clickY;
-            SDL_PushEvent(&release);
+        // The steps, from the third frame (ImGui has sized its windows), one
+        // after another.
+        // Two frames between steps, as a person couldn't be faster: a popup
+        // (a combo's menu) is sized hidden for a frame before it can be clicked.
+        if (!snapshot.empty() && snapshotFrames >= 3 && step < steps.size()) {
+            if (stepFrame < 0) {
+                ++stepFrame;
+            } else if (runStep(window, steps[step], stepFrame++)) {
+                ++step;
+                stepFrame = -2;
+                if (step == steps.size()) stepsDoneAt = snapshotFrames;
+            }
         }
         SDL_RenderPresent(renderer);
     }

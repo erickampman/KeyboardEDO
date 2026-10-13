@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 
 namespace kedo {
 
@@ -42,7 +43,7 @@ CustomLayout::CustomLayout(const std::vector<CustomKey>& keys, const Tuning& tun
         // (the layout's) counts as its own value, 16.
         k.note.id = (int(c.group.value_or(16)) * 17 + int(c.channel.value_or(16))) * 128 + k.note.number;
         k.playable = k.note.pitch >= 0 && k.note.pitch < 128 && c.number >= 0 && c.number <= 127;
-        k.shape = c.shape;
+        k.shape = KeyShape::Diamond;
         k.shade = c.shade;
         k.center = c.center;
         k.halfWidth = c.halfWidth > 0 ? c.halfWidth : kHalfDiag;
@@ -91,13 +92,25 @@ int suggestNumber(const std::vector<CustomKey>& keys, std::size_t index, const T
 
 std::vector<CustomKey> convertToCustom(const Layout& layout, const Tuning& tuning, LayoutKind kind,
                                        TileColor tileColor) {
+    // The 12-EDO piano's rectangles become the diamond piano's arrangement of
+    // the same keys: a diamond each, the black ones half a diamond up.
+    std::vector<Key> keys = layout.keysIn(layout.bounds());
+    if (std::any_of(keys.begin(), keys.end(), [](const Key& k) { return k.shape == KeyShape::Rectangle; })) {
+        std::set<int> steps;
+        for (const Key& k : keys)
+            if (k.playable) steps.insert(k.step);
+        const DiamondLayout diamonds(tuning);
+        keys.clear();
+        for (const Key& k : diamonds.keysIn(diamonds.bounds()))
+            if (steps.count(k.step)) keys.push_back(k);
+    }
+
     std::vector<CustomKey> out;
-    for (const Key& k : layout.keysIn(layout.bounds())) {
+    for (const Key& k : keys) {
         if (!k.playable) continue;
         const KeyLook look = keyLook(k, tuning, kind, tileColor, false, false);
         CustomKey c;
         c.center = k.center;
-        c.shape = k.shape;
         c.halfWidth = k.halfWidth;
         c.halfHeight = k.halfHeight;
         c.shade = k.shade;

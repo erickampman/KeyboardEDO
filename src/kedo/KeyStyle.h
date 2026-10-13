@@ -33,6 +33,10 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
 // piano and tiles, as KeyEDO.
 Rgb keyboardBackground(LayoutKind kind, const Tuning& tuning);
 
+// The nearest 12-EDO note's name and octave, e.g. "F#3": a custom key's
+// label from its pitch.
+std::string noteNameOf(double pitch);
+
 // HSB to RGB, h in 0..1.
 Rgb hsb(double h, double s, double b);
 

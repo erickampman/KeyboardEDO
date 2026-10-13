@@ -20,8 +20,15 @@ Related repos:
 - One milestone per session, about a day of work each.
 - Keep `kedo::core` free of toolkit types; only `src/app/` knows SDL3 and
   ImGui.
-- Check UI changes with `keyboardedo --snapshot FILE.png [--click X,Y]`
-  rather than asking the author to look.
+- Check UI changes with `keyboardedo --snapshot FILE.png [STEP...]`
+  rather than asking the author to look. Steps run in order before the
+  picture: `--click`, `--tap [shift+]X,Y`, `--double`, `--drag X1,Y1,X2,Y2`,
+  `--key [ctrl+][shift+]NAME` (`--help`). While steps run, the real mouse is
+  ignored. A snapshot run starts from the default preferences (Edit mode,
+  not publishing: add `--publish`) and saves none, so it never changes the
+  author's. The author may have KeyboardEDO running too (publishing the same
+  name): to listen to a test instance, find its ALSA client by pid in
+  `aconnect -l` rather than by name.
 - Keep tests silent (no audible output).
 - Record decisions in the docs, not only in conversation.
 - The author commits to `main` directly. Never open pull requests. Ask before

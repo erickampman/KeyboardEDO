@@ -184,6 +184,40 @@ editor app: decided 2026-10-13, "Documents with several layouts"):
   converted layout's grey, unplayable tiles aren't kept. Converting keeps
   the view; the Layout menu's "Custom" starts from whatever keys the layout
   had (none at first).
+- **No rectangles** (the author, 2026-10-13): custom keys are all diamonds;
+  converting the 12-EDO piano gives the diamond piano's arrangement of its
+  keys (one each, black half a diamond up), keeping its range and its black
+  and white.
+- **The editor, as built** (session 2, 2026-10-13), in the panel's Keys
+  section and on the keyboard:
+  - Click selects, Shift-click adds or removes, drag moves (the grabbed key
+    snaps, the rest keep their places relative to it), double-click on
+    empty space adds a key, a click there clears the selection. Selected
+    keys draw on top, and a click finds them first.
+  - Keys: Del or Backspace deletes, Cmd/Ctrl-D duplicates (a key to the
+    right, numbers suggested afresh), Cmd/Ctrl-A selects all, arrows nudge a
+    grid step (Shift: four), Escape clears the selection, Cmd/Ctrl-Z undoes
+    and Cmd/Ctrl-Shift-Z (or -Y) redoes. Undo covers keys and selection,
+    up to 200 steps, per layout shown (switching layouts clears it).
+  - A new key: the selected key's pitch a step up (or the origin note in
+    octave 4), in the layout's EDO; its note number suggested; its label its
+    note's name.
+  - The inspector: one key's EDO / octave / degree (the degree wraps into
+    the octave), with its note name, cents and frequency; several keys'
+    pitches move together by "- step / + step / - octave / + octave", each in
+    its own EDO. Note number (one key's): suggested until typed, "Suggest"
+    to go back, and a warning when it's shared with a key of another pitch.
+    Group and channel: the layout's or a key's own. Shade, own colour,
+    width and height (menus of 50%, 100%, 150% and 200% of the standard
+    diamond, 100% the default: the author, 2026-10-13), label and the line
+    under it, "Label from pitch". A suggested number and a label that was
+    the old note's name follow a pitch change.
+  - Auditioning: a pitch, number or route change sounds the key's note for
+    400 ms through the outputs.
+  - While editing keys the view isn't clamped to them (it would slide keys
+    from under the pointer, and leave no room to add); Reset View still
+    finds them. Snapping is to the grid of half a diamond's width, or half
+    that ("Half steps"); off, keys go where they're put.
 - **Auditioning** (decided 2026-10-09): changing a key's values in the
   inspector sends that key's note through the configured output, as playing
   it would, so a DAW or synth listening there hears the change and can use

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cfloat>
+#include <cstdio>
 #include <cmath>
 
 #include "Icons.h"
@@ -46,7 +47,11 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
       path_(start.path),
       targets_(settings_.output),
       performer_(targets_.sink()) {
-    if (char* folder = SDL_GetPrefPath("unlikelyware", "KeyboardEDO")) {
+    if (start.ownPreferences) {
+        // A check run (--snapshot): defaults, read from and saved to nowhere,
+        // so it neither depends on nor changes the preferences of the
+        // KeyboardEDO the author may be playing meanwhile.
+    } else if (char* folder = SDL_GetPrefPath("unlikelyware", "KeyboardEDO")) {
         prefsPath_ = std::string(folder) + "preferences.json";
         SDL_free(folder);
         prefs_ = loadPreferences(prefsPath_);
@@ -135,20 +140,29 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
     const ImGuiIO& io = ImGui::GetIO();
     switch (e.type) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-        // Touches arrive as fingers below; SDL's mouse copies of them are ImGui's.
-        if (e.button.which == SDL_TOUCH_MOUSEID || e.button.button != SDL_BUTTON_LEFT) break;
+        if (e.button.button != SDL_BUTTON_LEFT) break;
         const Point p{e.button.x, e.button.y};
         if (!inKeyboard(p) || io.WantCaptureMouse) break;
+        // Editing a custom layout: the editor's, touches included (SDL's
+        // mouse copies of them).
+        if (editingKeys()) {
+            editPress(p, shiftDown_ || (SDL_GetModState() & SDL_KMOD_SHIFT) != 0, e.button.clicks >= 2);
+            break;
+        }
+        // Touches arrive as fingers below; SDL's mouse copies of them are ImGui's.
+        if (e.button.which == SDL_TOUCH_MOUSEID) break;
         mouseDown_ = true;
         performer_.pointerDown(0, viewport_.toLayout(p), modifiers());
         break;
     }
     case SDL_EVENT_MOUSE_MOTION:
-        if (mouseDown_ && e.motion.which != SDL_TOUCH_MOUSEID)
+        if (dragging_) editDrag({e.motion.x, e.motion.y});
+        else if (mouseDown_ && e.motion.which != SDL_TOUCH_MOUSEID)
             performer_.pointerMove(0, viewport_.toLayout({e.motion.x, e.motion.y}));
         break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
-        if (mouseDown_ && e.button.which != SDL_TOUCH_MOUSEID && e.button.button == SDL_BUTTON_LEFT) {
+        if (dragging_ && e.button.button == SDL_BUTTON_LEFT) dragging_ = false;
+        else if (mouseDown_ && e.button.which != SDL_TOUCH_MOUSEID && e.button.button == SDL_BUTTON_LEFT) {
             performer_.pointerUp(0, modifiers());
             mouseDown_ = false;
         }
@@ -156,7 +170,8 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
 
     case SDL_EVENT_FINGER_DOWN: {
         // Only touchscreens: a trackpad's fingers have no place on the screen.
-        if (SDL_GetTouchDeviceType(e.tfinger.touchID) != SDL_TOUCH_DEVICE_DIRECT) break;
+        // Editing keys, the editor has them as the mouse.
+        if (editingKeys() || SDL_GetTouchDeviceType(e.tfinger.touchID) != SDL_TOUCH_DEVICE_DIRECT) break;
         int w = 0, h = 0;
         SDL_GetWindowSize(window_, &w, &h);
         const Point p{e.tfinger.x * w, e.tfinger.y * h};
@@ -214,7 +229,12 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         break;
     }
 
+    case SDL_EVENT_KEY_UP:
+        if (e.key.key == SDLK_LSHIFT || e.key.key == SDLK_RSHIFT) shiftDown_ = false;
+        break;
     case SDL_EVENT_KEY_DOWN: {
+        if (e.key.key == SDLK_LSHIFT || e.key.key == SDLK_RSHIFT) shiftDown_ = true;
+        if (editingKeys() && !io.WantCaptureKeyboard && editKey(e.key)) break;
         if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) performer_.releaseAll();
         // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as; = (or +) and -
         // zoom, and 0 back to zoom 1, about the keyboard's centre.
@@ -238,6 +258,8 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         // A release we'll never see would leave a note stuck.
         if (mouseDown_) performer_.pointerCancel(0);
         mouseDown_ = false;
+        dragging_ = false;
+        shiftDown_ = false;   // its release goes elsewhere
         break;
     default:
         break;
@@ -259,6 +281,14 @@ void KeyboardApp::frame() {
                         std::max(0.0, double(h) - barHeight_ - monitorHeight)};
 
     takeDialogResults();
+    if (auditionId_ && SDL_GetTicks() >= auditionOff_) {
+        targets_.sink().noteOff(*auditionId_);
+        auditionId_.reset();
+    }
+    if (!editingKeys()) {
+        selected_.clear();
+        dragging_ = false;
+    }
     applySettings();
     targets_.poll();
 
@@ -267,11 +297,15 @@ void KeyboardApp::frame() {
     // rows that fit. Kept for two frames, as ImGui sizes the toolbar a frame
     // late, so the first frame's keyboard area is too tall. Octave columns'
     // rows don't fit, and scroll.
+    const bool resetting = originFrames_ > 0;
     if (originFrames_ > 0) {
         --originFrames_;
         viewport_.scroll.y = layout_->bounds().bottom();
     }
-    viewport_.clampTo(layout_->bounds());
+    // Editing keys, the view stays where it's put once it's set: centring or
+    // clamping to the keys would move them out from under the pointer as they
+    // move, and there's room needed to place new ones.
+    if (!editingKeys() || resetting) viewport_.clampTo(layout_->bounds());
     drawKeyboard(ImGui::GetBackgroundDrawList());
     flush();
     updateTitle();
@@ -325,6 +359,7 @@ void KeyboardApp::open(const std::string& path) {
     doc_ = *document;
     saved_ = *document;
     settings_ = doc_.layout();
+    resetEditor();
     path_ = imported ? "" : path;
     applySettings();
     rebuild(true);
@@ -361,6 +396,7 @@ void KeyboardApp::selectLayout(int index) {
     performer_.releaseAll();
     doc_.current = index;
     settings_ = doc_.layout();
+    resetEditor();
     applySettings();
     rebuild(true);
 }
@@ -377,6 +413,7 @@ void KeyboardApp::removeLayout() {
     doc_.layouts.erase(doc_.layouts.begin() + doc_.current);
     doc_.current = std::min(doc_.current, int(doc_.layouts.size()) - 1);
     settings_ = doc_.layout();
+    resetEditor();
     applySettings();
     rebuild(true);
 }
@@ -392,6 +429,212 @@ void KeyboardApp::moveLayout(int by) {
 void KeyboardApp::setEditing(bool on) {
     prefs_.editing = on;
     if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
+}
+
+// --- The custom layout editor -----------------------------------------------------------
+
+// A layout shown afresh: nothing selected, nothing to undo.
+void KeyboardApp::resetEditor() {
+    selected_.clear();
+    dragging_ = false;
+    undo_.clear();
+    redo_.clear();
+}
+
+void KeyboardApp::pushUndo() { pushUndo({keys(), selected_}); }
+
+void KeyboardApp::pushUndo(EditState state) {
+    if (!undo_.empty() && undo_.back() == state) return;   // nothing changed since
+    undo_.push_back(std::move(state));
+    if (undo_.size() > 200) undo_.erase(undo_.begin());
+    redo_.clear();
+}
+
+void KeyboardApp::undo() {
+    if (undo_.empty()) return;
+    redo_.push_back({keys(), selected_});
+    keys() = undo_.back().keys;
+    selected_ = undo_.back().selected;
+    undo_.pop_back();
+}
+
+void KeyboardApp::redo() {
+    if (redo_.empty()) return;
+    undo_.push_back({keys(), selected_});
+    keys() = redo_.back().keys;
+    selected_ = redo_.back().selected;
+    redo_.pop_back();
+}
+
+// Half a diamond's width: the generated diamond layouts' key centres all lie
+// on this grid, and neighbours on it share edges (decisions.md).
+double KeyboardApp::gridStep() const { return halfGrid_ ? kHalfDiag / 2 : kHalfDiag; }
+
+Point KeyboardApp::snapped(Point p) const {
+    if (!snap_) return p;
+    const double step = gridStep();
+    return {std::round(p.x / step) * step, std::round(p.y / step) * step};
+}
+
+// A click selects (Shift adds or removes) and starts a drag; a double click
+// on empty space adds a key there; a click on empty space clears the selection.
+void KeyboardApp::editPress(Point screen, bool shift, bool doubleClick) {
+    const Point at = viewport_.toLayout(screen);
+    // What's under the pointer as drawn: a selected key is on top.
+    int index = -1;
+    if (const auto* custom = dynamic_cast<const CustomLayout*>(layout_.get()))
+        for (auto it = selected_.rbegin(); it != selected_.rend() && index < 0; ++it)
+            if (*it < int(custom->keys().size()) && custom->keys()[*it].contains(at)) index = *it;
+    if (index < 0)
+        if (const auto key = layout_->keyAt(at)) index = key->row;   // CustomLayout: the key's index
+    if (index < 0) {
+        if (doubleClick) addKeyAt(at);
+        else if (!shift) selected_.clear();
+        return;
+    }
+    if (shift) {
+        if (!selected_.erase(index)) selected_.insert(index);
+        if (!selected_.count(index)) return;   // deselected: nothing to drag
+    } else if (!selected_.count(index)) {
+        selected_ = {index};
+    }
+    dragging_ = true;
+    dragMoved_ = false;
+    dragFrom_ = at;
+    dragAnchor_ = index;
+    dragOrigins_.clear();
+    for (const auto& k : keys()) dragOrigins_.push_back(k.center);
+}
+
+// The grabbed key follows the pointer, snapped; the rest of the selection
+// keeps its place relative to it.
+void KeyboardApp::editDrag(Point screen) {
+    if (dragAnchor_ < 0 || dragAnchor_ >= int(keys().size())) return;
+    const Point at = viewport_.toLayout(screen);
+    const Point from = dragOrigins_[dragAnchor_];
+    const Point to = snapped({from.x + at.x - dragFrom_.x, from.y + at.y - dragFrom_.y});
+    const double dx = to.x - from.x, dy = to.y - from.y;
+    if (!dragMoved_ && dx == 0 && dy == 0) return;
+    if (!dragMoved_) pushUndo();
+    dragMoved_ = true;
+    for (const int i : selected_)
+        if (i < int(keys().size())) keys()[i].center = {dragOrigins_[i].x + dx, dragOrigins_[i].y + dy};
+}
+
+bool KeyboardApp::editKey(const SDL_KeyboardEvent& key) {
+    const bool command = (key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL)) != 0;
+    const bool shift = (key.mod & SDL_KMOD_SHIFT) != 0;
+    const double step = gridStep() * (shift ? 4 : 1);
+    switch (key.key) {
+    case SDLK_Z:
+        if (!command) return false;
+        if (shift) redo();
+        else undo();
+        return true;
+    case SDLK_Y:
+        if (!command) return false;
+        redo();
+        return true;
+    case SDLK_A:
+        if (!command) return false;
+        selected_.clear();
+        for (int i = 0; i < int(keys().size()); ++i) selected_.insert(i);
+        return true;
+    case SDLK_D:
+        if (!command) return false;
+        duplicateSelected();
+        return true;
+    case SDLK_DELETE:
+    case SDLK_BACKSPACE: deleteSelected(); return true;
+    case SDLK_ESCAPE: selected_.clear(); return false;   // Escape also releases notes
+    case SDLK_LEFT: nudge(-step, 0); return true;
+    case SDLK_RIGHT: nudge(step, 0); return true;
+    case SDLK_UP: nudge(0, -step); return true;
+    case SDLK_DOWN: nudge(0, step); return true;
+    default: return false;
+    }
+}
+
+// A new key at `at` (snapped): the selected key's pitch a step up, or the
+// origin note in octave 4, in the layout's EDO; its note number suggested and
+// its label its note's name.
+void KeyboardApp::addKeyAt(Point at) {
+    pushUndo();
+    CustomKey k;
+    k.center = snapped(at);
+    k.edo = settings_.tuning.edo;
+    if (!selected_.empty() && *selected_.begin() < int(keys().size())) {
+        const CustomKey& from = keys()[*selected_.begin()];
+        k.edo = from.edo;
+        k.octave = from.octave + (from.degree + 1) / from.edo;
+        k.degree = (from.degree + 1) % from.edo;
+        k.halfWidth = from.halfWidth;
+        k.halfHeight = from.halfHeight;
+    }
+    keys().push_back(k);
+    const int index = int(keys().size()) - 1;
+    keys()[index].number = suggestNumber(keys(), index, settings_.tuning);
+    keys()[index].label = noteNameOf(customPitch(keys()[index], settings_.tuning));
+    selected_ = {index};
+    audition(index);
+}
+
+void KeyboardApp::deleteSelected() {
+    if (selected_.empty()) return;
+    pushUndo();
+    for (auto it = selected_.rbegin(); it != selected_.rend(); ++it)
+        if (*it < int(keys().size())) keys().erase(keys().begin() + *it);
+    selected_.clear();
+}
+
+// Copies a grid step right and down, the copies selected, each copy's number
+// suggested afresh (the original keeps its own).
+void KeyboardApp::duplicateSelected() {
+    if (selected_.empty()) return;
+    pushUndo();
+    std::set<int> copies;
+    for (const int i : selected_) {
+        if (i >= int(keys().size())) continue;
+        CustomKey copy = keys()[i];
+        copy.center = {copy.center.x + 2 * gridStep(), copy.center.y};
+        copy.numberChosen = false;
+        keys().push_back(copy);
+        copies.insert(int(keys().size()) - 1);
+    }
+    for (const int i : copies) keys()[i].number = suggestNumber(keys(), i, settings_.tuning);
+    selected_ = copies;
+}
+
+void KeyboardApp::nudge(double dx, double dy) {
+    if (selected_.empty()) return;
+    pushUndo();
+    for (const int i : selected_)
+        if (i < int(keys().size())) keys()[i].center = {keys()[i].center.x + dx, keys()[i].center.y + dy};
+}
+
+// After a key's pitch changed: a suggested number follows it, and so does a
+// label that was its old note's name.
+void KeyboardApp::pitchChanged(int index, double oldPitch) {
+    CustomKey& k = keys()[index];
+    if (!k.numberChosen) k.number = suggestNumber(keys(), index, settings_.tuning);
+    if (k.label == noteNameOf(oldPitch)) k.label = noteNameOf(customPitch(k, settings_.tuning));
+}
+
+// Sounds the key's note briefly through the outputs, as playing it would
+// (decisions.md: auditioning edits).
+void KeyboardApp::audition(int index) {
+    if (index < 0 || index >= int(keys().size())) return;
+    NoteSink& sink = targets_.sink();
+    if (auditionId_) sink.noteOff(*auditionId_);
+    const CustomLayout one({keys()[index]}, settings_.tuning);
+    const Key& k = one.keys().front();
+    if (!k.playable) {
+        auditionId_.reset();
+        return;
+    }
+    sink.noteOn(k.note, 0xC000);   // its id is the one the whole layout gives it
+    auditionId_ = k.note.id;
+    auditionOff_ = SDL_GetTicks() + 400;
 }
 
 void KeyboardApp::showDialog(Dialog dialog) {
@@ -464,7 +707,11 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
 
     ImFont* font = ImGui::GetFont();
     const float zoom = float(viewport_.zoom);
-    for (const Key& k : layout_->keysIn(viewport_.visible())) {
+    // Editing keys, the selected ones on top, so what's being moved shows.
+    std::vector<Key> keys = layout_->keysIn(viewport_.visible());
+    if (editingKeys())
+        std::stable_partition(keys.begin(), keys.end(), [&](const Key& k) { return !selected_.count(k.row); });
+    for (const Key& k : keys) {
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
                                      performer_.isSounding(k.note.id), performer_.isLatched(k.note.id));
         const ImVec2 c = vec(viewport_.toScreen(k.center));
@@ -476,6 +723,8 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
             const ImVec2 top{c.x, c.y - hh}, right{c.x + hw, c.y}, bottom{c.x, c.y + hh}, left{c.x - hw, c.y};
             list->AddQuadFilled(top, right, bottom, left, color(look.fill));
             list->AddQuad(top, right, bottom, left, color(look.outline), 1.0f);
+            if (editingKeys() && selected_.count(k.row))   // the editor's selection
+                list->AddQuad(top, right, bottom, left, IM_COL32(40, 150, 255, 255), 3.0f);
             titleY = c.y - (look.detail.empty() ? titleSize / 2 : titleSize * 0.8f);
         } else {
             const ImVec2 a{c.x - hw, c.y - hh}, b{c.x + hw, c.y + hh};
@@ -645,14 +894,17 @@ void KeyboardApp::drawLayoutsSection() {
     }
     if (chosen >= 0) selectLayout(chosen);
     if (!prefs_.editing) {
-        ImGui::TextDisabled("Edit (toolbar) to set them up.");
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("Play mode: choose a layout here or in the toolbar's menu. To add, "
+                           "rename or change layouts, click Edit in the toolbar.");
+        ImGui::PopStyleColor();
         return;
     }
 
     char name[128] = {};
     settings_.name.copy(name, sizeof name - 1);
     if (ImGui::InputText("Name", name, sizeof name)) settings_.name = name;
-    if (ImGui::Button("Add")) {
+    if (ImGui::Button("Add##layout")) {
         LayoutSetup fresh;
         for (int n = int(doc_.layouts.size()) + 1;; ++n) {
             fresh.name = "Layout " + std::to_string(n);
@@ -664,7 +916,7 @@ void KeyboardApp::drawLayoutsSection() {
     }
     ImGui::SetItemTooltip("A new layout, after this one");
     ImGui::SameLine();
-    if (ImGui::Button("Duplicate")) {
+    if (ImGui::Button("Duplicate##layout")) {
         LayoutSetup copy = settings_;
         copy.name += " copy";
         addLayout(copy);
@@ -683,6 +935,233 @@ void KeyboardApp::drawLayoutsSection() {
     if (ImGui::ArrowButton("##later", ImGuiDir_Down)) moveLayout(1);
     ImGui::EndDisabled();
     ImGui::SetItemTooltip("Later in the list");
+}
+
+// The custom layout editor's panel: snapping, the edits, and the inspector for
+// the selected keys (decisions.md, "Custom layout").
+void KeyboardApp::drawKeyInspector() {
+    if (!ImGui::CollapsingHeader("Keys", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    for (auto it = selected_.begin(); it != selected_.end();)   // after undo, deletion
+        it = *it < int(keys().size()) ? std::next(it) : selected_.erase(it);
+    // Each edit's widget saves the keys for undo as it's first touched: as
+    // they were before this frame, as the widget may already have changed
+    // them in the frame it was touched.
+    const EditState before{keys(), selected_};
+    auto undoable = [&] {
+        if (ImGui::IsItemActivated()) pushUndo(before);
+    };
+
+    ImGui::Checkbox("Snap to grid", &snap_);
+    ImGui::SameLine();
+    ImGui::BeginDisabled(!snap_);
+    ImGui::Checkbox("Half steps", &halfGrid_);
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Snap to half the grid, between keys");
+
+    // Labels of their own: the Layouts section above has Add and Duplicate,
+    // and ImGui takes a widget's label as its identity.
+    ImGui::BeginDisabled(undo_.empty());
+    if (ImGui::Button("Undo")) undo();
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Cmd/Ctrl-Z");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(redo_.empty());
+    if (ImGui::Button("Redo")) redo();
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Cmd/Ctrl-Shift-Z");
+    if (ImGui::Button("Add key")) {
+        const Rect v = viewport_.visible();
+        addKeyAt({v.x + v.w / 2, v.y + v.h / 2});
+    }
+    ImGui::SetItemTooltip("A key in the middle of the view (or double-click empty space)");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(selected_.empty());
+    if (ImGui::Button("Duplicate##keys")) duplicateSelected();
+    ImGui::SetItemTooltip("The selected keys (Cmd/Ctrl-D)");
+    ImGui::SameLine();
+    if (ImGui::Button("Delete##keys")) deleteSelected();
+    ImGui::SetItemTooltip("The selected keys (Del)");
+    ImGui::EndDisabled();
+
+    if (selected_.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("Click a key to select it, Shift-click for more, and drag to move them; "
+                           "arrows nudge (Shift: further). Del deletes, Cmd/Ctrl-A selects all.");
+        ImGui::PopStyleColor();
+        return;
+    }
+    const Tuning& tuning = settings_.tuning;
+    const int primary = *selected_.begin();
+    const bool several = selected_.size() > 1;
+    auto each = [&](auto&& change) {
+        for (const int i : selected_) change(keys()[i]);
+    };
+
+    // Pitch: one key's EDO, octave and degree; several keys, transposed.
+    ImGui::SeparatorText(several ? "Pitch (each key)" : "Pitch");
+    if (!several) {
+        CustomKey& k = keys()[primary];
+        int edo = k.edo, octave = k.octave, degree = k.degree;
+        bool changed = false;
+        changed |= ImGui::InputInt("EDO##key", &edo);
+        undoable();
+        changed |= ImGui::InputInt("Octave##key", &octave);
+        undoable();
+        changed |= ImGui::InputInt("Degree##key", &degree);
+        undoable();
+        ImGui::SetItemTooltip("Steps of the EDO above the origin note (%s) in the octave",
+                              pitchClassName(tuning.originPitchClass));
+        if (changed) {
+            edo = std::clamp(edo, 1, Tuning::kMaxEdo);
+            while (degree >= edo) degree -= edo, ++octave;
+            while (degree < 0) degree += edo, --octave;
+            const double old = customPitch(k, tuning);
+            k.edo = edo;
+            k.octave = std::clamp(octave, -1, 9);
+            k.degree = degree;
+            pitchChanged(primary, old);
+            audition(primary);
+        }
+    } else {
+        auto transpose = [&](int steps, int octaves) {
+            pushUndo();
+            for (const int i : selected_) {
+                CustomKey& k = keys()[i];
+                const double old = customPitch(k, tuning);
+                k.octave += octaves;
+                k.degree += steps;
+                while (k.degree >= k.edo) k.degree -= k.edo, ++k.octave;
+                while (k.degree < 0) k.degree += k.edo, --k.octave;
+                pitchChanged(i, old);
+            }
+            audition(primary);
+        };
+        if (ImGui::Button("- step")) transpose(-1, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("+ step")) transpose(1, 0);
+        ImGui::SameLine();
+        if (ImGui::Button("- octave")) transpose(0, -1);
+        ImGui::SameLine();
+        if (ImGui::Button("+ octave")) transpose(0, 1);
+    }
+    {
+        const CustomKey& k = keys()[primary];
+        const double pitch = customPitch(k, tuning);
+        const StepLabel l = labelOfPitch(pitch);
+        ImGui::TextDisabled("%s%s %+.0f cents, %.2f Hz", several ? "First: " : "", noteNameOf(pitch).c_str(),
+                            l.cents, 440.0 * std::pow(2.0, (pitch - 69) / 12.0));
+    }
+
+    // The note number: suggested (nearest free) unless chosen; one key's.
+    ImGui::SeparatorText("MIDI");
+    if (!several) {
+        CustomKey& k = keys()[primary];
+        int number = k.number;
+        if (ImGui::InputInt("Note number", &number)) {
+            k.number = std::clamp(number, 0, 127);
+            k.numberChosen = true;
+            audition(primary);
+        }
+        undoable();
+        if (k.numberChosen) {
+            if (ImGui::Button("Suggest")) {
+                pushUndo();
+                k.numberChosen = false;
+                k.number = suggestNumber(keys(), primary, tuning);
+                audition(primary);
+            }
+            ImGui::SetItemTooltip("The nearest free number to the key's pitch");
+        } else {
+            ImGui::TextDisabled("Suggested: the nearest free number");
+        }
+        // Another key's note on this number, at another pitch: the receiver
+        // hears one note (decisions.md: duplicates warn).
+        const double pitch = customPitch(k, tuning);
+        for (int i = 0; i < int(keys().size()); ++i) {
+            const CustomKey& o = keys()[i];
+            if (i != primary && o.number == k.number && o.group == k.group && o.channel == k.channel &&
+                std::abs(customPitch(o, tuning) - pitch) > 1e-9) {
+                ImGui::TextColored({1.0f, 0.6f, 0.3f, 1.0f}, "Shared with a key of another pitch:");
+                ImGui::TextColored({1.0f, 0.6f, 0.3f, 1.0f}, "they'll sound as one note.");
+                break;
+            }
+        }
+    }
+    // Group and channel: the layout's (the MIDI section), or the key's own.
+    auto route = [&](const char* label, std::optional<std::uint8_t> CustomKey::*field) {
+        const auto& first = keys()[primary].*field;
+        const std::string shown = first ? std::to_string(*first + 1) : "Layout's";
+        if (ImGui::BeginCombo(label, shown.c_str())) {
+            std::optional<std::optional<std::uint8_t>> chosen;
+            if (ImGui::Selectable("Layout's", !first)) chosen = std::optional<std::uint8_t>{};
+            for (int n = 0; n < 16; ++n)
+                if (ImGui::Selectable(std::to_string(n + 1).c_str(), first && *first == n))
+                    chosen = std::optional<std::uint8_t>{std::uint8_t(n)};
+            ImGui::EndCombo();
+            if (chosen) {
+                pushUndo();
+                each([&](CustomKey& k) { k.*field = *chosen; });
+                for (const int i : selected_)   // a new route: free numbers there
+                    if (!keys()[i].numberChosen) keys()[i].number = suggestNumber(keys(), i, tuning);
+                audition(primary);
+            }
+        }
+    };
+    route("Group##key", &CustomKey::group);
+    route("Channel##key", &CustomKey::channel);
+
+    // The look.
+    ImGui::SeparatorText("Look");
+    {
+        CustomKey& k = keys()[primary];
+        static const char* const kShades[] = {"White", "Black"};
+        int shade = int(k.shade);
+        if (ImGui::Combo("Shade", &shade, kShades, 2)) each([&](CustomKey& o) { o.shade = KeyShade(shade); });
+        undoable();
+        bool own = k.color.has_value();
+        if (ImGui::Checkbox("Own colour", &own))
+            each([&](CustomKey& o) { o.color = own ? std::optional<std::uint32_t>(k.color.value_or(0xb0d0ff)) : std::nullopt; });
+        undoable();
+        if (k.color) {
+            ImGui::SameLine();
+            float rgb[3] = {((*k.color >> 16) & 0xFF) / 255.0f, ((*k.color >> 8) & 0xFF) / 255.0f,
+                            (*k.color & 0xFF) / 255.0f};
+            if (ImGui::ColorEdit3("##colour", rgb, ImGuiColorEditFlags_NoInputs)) {
+                auto byte = [](float v) { return std::uint32_t(std::lround(std::clamp(v, 0.0f, 1.0f) * 255)); };
+                const std::uint32_t packed = byte(rgb[0]) << 16 | byte(rgb[1]) << 8 | byte(rgb[2]);
+                each([&](CustomKey& o) { o.color = packed; });
+            }
+            undoable();
+        }
+        // Width and height: 50, 100 (the standard diamond's, the default), 150
+        // or 200%. A size from elsewhere shows as the nearest.
+        static const char* const kSizes[] = {"50%", "100%", "150%", "200%"};
+        auto sizeIndex = [](double half) {
+            const double percent = 100 * (half > 0 ? half : kHalfDiag) / kHalfDiag;
+            return std::clamp(int(std::lround(percent / 50)) - 1, 0, 3);
+        };
+        int width = sizeIndex(k.halfWidth), height = sizeIndex(k.halfHeight);
+        if (ImGui::Combo("Width", &width, kSizes, 4)) {
+            pushUndo(before);
+            each([&](CustomKey& o) { o.halfWidth = (width + 1) * 0.5 * kHalfDiag; });
+        }
+        if (ImGui::Combo("Height", &height, kSizes, 4)) {
+            pushUndo(before);
+            each([&](CustomKey& o) { o.halfHeight = (height + 1) * 0.5 * kHalfDiag; });
+        }
+        char text[64] = {};
+        k.label.copy(text, sizeof text - 1);
+        if (ImGui::InputText("Label", text, sizeof text)) each([&](CustomKey& o) { o.label = text; });
+        undoable();
+        char sub[64] = {};
+        k.sublabel.copy(sub, sizeof sub - 1);
+        if (ImGui::InputText("Under it", sub, sizeof sub)) each([&](CustomKey& o) { o.sublabel = sub; });
+        undoable();
+        if (ImGui::Button("Label from pitch")) {
+            pushUndo();
+            each([&](CustomKey& o) { o.label = noteNameOf(customPitch(o, tuning)); });
+        }
+    }
 }
 
 // KeyEDO's routing menu: Send to a destination, and Publish our own source.
@@ -807,6 +1286,8 @@ float KeyboardApp::drawPanel() {
                                   "pitch and note number, so it plays just as it does now");
         }
     }
+
+    if (editingKeys()) drawKeyInspector();
 
     if (ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::Button("Reset View")) rebuild(true);

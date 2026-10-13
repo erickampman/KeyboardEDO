@@ -43,6 +43,8 @@ std::string noteName(const StepLabel& l, bool withOctave) {
 
 } // namespace
 
+std::string noteNameOf(double pitch) { return noteName(labelOfPitch(pitch), true); }
+
 Rgb hsb(double h, double s, double b) {
     h = (h - std::floor(h)) * 6.0;
     const int i = int(h) % 6;
@@ -65,14 +67,12 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
     const bool black = key.shade == KeyShade::Black;
 
     if (kind == LayoutKind::Custom) {
-        // Its own colour, or its shade as the piano it may have come from;
-        // its own labels; ink that shows on the fill.
-        const bool diamond = key.shape == KeyShape::Diamond;
+        // Its own colour, or its shade as the diamond piano's; its own
+        // labels; ink that shows on the fill.
         if (key.color)
             look.fill = {((*key.color >> 16) & 0xFF) / 255.0f, ((*key.color >> 8) & 0xFF) / 255.0f,
                          (*key.color & 0xFF) / 255.0f};
-        else if (black) look.fill = diamond ? grey(0.0f) : grey(0.12f);
-        else look.fill = diamond ? grey(1.0f) : grey(0.90f);
+        else look.fill = black ? grey(0.0f) : grey(1.0f);
         if (!key.playable) look.fill = grey(0.28f);
         look.outline = grey(0.30f);
         const float light = 0.30f * look.fill.r + 0.59f * look.fill.g + 0.11f * look.fill.b;

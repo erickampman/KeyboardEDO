@@ -210,10 +210,12 @@ enum class LayoutKind { Piano, Tiled, Custom };
 // note in `octave` (with the origin at A, 17 / 3 / 5 is five 17-EDO steps above
 // A3), so keys of different EDOs can share a layout, and changing the
 // layout's EDO leaves them be.
+//
+// Every custom key is a diamond (the author, 2026-10-13): a 12-EDO piano
+// converts to the diamond piano's arrangement, keeping its black and white.
 struct CustomKey {
     Point    center;
-    KeyShape shape = KeyShape::Diamond;
-    double   halfWidth  = 0;      // 0: the standard diamond's
+    double   halfWidth  = 0;      // half-diagonals; 0: the standard diamond's
     double   halfHeight = 0;
     KeyShade shade = KeyShade::White;
     std::optional<std::uint32_t> color;   // fill, 0xRRGGBB, instead of the shade's

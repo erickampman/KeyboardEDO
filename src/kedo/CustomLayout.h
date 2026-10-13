@@ -44,9 +44,11 @@ private:
 int suggestNumber(const std::vector<CustomKey>& keys, std::size_t index, const Tuning& tuning);
 
 // Every playable key of a generated `layout` (made by makeLayout from `kind`,
-// Piano or Tiled, and `tuning`) as a custom key: its place, shape, size,
-// look, pitch and note number, so the custom layout plays exactly what
-// `layout` did.
+// Piano or Tiled, and `tuning`) as a custom key: its place, size, look,
+// pitch and note number, so the custom layout plays exactly what `layout`
+// did. The 12-EDO piano's keys are arranged as the diamond piano's (black
+// and white diamonds, the black half a diamond up), as custom keys are all
+// diamonds.
 std::vector<CustomKey> convertToCustom(const Layout& layout, const Tuning& tuning, LayoutKind kind,
                                        TileColor tileColor);
 

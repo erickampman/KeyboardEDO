@@ -209,7 +209,29 @@ decisions.md, "Custom layout". Two sessions:
 2. The editor, in Edit mode: select (Shift adds), drag, snap, add, delete,
    duplicate, undo; the inspector, with pitch as EDO / octave / degree, the
    suggested note number and its override; auditioning edits through the
-   output.
+   output. **Done 2026-10-13** (decisions.md, "Custom layout", the editor as
+   built). Also: custom keys are diamonds only, and the 12-EDO piano
+   converts to the diamond piano's arrangement. `--snapshot` takes steps in
+   order (`--tap [shift+]`, `--double`, `--drag`, `--key`), ignoring the
+   real mouse meanwhile. Checked with them: selecting, Shift-selecting,
+   dragging and nudging with snapping, adding by double-click, duplicating,
+   deleting and undoing, the inspector's degree changing a key's pitch and
+   number, and Cmd/Ctrl-S saving the edits, read back from the bundle;
+   auditioning heard with `aseqdump` (note on, off 400 ms later).
+
+   The author found no way to add a layout from a custom one: in Play mode
+   the Layouts section only lists them (its hint now says to click Edit),
+   and in Edit mode the Keys section's Add and Duplicate had the Layouts
+   section's labels, which ImGui takes as one widget; they're now "Add key",
+   and so on. Snapshot runs use default preferences and save none (the
+   author's running KeyboardEDO and the tests had been switching each
+   other's mode through the shared file).
+
+   Not tested automatically: the editor is app code (the core's custom
+   layout, numbering and file are tested). Still to check by hand: dragging
+   with a real mouse and a touchscreen, the colour picker, and whether a
+   converted diamond piano's labels ("A", "110.0") should follow a pitch
+   change (only a label that's the note's name with its octave does now).
 
 ## 9. Computer keyboard (KeyboardEDO)
 

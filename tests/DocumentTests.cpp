@@ -271,7 +271,6 @@ void testCustomKeys() {
     a.group = 2;
     a.channel = 9;
     CustomKey b;
-    b.shape = KeyShape::Rectangle;
     b.shade = KeyShade::Black;
     b.halfWidth = 11.5;
     b.halfHeight = 55;

@@ -61,7 +61,6 @@ void readEnum(const json& j, const char* key, E& value, int count) {
 // layout's; a fill colour is "#rrggbb".
 json customKeyJson(const CustomKey& k) {
     json j = {{"x", k.center.x}, {"y", k.center.y},
-              {"shape", k.shape == KeyShape::Diamond ? "diamond" : "rectangle"},
               {"shade", k.shade == KeyShade::Black ? "black" : "white"},
               {"edo", k.edo}, {"octave", k.octave}, {"degree", k.degree},
               {"number", k.number}, {"numberChosen", k.numberChosen}};
@@ -85,9 +84,6 @@ CustomKey customKeyFrom(const json& j) {
     read(j, "x", k.center.x);
     read(j, "y", k.center.y);
     std::string text;
-    read(j, "shape", text);
-    k.shape = text == "rectangle" ? KeyShape::Rectangle : KeyShape::Diamond;
-    text.clear();
     read(j, "shade", text);
     k.shade = text == "black" ? KeyShade::Black : KeyShade::White;
     read(j, "halfWidth", k.halfWidth);
