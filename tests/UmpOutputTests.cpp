@@ -14,6 +14,7 @@ namespace {
 
 Tuning seventeen() {
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 17;
     return t;
 }
@@ -48,7 +49,7 @@ void testNoteOnMidi2() {
 
 void testNoteOnTwelve() {
     UmpOutput out(config(uw::MidiProtocol::Midi2));
-    out.noteOn(Tuning{}.note(36), 0xFFFF);
+    out.noteOn(Tuning{.originOctave = 1}.note(36), 0xFFFF);
     const auto m = out.take();
     CHECK(m.size() == 1);
     CHECK(ump::noteNumber(m[0]) == 69);        // the standard note number

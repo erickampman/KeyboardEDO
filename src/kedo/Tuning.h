@@ -28,7 +28,7 @@ struct Tuning {
 
     int edo            = 12;
     int originPitchClass = 9;    // A
-    int originOctave   = 1;      // A1 = 55 Hz
+    int originOctave   = 0;      // A0 = 27.5 Hz: in the piano's lowest octave
 
     // The origin as a 12-EDO MIDI note number (A1 = 33).
     int originMidiNote() const;
@@ -47,6 +47,12 @@ struct Tuning {
     int firstStep() const;
     int lastStep() const;           // inclusive
     bool isPlayable(int step) const { return step >= firstStep() && step <= lastStep(); }
+
+    // The lowest key the tile layouts show: the origin note in octave -1 (A-1
+    // for an A origin), whatever the origin octave. At 12-EDO the keys below
+    // it are never shown; at other EDOs, those from it up to the origin are
+    // shown, but grey (they have no note number).
+    int lowestStep() const { return -edo * (originOctave + 1); }
 
     // The MIDI 2.0 note number that identifies `step`. At 12-EDO it is the
     // standard note number; otherwise steps are numbered from 0 at the origin,

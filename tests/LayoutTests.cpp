@@ -1,6 +1,7 @@
 // The three layouts: positions, hit-testing, and the Tiled lattice's isomorphism.
 
 #include <cmath>
+#include <map>
 #include <set>
 
 #include "Check.h"
@@ -36,6 +37,7 @@ void checkNotes(const Layout& layout, const Tuning& t) {
 
 void testPiano() {
     Tuning t;   // 12-EDO from A1
+    t.originOctave = 1;
     PianoLayout piano(t, 24, 108);   // C1..C8
     CHECK(near(piano.bounds().w, 50 * PianoLayout::kWhiteWidth));
     checkConsistent(piano);
@@ -163,11 +165,13 @@ void testTiledIsomorphic() {
 void testTiledRange() {
     Tuning t;
     t.edo = 17;
+    t.originOctave = -1;   // so the lowest key, A-1, is the origin, step 0
     TiledLayout tiled(t, {"Wicki-Hayden", 3, 10}, 8);
     // Steps outside the tuning are drawn, but unplayable.
     CHECK(!tiled.keyAtLattice(-1, 0).playable);
     CHECK(tiled.keyAtLattice(0, 0).playable);
-    CHECK(!tiled.keyAtLattice(36, 0).playable);   // 108 > 106
+    CHECK(tiled.keyAtLattice(42, 0).playable);    // 126
+    CHECK(!tiled.keyAtLattice(43, 0).playable);   // 129: past the 128 note numbers
     // keysIn returns every key in the area, playable or not.
     const auto keys = tiled.keysIn(tiled.bounds());
     std::set<int> steps;
@@ -177,6 +181,114 @@ void testTiledRange() {
     // keyForStep: the lowest row's.
     const auto k = tiled.keyForStep(13);
     CHECK(k && k->row == 1 && k->col == 1);
+}
+
+// Octave columns (docs/decisions.md): each column one degree in every
+// octave, two octaves of columns, from the origin note in octave -1.
+void testOctaveColumns() {
+    // The author's examples, at 12-EDO with an A origin.
+    {
+        Tuning t;   // A0
+        OctaveLayout oct(t);
+        CHECK(oct.columns() == 24);
+        const auto named = [&](const char* pc, int octave) {
+            const int midi = (octave + 1) * 12 + pitchClassOf(pc);
+            return oct.keyForStep(midi - t.originMidiNote());
+        };
+        const auto a1lowest = oct.keysIn(oct.bounds());
+        std::map<std::pair<int, int>, Key> at;   // (column, level)
+        for (const auto& k : a1lowest) at[{k.col, k.row}] = k;
+        const auto lowest = named("A", -1);
+        CHECK(lowest && lowest->col == 0 && lowest->row == 0 && lowest->note.number == 9);
+        CHECK(lowest && near(lowest->center.x, kHalfDiag) && near(lowest->center.y, oct.bounds().bottom() - kHalfDiag));
+        for (const auto& k : a1lowest) CHECK(k.step >= lowest->step);   // nothing below A-1
+        CHECK((at[{0, 1}].step == named("A", 0)->step));   // straight up from A-1 is A0
+        const auto a6 = named("A", 6), as6 = named("A#", 6), b6 = named("B", 6);
+        CHECK(a6 && as6 && b6);
+        CHECK(as6->col == a6->col + 1 && as6->row == a6->row);       // up-right
+        CHECK(near(as6->center.y, a6->center.y - kHalfDiag));
+        CHECK(b6->col == a6->col + 2 && near(b6->center.y, a6->center.y));   // right
+        // After G#1 (the first G# column's) comes A1, in the second octave of columns.
+        const Key gs1 = at[{11, 1}];
+        CHECK(gs1.step == named("G#", 1)->step);
+        bool found = false;
+        for (const auto& k : a1lowest)
+            if (k.col == 12 && k.step == gs1.step + 1) {
+                found = true;
+                CHECK(near(k.center.y, gs1.center.y + kHalfDiag));   // down-right of it
+            }
+        CHECK(found);
+    }
+
+    for (int edo = Tuning::kMinEdo; edo <= Tuning::kMaxEdo; ++edo) {
+        for (int originOctave : {-1, 0, 1, 4}) {
+            Tuning t;
+            t.edo = edo;
+            t.originPitchClass = 0;   // C
+            t.originOctave = originOctave;
+            const auto presets = generatorPresets(edo);
+            CHECK(presets.back().name == "Octave columns" && presets.back().octaveColumns);   // last: KeyEDO's indexes stay
+            LayoutConfig c;
+            c.kind = LayoutKind::Tiled;
+            c.generatorIndex = int(presets.size()) - 1;
+            const auto made = makeLayout(c, t);
+            const auto* oct = dynamic_cast<OctaveLayout*>(made.get());
+            CHECK(oct != nullptr);
+            if (!oct) continue;
+            CHECK(oct->columns() == 2 * edo);
+            checkConsistent(*oct);
+
+            const auto keys = oct->keysIn(oct->bounds());
+            std::map<std::pair<int, int>, Key> at;
+            for (const auto& k : keys) at[{k.col, k.row}] = k;
+            CHECK(int(keys.size()) == oct->columns() * oct->levels());
+            for (const auto& [pos, k] : at) {
+                const auto [col, row] = pos;
+                CHECK(k.step == t.lowestStep() + col + edo * row);
+                CHECK(k.playable == t.isPlayable(k.step));
+                if (const auto up = at.find({col, row + 1}); up != at.end()) {
+                    CHECK(up->second.step - k.step == edo);              // straight up, an octave
+                    CHECK(near(up->second.center.x, k.center.x));
+                }
+                if (const auto right = at.find({col + 2, row}); right != at.end())
+                    CHECK(right->second.step - k.step == 2 && near(right->second.center.y, k.center.y));
+                // Up-right: the next degree, from an even column; from an odd
+                // one, the next degree an octave up.
+                if (const auto ur = at.find({col + 1, row + (col % 2)}); ur != at.end()) {
+                    CHECK(ur->second.step - k.step == 1 + (col % 2) * edo);
+                    CHECK(near(ur->second.center.y, k.center.y - kHalfDiag));
+                }
+            }
+            // The bottom left is C-1, the origin note in octave -1; every
+            // playable step is there.
+            CHECK((at[{0, 0}].step == t.lowestStep()));
+            CHECK(t.label(t.lowestStep()).pitchClass == 0 && t.label(t.lowestStep()).octave == -1);
+            std::set<int> steps;
+            for (const auto& k : keys)
+                if (k.playable) steps.insert(k.step);
+            CHECK(int(steps.size()) == t.lastStep() - std::max(t.firstStep(), t.lowestStep()) + 1);
+        }
+    }
+}
+
+// Tiled starts from the origin note in octave -1 too.
+void testTiledLowest() {
+    for (int edo : {12, 17, 31}) {
+        Tuning t;
+        t.edo = edo;
+        for (const auto& g : generatorPresets(edo)) {
+            if (g.octaveColumns) continue;
+            TiledLayout tiled(t, g, 8);
+            const auto k = tiled.keyForStep(t.lowestStep());
+            CHECK(k && k->row == 0 && k->col == 0);
+            for (const auto& key : tiled.keysIn(tiled.bounds())) {
+                if (key.step < t.lowestStep()) CHECK(!key.playable);
+                if (edo != 12 && key.step < 0) CHECK(!key.playable);   // below the origin: no note number
+            }
+            // At 12-EDO, A-1 (note 9) is playable and G#-1 isn't shown.
+            if (edo == 12) CHECK(k && k->playable && k->note.number == 9);
+        }
+    }
 }
 
 void testMakeLayout() {
@@ -201,6 +313,8 @@ int main() {
     testDiamondAllEdos();
     testTiledIsomorphic();
     testTiledRange();
+    testOctaveColumns();
+    testTiledLowest();
     testMakeLayout();
     return kedo::test::finish("Layout");
 }

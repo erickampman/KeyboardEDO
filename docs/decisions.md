@@ -96,16 +96,41 @@ The presets keep KeyEDO's names, re-expressed for the new lattice:
 ### Octave columns
 
 Each column holds one scale degree in every octave, stacked corner to corner
-as the diamond piano's columns: above A0 is A1. The column up and to the right
-holds the next degree (at 12-EDO, A#), and so on.
+as the diamond piano's columns: above A-1 is A0. The column up and to the
+right holds the next degree (at 12-EDO, A#), and so on.
 
-It's a Tiled generator, not a new layout: up-right = 1 step and right =
-2 - EDO, so two rows straight up adds 2 x 1 - (2 - EDO) = EDO steps, an
-octave, and every direction keeps one interval (still isomorphic). It needs:
-- `TiledLayout` to accept a negative `right` (it clamps to 1 now, and its
-  range and `keyForStep` arithmetic assume positive);
-- rows enough for every octave (about 20 at 12-EDO), with vertical
-  scrolling, instead of rows fitted to the window's height.
+The first plan (2026-10-09) made it a Tiled generator, up-right 1 and right
+2 - EDO, which keeps it isomorphic. Built that way, each column started half
+a tile above the one before, so the tile right of A6 was B5. **The author's
+layout (2026-10-13) can't be isomorphic**, and is its own `OctaveLayout`:
+- Two octaves of columns, one per degree: at 12-EDO A, A#, ... G#, A, ... G#.
+  Every other column sits half a tile higher, as the diamond piano's black
+  keys, so the zigzag along the bottom is chromatic: A-1, A#-1, ... G#0, A0,
+  ... G#1. Column c at level o plays the step c + EDO * o above the lowest.
+- So right of A6 is B6 (+2), up-right of A6 is A#6 (+1), straight up an
+  octave, and after G#1 comes A1 (down and right of it, in the second octave
+  of columns); but up-right of A#6 is B7 (+EDO + 1).
+- Levels enough for the first column to reach the last note; tiles without
+  a note number are grey.
+- It's still the last preset in the Tiled generator list
+  (`Generator::octaveColumns`), so documents store it as KeyEDO's do, by
+  `selectedPresetIndex`, and KeyEDO's own presets keep their indexes.
+
+### The lowest key, and the default origin (decided 2026-10-13)
+
+- **Every tile layout (Tiled and Octave columns) starts at the origin note
+  in octave -1** (`Tuning::lowestStep()`): A-1 with an A origin, C-1 with a C
+  one, whatever the origin octave. It's the bottom left key, and the view
+  opens on it. At 12-EDO the notes below it (C-1 to G#-1 for A) are no
+  longer shown; at other EDOs the keys from it up to the origin are shown
+  grey, as they have no note number.
+- Not the piano: the standard keyboard keeps its own range, and the diamond
+  piano starts at the origin.
+- **Note numbers are as before:** at EDOs other than 12, the origin note and
+  octave get note 0, and keys past note 127 are grey; 12-EDO keeps standard
+  MIDI numbers.
+- **The default origin is A0** (27.5 Hz), in the piano's lowest octave,
+  instead of A1. A document that names its origin octave keeps it.
 
 ### Custom layout
 
@@ -392,7 +417,13 @@ How it's set up:
   to ImGui, so panels still work by touch and no note is played twice.
   Trackpad fingers (indirect touch devices) are ignored: they have no place
   on the screen. Wheel scrolls, Ctrl or Cmd with the wheel zooms, and a
-  trackpad pinch zooms (SDL 3.4's pinch events). Lock stops both.
+  trackpad pinch zooms (SDL 3.4's pinch events). Lock stops both. A
+  keyboard that fits the window's height scrolls sideways with a plain
+  wheel; a taller one (Octave columns) scrolls vertically, and sideways with
+  Shift held. Zoom buttons by Reset View, Cmd/Ctrl = and -, and Cmd/Ctrl 0
+  for zoom 1 zoom about the keyboard's centre (2026-10-13: the author found
+  no way to scroll Octave columns sideways or zoom with a plain mouse; the
+  panel now says how).
 - **Fonts:** ImGui's built-in vector font, and Cousine (from ImGui's
   `misc/fonts`, embedded at configure time) for the MIDI monitor.
 - **Redraw on demand:** the loop waits for events, draws a few frames after

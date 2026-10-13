@@ -21,6 +21,7 @@ void testPitchClasses() {
 
 void testTwelve() {
     Tuning t;   // 12-EDO from A1
+    t.originOctave = 1;   // A1: these numbers assume it
     CHECK(t.originMidiNote() == 33);
     CHECK(near(t.originFrequency(), 55.0));
     CHECK(near(t.frequency(36), 440.0));
@@ -32,8 +33,24 @@ void testTwelve() {
     CHECK(t.nearestMidi1Note(36) == 69);
 }
 
+void testDefaultsAndLowest() {
+    Tuning t;   // A0, the piano's lowest key
+    CHECK(t.originPitchClass == 9 && t.originOctave == 0);
+    CHECK(t.originMidiNote() == 21);
+    // The tile layouts' lowest key: the origin note in octave -1.
+    CHECK(t.lowestStep() == -12);
+    CHECK(t.noteNumber(t.lowestStep()) == 9);   // A-1
+    t.originPitchClass = 0;                     // C0: C-1, note 0
+    CHECK(t.noteNumber(t.lowestStep()) == 0);
+    t.edo = 31;
+    t.originOctave = 2;
+    CHECK(t.lowestStep() == -93);                // three octaves below C2
+    CHECK(!t.isPlayable(t.lowestStep()));        // below the origin: no note number
+}
+
 void testSeventeen() {
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 17;   // KeyEDO's screenshot: 17-EDO from A1
     CHECK(near(t.frequency(17), 110.0));
     CHECK(near(t.frequency(34), 220.0));
@@ -52,6 +69,7 @@ void testSeventeen() {
 
 void testWideEdos() {
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 72;
     t.originOctave = 0;   // A0: 87 semitones to C8 would be 522 steps
     CHECK(t.lastStep() == 127);   // at most 128 note numbers
@@ -100,6 +118,7 @@ void testGenerators() {
 int main() {
     testPitchClasses();
     testTwelve();
+    testDefaultsAndLowest();
     testSeventeen();
     testWideEdos();
     testPitchEncodings();

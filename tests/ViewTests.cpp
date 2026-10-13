@@ -45,6 +45,7 @@ void testViewport() {
 
 void testKeyLook() {
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 17;
     Key k;
     k.step = 17;   // A2
@@ -87,6 +88,7 @@ void testKeyLook() {
 
 void testUmpText() {
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 17;
     OutputConfig c;
     c.perNoteManagement = true;
@@ -114,6 +116,7 @@ void testSynopsis() {
     CHECK(synopsis(d, {}) == "12-EDO" + dot + "Piano" + dot + "Gliss");
 
     d.tuning.edo = 17;
+    d.tuning.originOctave = 1;
     d.layout.kind = LayoutKind::Tiled;
     d.play.strikeVelocity = true;
     LiveState live;

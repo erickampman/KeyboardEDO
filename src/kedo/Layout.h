@@ -128,12 +128,13 @@ private:
 };
 
 // An isomorphic lattice of diamonds. Tile (col, row) plays
-//     col * generator.right + row * generator.upRight
-// and sits at x = (2 * col + row) * h, so every row is shifted half a tile
-// right of the one below: moving up-right always adds upRight, and up-left
-// always adds upRight - right, wherever you start. Rows run from 0 (bottom) to
-// rows - 1. Columns are unbounded; tiles outside the tuning's range are
-// unplayable.
+//     lowest + col * generator.right + row * generator.upRight
+// (lowest: Tuning::lowestStep(), the origin note in octave -1) and sits at
+// x = (2 * col + row) * h, so every row is shifted half a tile right of the
+// one below: moving up-right always adds upRight, and up-left always adds
+// upRight - right, wherever you start. Rows run from 0 (bottom) to rows - 1.
+// Columns are unbounded; tiles below `lowest` or outside the tuning's range
+// are unplayable.
 //
 // KeyEDO alternated the shift between even and odd rows instead, so up-right
 // added upRight from an even row but right + upRight from an odd one, and
@@ -159,6 +160,34 @@ private:
     Tuning tuning_;
     Generator generator_;
     int rows_;
+    int lowest_;
+    Rect bounds_;
+};
+
+// Octave columns (docs/decisions.md): each column one degree in every octave,
+// going up, two octaves of columns side by side. Column c at level o plays
+//     lowest + c + EDO * o
+// (lowest: Tuning::lowestStep()), so the zigzag along the bottom is
+// chromatic, and every other column sits half a tile higher, as the diamond
+// piano's black keys. Not isomorphic: up-right adds 1 from an even column but
+// EDO + 1 from an odd one. Tiles without a note number are drawn, unplayable.
+class OctaveLayout final : public Layout {
+public:
+    static constexpr double kKeySize = 60;
+
+    explicit OctaveLayout(const Tuning& tuning);
+
+    Rect bounds() const override { return bounds_; }
+    std::vector<Key> keysIn(const Rect& area) const override;
+    std::optional<Key> keyAt(Point p) const override;
+    std::optional<Key> keyForStep(int step) const override;   // the lowest level's
+
+    int columns() const { return columns_; }
+    int levels() const { return levels_; }
+
+private:
+    std::vector<Key> keys_;   // by column, then level
+    int columns_ = 0, levels_ = 0;
     Rect bounds_;
 };
 
@@ -177,7 +206,7 @@ struct LayoutConfig {
 };
 
 // Piano at 12-EDO is PianoLayout and at any other EDO DiamondLayout; Tiled is
-// TiledLayout at every EDO.
+// TiledLayout at every EDO, or OctaveLayout for the Octave columns preset.
 std::unique_ptr<Layout> makeLayout(const LayoutConfig& config, const Tuning& tuning);
 
 } // namespace kedo

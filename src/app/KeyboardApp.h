@@ -78,6 +78,7 @@ private:
 
     bool inKeyboard(Point p) const { return viewport_.screen.contains(p); }
     Modifiers modifiers() const;
+    void zoomBy(double factor);
 
     SDL_Window* window_;
     ImFont* monoFont_;
@@ -92,6 +93,7 @@ private:
     MidiTargets targets_;     // before performer_, which plays into it
     Performer performer_;
     Viewport viewport_;
+    int originFrames_ = 0;    // frames left to keep Tiled's bottom row in view (frame())
 
     // Pointer ids for the Performer: 0 is the mouse, fingers count from 1.
     std::map<SDL_FingerID, int> pointers_;

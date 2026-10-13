@@ -51,6 +51,11 @@ std::vector<Generator> generatorPresets(int edo) {
     if (presets.empty())
         presets.push_back({"Default", 1, std::max(2, int(std::lround(edo * 0.585)))});
 
+    // Octave columns: each column one degree in every octave, two octaves of
+    // columns (OctaveLayout, docs/decisions.md). Not KeyEDO's, so last, after
+    // its presets' indexes.
+    presets.push_back({"Octave columns", 2, 1, true});
+
     return presets;
 }
 

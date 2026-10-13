@@ -54,6 +54,7 @@ struct Rig {
 
     Rig() {
         tuning.edo = 17;
+        tuning.originOctave = -1;   // the lowest key the origin, so tile (0, 0) is step 0
         layout = std::make_unique<TiledLayout>(tuning, Generator{"Wicki-Hayden", 3, 10}, 8);
         performer.setLayout(layout.get());
     }
@@ -261,6 +262,7 @@ void testNotesPassThrough() {
 void testDiamondGaps() {
     // Gliss holds the note across the Diamond layout's gaps.
     Tuning t;
+    t.originOctave = 1;   // A1: these numbers assume it
     t.edo = 19;
     DiamondLayout d(t);
     Recorder sink;

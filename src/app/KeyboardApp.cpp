@@ -15,6 +15,7 @@ namespace {
 constexpr float kMonitorHeight = 170;
 constexpr size_t kMonitorLines = 1000;
 constexpr double kWheelPoints = 30;   // scroll distance per wheel unit
+constexpr double kZoomStep = 1.25;    // the zoom buttons' and keys' factor
 
 const double kHalfDiag = TiledLayout::kKeySize * std::sqrt(2.0) / 2;
 
@@ -100,9 +101,23 @@ void KeyboardApp::rebuild(bool resetView) {
         // Start at zoom 1, the lowest keys at the left (Tiled: the origin).
         viewport_.zoom = 1;
         viewport_.scroll = {layout_->bounds().x, layout_->bounds().y};
+        // Tiled and Octave columns: the lowest key (the origin note in octave
+        // -1) at the left, and (frame(), originFrames_) its row, the bottom
+        // one, at the bottom.
         if (settings_.layout.kind == LayoutKind::Tiled)
-            if (const auto k = layout_->keyForStep(0)) viewport_.scroll.x = k->center.x - 2 * kHalfDiag;
+            if (const auto k = layout_->keyForStep(settings_.tuning.lowestStep())) {
+                viewport_.scroll.x = k->center.x - 2 * kHalfDiag;
+                originFrames_ = 2;
+            }
     }
+}
+
+// Zoom about the keyboard's centre (buttons and keys; the wheel and pinch
+// zoom about the pointer). Not while locked.
+void KeyboardApp::zoomBy(double factor) {
+    if (settings_.locked) return;
+    const Rect& s = viewport_.screen;
+    viewport_.zoomAbout({s.x + s.w / 2, s.y + s.h / 2}, factor);
 }
 
 Modifiers KeyboardApp::modifiers() const {
@@ -176,8 +191,10 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         // ("natural" on the Mac); moving the view by them makes the content
         // follow the fingers. (The author found the opposite sign backwards.)
         double dx = e.wheel.x * kWheelPoints, dy = e.wheel.y * kWheelPoints;
-        // A keyboard that fits vertically scrolls sideways with a plain wheel.
-        if (layout_->bounds().h * viewport_.zoom <= viewport_.screen.h && dx == 0) std::swap(dx, dy);
+        // A keyboard that fits vertically scrolls sideways with a plain wheel;
+        // one that doesn't (Octave columns), with Shift held, as is usual.
+        const bool fits = layout_->bounds().h * viewport_.zoom <= viewport_.screen.h;
+        if ((fits || (SDL_GetModState() & SDL_KMOD_SHIFT)) && dx == 0) std::swap(dx, dy);
         viewport_.scrollBy(dx, dy);
         break;
     }
@@ -194,8 +211,14 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
 
     case SDL_EVENT_KEY_DOWN: {
         if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) performer_.releaseAll();
-        // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as.
+        // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as; = (or +) and -
+        // zoom, and 0 back to zoom 1, about the keyboard's centre.
         const bool command = (e.key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL)) != 0;
+        if (command) {
+            if (e.key.key == SDLK_EQUALS || e.key.key == SDLK_PLUS || e.key.key == SDLK_KP_PLUS) zoomBy(kZoomStep);
+            if (e.key.key == SDLK_MINUS || e.key.key == SDLK_KP_MINUS) zoomBy(1 / kZoomStep);
+            if (e.key.key == SDLK_0 || e.key.key == SDLK_KP_0) zoomBy(1 / viewport_.zoom);
+        }
         if (command && !e.key.repeat) {
             if (e.key.key == SDLK_O) showDialog(Dialog::Open);
             if (e.key.key == SDLK_S) {
@@ -234,6 +257,15 @@ void KeyboardApp::frame() {
     applySettings();
     targets_.poll();
 
+    // After a reset, Tiled's bottom row at the bottom: clampTo turns the
+    // bottom of the layout into the lowest scroll that shows it, or centres
+    // rows that fit. Kept for two frames, as ImGui sizes the toolbar a frame
+    // late, so the first frame's keyboard area is too tall. Octave columns'
+    // rows don't fit, and scroll.
+    if (originFrames_ > 0) {
+        --originFrames_;
+        viewport_.scroll.y = layout_->bounds().bottom();
+    }
     viewport_.clampTo(layout_->bounds());
     drawKeyboard(ImGui::GetBackgroundDrawList());
     flush();
@@ -580,17 +612,36 @@ float KeyboardApp::drawPanel() {
                 for (int i = 0; i < int(presets.size()); ++i) {
                     const auto& g = presets[i];
                     if (ImGui::Selectable(g.name.c_str(), i == l.generatorIndex)) l.generatorIndex = i;
-                    ImGui::SetItemTooltip("right %+d, up-right %+d, up-left %+d steps", g.right, g.upRight, g.upLeft());
+                    if (g.octaveColumns)
+                        ImGui::SetItemTooltip("each column one note in every octave, two octaves across");
+                    else
+                        ImGui::SetItemTooltip("right %+d, up-right %+d, up-left %+d steps", g.right, g.upRight, g.upLeft());
                 }
                 ImGui::EndCombo();
             }
             const auto& g = presets[l.generatorIndex];
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
-            ImGui::TextWrapped("Steps: right %+d, up-right %+d, up-left %+d", g.right, g.upRight, g.upLeft());
+            if (g.octaveColumns)
+                ImGui::TextWrapped("Each column one note in every octave; right +2, up-right +1.");
+            else
+                ImGui::TextWrapped("Steps: right %+d, up-right %+d, up-left %+d", g.right, g.upRight, g.upLeft());
             ImGui::PopStyleColor();
             enumCombo("Tile colour", settings_.tileColor, kTileColors, ImGui::CalcItemWidth());
         }
         if (ImGui::Button("Reset View")) rebuild(true);
+        ImGui::SameLine();
+        ImGui::BeginDisabled(settings_.locked);
+        if (ImGui::Button("-##zoom")) zoomBy(1 / kZoomStep);
+        ImGui::SetItemTooltip("Zoom out (Cmd/Ctrl -)");
+        ImGui::SameLine();
+        if (ImGui::Button("+##zoom")) zoomBy(kZoomStep);
+        ImGui::SetItemTooltip("Zoom in (Cmd/Ctrl =)");
+        ImGui::SameLine();
+        ImGui::Text("%d%%", int(std::lround(viewport_.zoom * 100)));
+        ImGui::EndDisabled();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+        ImGui::TextWrapped("Wheel scrolls, Shift-wheel sideways; Ctrl-wheel or pinch zooms.");
+        ImGui::PopStyleColor();
     }
 
     if (ImGui::CollapsingHeader("Playing", ImGuiTreeNodeFlags_DefaultOpen)) {

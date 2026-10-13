@@ -165,13 +165,15 @@ std::optional<Key> DiamondLayout::keyForStep(int step) const {
 // --- TiledLayout ----------------------------------------------------------------
 
 TiledLayout::TiledLayout(const Tuning& tuning, const Generator& generator, int rows)
-    : tuning_(tuning), generator_(generator), rows_(std::max(1, rows)) {
+    : tuning_(tuning), generator_(generator), rows_(std::max(1, rows)), lowest_(tuning.lowestStep()) {
     generator_.right = std::max(1, generator_.right);
     const double h = kKeySize * kSqrt2 / 2;
     const int r1 = generator_.right, ur = generator_.upRight;
+    // The keys shown run from lowest_ up; at EDOs other than 12, those below
+    // the origin are among them, but grey.
     for (int row = 0; row < rows_; ++row) {
-        const int lo = ceilDiv(tuning_.firstStep() - row * ur, r1);
-        const int hi = floorDiv(tuning_.lastStep() - row * ur, r1);
+        const int lo = ceilDiv(-row * ur, r1);
+        const int hi = floorDiv(tuning_.lastStep() - lowest_ - row * ur, r1);
         if (lo > hi) continue;
         const Point a = center(lo, row), b = center(hi, row);
         bounds_ = bounds_.unite({a.x - h, a.y - h, b.x - a.x + 2 * h, 2 * h});
@@ -186,9 +188,9 @@ Point TiledLayout::center(int col, int row) const {
 Key TiledLayout::keyAtLattice(int col, int row) const {
     const double h = kKeySize * kSqrt2 / 2;
     Key k;
-    k.step = col * generator_.right + row * generator_.upRight;
+    k.step = lowest_ + col * generator_.right + row * generator_.upRight;
     k.note = tuning_.note(k.step);
-    k.playable = tuning_.isPlayable(k.step);
+    k.playable = k.step >= lowest_ && tuning_.isPlayable(k.step);
     k.shape = KeyShape::Diamond;
     k.shade = KeyShade::White;
     k.center = center(col, row);
@@ -226,10 +228,60 @@ std::optional<Key> TiledLayout::keyAt(Point p) const {
 std::optional<Key> TiledLayout::keyForStep(int step) const {
     // The lowest row that has it.
     for (int row = 0; row < rows_; ++row) {
-        const int rest = step - row * generator_.upRight;
+        const int rest = step - lowest_ - row * generator_.upRight;
         if (rest % generator_.right == 0) return keyAtLattice(rest / generator_.right, row);
     }
     return std::nullopt;
+}
+
+// --- OctaveLayout --------------------------------------------------------------
+
+OctaveLayout::OctaveLayout(const Tuning& tuning) {
+    const double h = kKeySize * kSqrt2 / 2;   // half-diagonal
+    const int lowest = tuning.lowestStep(), edo = tuning.edo;
+    columns_ = 2 * edo;
+    // Levels enough for the first column to reach the last step; the columns
+    // after it run out sooner, and their top tiles are grey.
+    levels_ = std::max(1, floorDiv(tuning.lastStep() - lowest, edo) + 1);
+
+    const double top = 2 * h * levels_ + h;   // the odd columns' top corner, the highest point
+    for (int col = 0; col < columns_; ++col) {
+        for (int level = 0; level < levels_; ++level) {
+            Key k;
+            k.step = lowest + col + edo * level;
+            k.note = tuning.note(k.step);
+            k.playable = tuning.isPlayable(k.step);
+            k.shape = KeyShape::Diamond;
+            k.shade = KeyShade::White;
+            k.halfWidth = k.halfHeight = h;
+            k.col = col;
+            k.row = level;
+            const double up = (col % 2 ? 2 * h : h) + level * 2 * h;   // centre above the bottom
+            k.center = {h + col * h, top - up};
+            keys_.push_back(k);
+        }
+    }
+    bounds_ = {0, 0, (columns_ + 1) * h, top};
+}
+
+std::vector<Key> OctaveLayout::keysIn(const Rect& area) const {
+    std::vector<Key> out;
+    for (const auto& k : keys_)
+        if (k.bounds().intersects(area)) out.push_back(k);
+    return out;
+}
+
+std::optional<Key> OctaveLayout::keyAt(Point p) const {
+    for (const auto& k : keys_)
+        if (k.contains(p)) return k;
+    return std::nullopt;
+}
+
+std::optional<Key> OctaveLayout::keyForStep(int step) const {
+    std::optional<Key> found;
+    for (const auto& k : keys_)
+        if (k.step == step && (!found || k.row < found->row)) found = k;
+    return found;
 }
 
 // --- makeLayout ---------------------------------------------------------------------
@@ -240,6 +292,7 @@ std::unique_ptr<Layout> makeLayout(const LayoutConfig& config, const Tuning& tun
         // A preset index from another EDO may be out of range: use the first.
         const int i = config.generatorIndex;
         const auto& g = presets[i >= 0 && i < int(presets.size()) ? i : 0];
+        if (g.octaveColumns) return std::make_unique<OctaveLayout>(tuning);
         return std::make_unique<TiledLayout>(tuning, g, config.tiledRows);
     }
     if (tuning.edo == 12)

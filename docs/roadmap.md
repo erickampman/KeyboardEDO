@@ -73,8 +73,12 @@ MIDI 2.0, and a MIDI 1.0 UMP destination and `aseqdump` the nearest note
 with the bend range as CC 101/100/6/38; quitting sends the note-off and CC
 123.
 
-Still to check by hand: a real synth (StageHand, FluidSynth), and a USB
-MIDI 2.0 device's UMP endpoint ports.
+Checked by the author 2026-10-13: KeyboardEDO plays StageHand on Linux.
+Its MIDI 2.0 behaviour there was confusing, most likely in the plugins,
+which need work (decisions.md, "What the synths do with it"); not yet
+pinned down.
+
+Still to check by hand: a USB MIDI 2.0 device's UMP endpoint ports.
 
 Declaring a UMP endpoint and function blocks moved to milestone 11, with the
 rest of identity and discovery: on the Mac it needs CoreMIDI's Objective-C
@@ -122,12 +126,31 @@ protocol badge centred, the routing menu on the antenna button. The panel
 shows only what the layout uses. Two-finger scrolling now follows the
 fingers. `keyboardedo --tap X,Y` presses and releases, for buttons.
 
-## 7. Octave columns (KeyboardEDO)
+## 7. Octave columns (KeyboardEDO): done 2026-10-13
 
-decisions.md, "Octave columns": a Tiled generator with up-right 1 and right
-2 - EDO. `TiledLayout` accepts a negative `right`; rows cover every octave,
-and the view scrolls vertically. Tests: straight up is an octave, up-right a
-step, from every tile.
+decisions.md, "Octave columns" and "The lowest key, and the default origin".
+Built first as an isomorphic Tiled generator (right 2 - EDO), which put B5
+right of A6; the author's layout isn't isomorphic, so it became
+`OctaveLayout`: two octaves of degree columns, every other one half a tile
+up, the bottom zigzag chromatic. Every tile layout now starts at the origin
+note in octave -1, and the default origin is A0.
+
+Tests: the author's 12-EDO examples (A-1 at the bottom left, A0 above it,
+A#6 up-right of A6, B6 right of it, A1 after G#1); at every EDO from 5 to 72
+and four origin octaves, straight up an octave, right +2, up-right +1 or
+EDO + 1, every playable step present, nothing overlapping; Tiled's lowest
+key at its bottom left, nothing below it playable. The existing tests that
+assumed the A1 default now set it.
+
+The reset view keeps the bottom row in view for two frames, because ImGui
+sizes the toolbar a frame late. Scrolling and zooming needed more than the
+wheel: Shift-wheel scrolls sideways, there are zoom buttons and Cmd/Ctrl
+= - 0, and the panel names them (decisions.md, "UI").
+
+Still to check by hand: playing it, Shift-wheel and the zoom keys with a
+real mouse and keyboard; and the Tiled presets against KeyEDO on the Mac
+(the author recalls them differently; KeyEDO's bottom row isn't chromatic
+either, but steps by the generator's "right").
 
 ## 8. Custom layout (KeyboardEDO)
 
