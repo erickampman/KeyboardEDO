@@ -23,10 +23,11 @@ namespace {
 
 void usage() {
     std::fprintf(stderr,
-                 "usage: keyboardedo [DOCUMENT.json] [--edo N] [--origin NOTE] [--octave N]\n"
+                 "usage: keyboardedo [DOCUMENT] [--edo N] [--origin NOTE] [--octave N]\n"
                  "                   [--layout piano|tiled] [--destination NAME] [--publish]\n"
                  "                   [--snapshot FILE.png [--click X,Y | --tap X,Y] [--wait SECONDS]]\n"
-                 "  DOCUMENT     a KeyboardEDO or KeyEDO document; the options override it\n"
+                 "  DOCUMENT     a .kedo document, or a KeyEDO .json (imported); the options\n"
+                 "               change its showing layout (--destination, the document's)\n"
                  "  --snapshot   draw a few frames, save the window as PNG, and quit\n"
                  "  --click      with --snapshot: press the mouse at X,Y (window points) first\n"
                  "  --tap        the same, and release it (for buttons)\n"
@@ -38,7 +39,7 @@ void usage() {
 
 int main(int argc, char** argv) {
     kedo::app::KeyboardApp::Start start;
-    kedo::Document& doc = start.document;
+    kedo::Document& document = start.document;
     std::string snapshot;
     float clickX = -1, clickY = -1;
     bool tap = false;   // --tap: release the click too
@@ -52,10 +53,11 @@ int main(int argc, char** argv) {
             std::fprintf(stderr, "keyboardedo: %s\n", error.c_str());
             return 1;
         }
-        doc = *loaded;
-        start.path = argv[1];
+        document = *loaded;
+        if (kedo::isBundlePath(argv[1])) start.path = argv[1];   // a KeyEDO file is imported: unsaved
         first = 2;
     }
+    kedo::LayoutSetup& doc = document.layout();
     for (int i = first; i < argc; ++i) {
         const char* arg = argv[i];
         if (!std::strcmp(arg, "--publish")) {
@@ -68,7 +70,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(arg, "--origin")) doc.tuning.originPitchClass = kedo::pitchClassOf(value);
         else if (!std::strcmp(arg, "--octave")) doc.tuning.originOctave = std::atoi(value);
         else if (!std::strcmp(arg, "--layout")) doc.layout.kind = !std::strcmp(value, "tiled") ? kedo::LayoutKind::Tiled : kedo::LayoutKind::Piano;
-        else if (!std::strcmp(arg, "--destination")) doc.destination = value;
+        else if (!std::strcmp(arg, "--destination")) document.destination = value;
         else if (!std::strcmp(arg, "--snapshot")) snapshot = value;
         else if (!std::strcmp(arg, "--click") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) {}
         else if (!std::strcmp(arg, "--tap") && std::sscanf(value, "%f,%f", &clickX, &clickY) == 2) tap = true;

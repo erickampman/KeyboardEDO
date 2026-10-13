@@ -16,6 +16,11 @@ struct Preferences {
     bool panelOpen   = true;
     bool monitorOpen = false;
 
+    // Edit mode (set up the document's layouts) or Play mode (choose among
+    // them, the settings hidden): decisions.md, "Documents with several
+    // layouts". Edit at first, to find things.
+    bool editing = true;
+
     bool operator==(const Preferences&) const = default;
 };
 

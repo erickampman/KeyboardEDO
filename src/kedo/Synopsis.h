@@ -17,6 +17,6 @@ struct LiveState {
     bool        publishing = false;
 };
 
-std::string synopsis(const Document& document, const LiveState& live);
+std::string synopsis(const LayoutSetup& document, const LiveState& live);
 
 } // namespace kedo

@@ -112,7 +112,7 @@ void testUmpText() {
 
 void testSynopsis() {
     const std::string dot = "  \u00B7  ";
-    Document d;   // 12-EDO piano
+    LayoutSetup d;   // 12-EDO piano
     CHECK(synopsis(d, {}) == "12-EDO" + dot + "Piano" + dot + "Gliss");
 
     d.tuning.edo = 17;

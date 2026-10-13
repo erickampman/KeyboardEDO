@@ -37,11 +37,13 @@ bool enumCombo(const char* label, E& value, const char* const (&names)[N], float
 KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& start)
     : window_(window),
       monoFont_(monoFont),
-      settings_(start.document),
-      applied_(start.document),
+      doc_(start.document),
       saved_(start.document),
+      settings_(start.document.layout()),
+      applied_(settings_),
+      appliedDestination_(start.document.destination),
       path_(start.path),
-      targets_(start.document.output),
+      targets_(settings_.output),
       performer_(targets_.sink()) {
     if (char* folder = SDL_GetPrefPath("unlikelyware", "KeyboardEDO")) {
         prefsPath_ = std::string(folder) + "preferences.json";
@@ -50,7 +52,7 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
     }
     rebuild(true);
     targets_.setConfig(settings_.output);
-    targets_.setDestination(settings_.destination);
+    targets_.setDestination(doc_.destination);
     targets_.setPublish(prefs_.publish || start.publish);
     updateTitle();
 }
@@ -278,9 +280,10 @@ void KeyboardApp::flush() { targets_.flush(monitor_, kMonitorLines); }
 void KeyboardApp::applySettings() {
     // A new destination or publishing starts from silence: notes held now
     // would never get their note-off there.
-    if (settings_.destination != applied_.destination) {
+    if (doc_.destination != appliedDestination_) {
         performer_.releaseAll();
-        targets_.setDestination(settings_.destination);
+        targets_.setDestination(doc_.destination);
+        appliedDestination_ = doc_.destination;
     }
     if (!(settings_.output == applied_.output)) {
         performer_.releaseAll();
@@ -302,6 +305,8 @@ void KeyboardApp::applySettings() {
 
 // --- Documents ----------------------------------------------------------------------
 
+// A .kedo bundle, or a KeyEDO file, imported: a document of one layout, not
+// saved until Save As makes it a bundle.
 void KeyboardApp::open(const std::string& path) {
     std::string error;
     const auto document = loadDocument(path, &error);
@@ -309,28 +314,84 @@ void KeyboardApp::open(const std::string& path) {
         status_ = error;
         return;
     }
-    status_.clear();
-    settings_ = *document;
+    const bool imported = !isBundlePath(path);
+    status_ = imported ? "Imported: Save makes it a .kedo document" : "";
+    performer_.releaseAll();
+    doc_ = *document;
     saved_ = *document;
-    path_ = path;
+    settings_ = doc_.layout();
+    path_ = imported ? "" : path;
     applySettings();
     rebuild(true);
 }
 
 bool KeyboardApp::save(const std::string& path) {
+    storeLayout();
     std::string error;
-    if (!saveDocument(path, settings_, &error)) {
+    if (!saveDocument(path, doc_, &error)) {
         status_ = error;
         return false;
     }
     status_.clear();
-    saved_ = settings_;
+    saved_ = doc_;
     path_ = path;
     return true;
 }
 
+// The document as it would be saved: the showing layout's settings stored.
+Document KeyboardApp::documentNow() const {
+    Document d = doc_;
+    d.layout() = settings_;
+    return d;
+}
+
+// --- Layouts ----------------------------------------------------------------------------
+
+// Switching releases what's held (the author's choice), then the new layout's
+// settings apply as if chosen: a new output setup goes out, the keys rebuild,
+// and the view starts afresh.
+void KeyboardApp::selectLayout(int index) {
+    if (index == doc_.current || index < 0 || index >= int(doc_.layouts.size())) return;
+    storeLayout();
+    performer_.releaseAll();
+    doc_.current = index;
+    settings_ = doc_.layout();
+    applySettings();
+    rebuild(true);
+}
+
+void KeyboardApp::addLayout(LayoutSetup layout) {
+    storeLayout();
+    doc_.layouts.insert(doc_.layouts.begin() + doc_.current + 1, std::move(layout));
+    selectLayout(doc_.current + 1);
+}
+
+void KeyboardApp::removeLayout() {
+    if (doc_.layouts.size() < 2) return;
+    performer_.releaseAll();
+    doc_.layouts.erase(doc_.layouts.begin() + doc_.current);
+    doc_.current = std::min(doc_.current, int(doc_.layouts.size()) - 1);
+    settings_ = doc_.layout();
+    applySettings();
+    rebuild(true);
+}
+
+void KeyboardApp::moveLayout(int by) {
+    const int to = doc_.current + by;
+    if (to < 0 || to >= int(doc_.layouts.size())) return;
+    storeLayout();
+    std::swap(doc_.layouts[doc_.current], doc_.layouts[to]);
+    doc_.current = to;
+}
+
+void KeyboardApp::setEditing(bool on) {
+    prefs_.editing = on;
+    if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
+}
+
 void KeyboardApp::showDialog(Dialog dialog) {
-    static const SDL_DialogFileFilter kFilters[] = {{"Keyboard documents (JSON)", "json"}};
+    static const SDL_DialogFileFilter kBundles[] = {{"KeyboardEDO documents", "kedo"}};
+    static const SDL_DialogFileFilter kKeyEdo[] = {{"KeyEDO documents (JSON)", "json"}};
     struct Request {
         KeyboardApp* app;
         Dialog dialog;
@@ -343,10 +404,14 @@ void KeyboardApp::showDialog(Dialog dialog) {
         std::lock_guard<std::mutex> g(r->app->dialogLock_);
         r->app->dialogResults_.emplace_back(r->dialog, files[0]);
     };
+    // A bundle is a folder (on the Mac, once the app declares .kedo a
+    // package, the file dialog will show it as one file).
     if (dialog == Dialog::Open)
-        SDL_ShowOpenFileDialog(callback, request, window_, kFilters, 1, nullptr, false);
+        SDL_ShowOpenFolderDialog(callback, request, window_, nullptr, false);
+    else if (dialog == Dialog::Import)
+        SDL_ShowOpenFileDialog(callback, request, window_, kKeyEdo, 1, nullptr, false);
     else
-        SDL_ShowSaveFileDialog(callback, request, window_, kFilters, 1, path_.empty() ? nullptr : path_.c_str());
+        SDL_ShowSaveFileDialog(callback, request, window_, kBundles, 1, path_.empty() ? nullptr : path_.c_str());
 }
 
 void KeyboardApp::takeDialogResults() {
@@ -356,10 +421,10 @@ void KeyboardApp::takeDialogResults() {
         results.swap(dialogResults_);
     }
     for (auto& [dialog, path] : results) {
-        if (dialog == Dialog::Open) {
+        if (dialog != Dialog::SaveAs) {
             open(path);
         } else {
-            if (path.size() < 5 || path.compare(path.size() - 5, 5, ".json") != 0) path += ".json";
+            if (path.size() < 5 || path.compare(path.size() - 5, 5, ".kedo") != 0) path += ".kedo";
             save(path);
         }
     }
@@ -371,10 +436,15 @@ void KeyboardApp::updateTitle() {
         const auto slash = path_.find_last_of("/\\");
         name = slash == std::string::npos ? path_ : path_.substr(slash + 1);
     }
-    // Tiled's row count follows the window, so it isn't an edit.
-    Document current = settings_;
-    current.layout.tiledRows = saved_.layout.tiledRows;
-    std::string title = name + (current == saved_ ? "" : " (edited)") + " - KeyboardEDO";
+    // Tiled's row count follows the window, and which layout shows follows
+    // playing, so neither is an edit.
+    auto plain = [](Document d) {
+        d.current = 0;
+        for (auto& l : d.layouts) l.layout.tiledRows = 0;
+        return d;
+    };
+    const bool edited = !(plain(documentNow()) == plain(saved_));
+    std::string title = name + (edited ? " (edited)" : "") + " - KeyboardEDO";
     if (title != SDL_GetWindowTitle(window_)) SDL_SetWindowTitle(window_, title.c_str());
 }
 
@@ -449,12 +519,29 @@ void KeyboardApp::drawToolbar() {
     const float icon = 1.9f * em;
     const float gap = ImGui::GetStyle().ItemSpacing.x;
 
+    const float rowY = ImGui::GetCursorPosY();
     if (iconButton("open", Icon::Open, icon, "Open... (Cmd/Ctrl-O)")) showDialog(Dialog::Open);
     ImGui::SameLine();
     if (iconButton("save", Icon::Save, icon, "Save (Cmd/Ctrl-S; Shift for Save As)")) {
         if (path_.empty()) showDialog(Dialog::SaveAs);
         else save(path_);
     }
+
+    // The document's layouts, and the mode: Edit sets them up, Play only
+    // chooses among them.
+    // Centred on the icons' row (setting only y would start a new line).
+    const float centredY = rowY + (icon - ImGui::GetFrameHeight()) / 2;
+    ImGui::SameLine();
+    ImGui::SetCursorPos({ImGui::GetCursorPosX(), centredY});
+    drawLayoutMenu(12 * em);
+    ImGui::SameLine();
+    ImGui::SetCursorPos({ImGui::GetCursorPosX(), centredY});
+    const bool editing = prefs_.editing;
+    if (editing) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+    if (ImGui::Button(editing ? "Editing" : "Edit")) setEditing(!editing);
+    if (editing) ImGui::PopStyleColor();
+    ImGui::SetItemTooltip(editing ? "Edit mode: set up the document's layouts. Click to play"
+                                  : "Play mode: choose among the layouts. Click to set them up");
 
     // The badge, centred: what the destination gets (KeyEDO's).
     const char* badge = !targets_.available()           ? "no MIDI output"
@@ -503,11 +590,11 @@ void KeyboardApp::drawToolbar() {
     LiveState live;
     live.latch = performer_.latchMode();
     live.publishing = targets_.publishing();
-    if (!settings_.destination.empty()) {
-        live.destination = settings_.destination;
+    if (!doc_.destination.empty()) {
+        live.destination = doc_.destination;
         live.destinationFound = false;
         for (const auto& d : targets_.destinations())
-            if (d.id == settings_.destination || d.name == settings_.destination) {
+            if (d.id == doc_.destination || d.name == doc_.destination) {
                 live.destination = d.name;
                 live.destinationFound = true;
             }
@@ -524,6 +611,75 @@ void KeyboardApp::drawToolbar() {
     ImGui::End();
 }
 
+// The layout menu on the toolbar: the document's layouts, the showing one
+// chosen.
+void KeyboardApp::drawLayoutMenu(float width) {
+    ImGui::SetNextItemWidth(width);
+    const std::string shown = settings_.name.empty() ? "(unnamed)" : settings_.name;
+    int chosen = -1;
+    if (ImGui::BeginCombo("##layout", shown.c_str())) {
+        for (int i = 0; i < int(doc_.layouts.size()); ++i) {
+            const std::string& name = i == doc_.current ? settings_.name : doc_.layouts[i].name;
+            const std::string label = (name.empty() ? "(unnamed)" : name) + "##" + std::to_string(i);
+            if (ImGui::Selectable(label.c_str(), i == doc_.current)) chosen = i;
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("The document's layouts (switching releases held notes)");
+    if (chosen >= 0) selectLayout(chosen);
+}
+
+// The panel's Layouts: the list to choose from, and in Edit mode, managing them.
+void KeyboardApp::drawLayoutsSection() {
+    if (!ImGui::CollapsingHeader("Layouts", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    int chosen = -1;
+    for (int i = 0; i < int(doc_.layouts.size()); ++i) {
+        const std::string& name = i == doc_.current ? settings_.name : doc_.layouts[i].name;
+        const std::string label = (name.empty() ? "(unnamed)" : name) + "##layout" + std::to_string(i);
+        if (ImGui::Selectable(label.c_str(), i == doc_.current)) chosen = i;
+    }
+    if (chosen >= 0) selectLayout(chosen);
+    if (!prefs_.editing) {
+        ImGui::TextDisabled("Edit (toolbar) to set them up.");
+        return;
+    }
+
+    char name[128] = {};
+    settings_.name.copy(name, sizeof name - 1);
+    if (ImGui::InputText("Name", name, sizeof name)) settings_.name = name;
+    if (ImGui::Button("Add")) {
+        LayoutSetup fresh;
+        for (int n = int(doc_.layouts.size()) + 1;; ++n) {
+            fresh.name = "Layout " + std::to_string(n);
+            if (std::none_of(doc_.layouts.begin(), doc_.layouts.end(),
+                             [&](const LayoutSetup& l) { return l.name == fresh.name; }))
+                break;
+        }
+        addLayout(fresh);
+    }
+    ImGui::SetItemTooltip("A new layout, after this one");
+    ImGui::SameLine();
+    if (ImGui::Button("Duplicate")) {
+        LayoutSetup copy = settings_;
+        copy.name += " copy";
+        addLayout(copy);
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(doc_.layouts.size() < 2);
+    if (ImGui::Button("Remove")) removeLayout();
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::BeginDisabled(doc_.current == 0);
+    if (ImGui::ArrowButton("##earlier", ImGuiDir_Up)) moveLayout(-1);
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Earlier in the list");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(doc_.current + 1 >= int(doc_.layouts.size()));
+    if (ImGui::ArrowButton("##later", ImGuiDir_Down)) moveLayout(1);
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Later in the list");
+}
+
 // KeyEDO's routing menu: Send to a destination, and Publish our own source.
 void KeyboardApp::drawRoutingMenu() {
     if (!ImGui::BeginPopup("routing")) return;
@@ -534,17 +690,17 @@ void KeyboardApp::drawRoutingMenu() {
         return;
     }
     ImGui::SeparatorText("Send to");
-    if (ImGui::MenuItem("None", nullptr, settings_.destination.empty())) settings_.destination.clear();
-    bool found = settings_.destination.empty();
+    if (ImGui::MenuItem("None", nullptr, doc_.destination.empty())) doc_.destination.clear();
+    bool found = doc_.destination.empty();
     for (const auto& d : targets_.destinations()) {
-        const bool chosen = d.id == settings_.destination || d.name == settings_.destination;
+        const bool chosen = d.id == doc_.destination || d.name == doc_.destination;
         found = found || chosen;
         const std::string label = d.name + "##" + d.id;
         if (ImGui::MenuItem(label.c_str(), d.protocol == uw::MidiProtocol::Midi2 ? "2.0" : "1.0", chosen))
-            settings_.destination = d.id;
+            doc_.destination = d.id;
     }
     if (!found) {
-        const std::string missing = settings_.destination + " (not found)";
+        const std::string missing = doc_.destination + " (not found)";
         ImGui::MenuItem(missing.c_str(), nullptr, true, false);
     }
 
@@ -590,7 +746,11 @@ float KeyboardApp::drawPanel() {
     auto& p = settings_.play;
     auto& o = settings_.output;
 
-    if (ImGui::CollapsingHeader("Tuning", ImGuiTreeNodeFlags_DefaultOpen)) {
+    drawLayoutsSection();
+
+    // The showing layout's settings: Edit mode only, so nothing changes by
+    // accident while playing.
+    if (prefs_.editing && ImGui::CollapsingHeader("Tuning", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::InputInt("EDO steps", &t.edo)) t.edo = std::clamp(t.edo, Tuning::kMinEdo, Tuning::kMaxEdo);
         ImGui::Combo("Origin note", &t.originPitchClass, kNotes, 12);
         if (ImGui::InputInt("Origin octave", &t.originOctave)) t.originOctave = std::clamp(t.originOctave, -1, 7);
@@ -598,7 +758,7 @@ float KeyboardApp::drawPanel() {
     }
 
     // The combo inside has the same label: "##kind" gives it its own ID.
-    if (ImGui::CollapsingHeader("Layout", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (prefs_.editing && ImGui::CollapsingHeader("Layout", ImGuiTreeNodeFlags_DefaultOpen)) {
         enumCombo("Layout##kind", l.kind, kLayouts, ImGui::CalcItemWidth());
         if (l.kind == LayoutKind::Piano) {
             ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
@@ -628,6 +788,9 @@ float KeyboardApp::drawPanel() {
             ImGui::PopStyleColor();
             enumCombo("Tile colour", settings_.tileColor, kTileColors, ImGui::CalcItemWidth());
         }
+    }
+
+    if (ImGui::CollapsingHeader("View", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (ImGui::Button("Reset View")) rebuild(true);
         ImGui::SameLine();
         ImGui::BeginDisabled(settings_.locked);
@@ -644,7 +807,7 @@ float KeyboardApp::drawPanel() {
         ImGui::PopStyleColor();
     }
 
-    if (ImGui::CollapsingHeader("Playing", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (prefs_.editing && ImGui::CollapsingHeader("Playing", ImGuiTreeNodeFlags_DefaultOpen)) {
         enumCombo("Drag", p.drag, kDrags, ImGui::CalcItemWidth());
         if (p.drag == DragBehavior::Gliss) {
             ImGui::Checkbox("Glide (Pitch 7.25)", &p.glide);
@@ -688,7 +851,7 @@ float KeyboardApp::drawPanel() {
         if (p.strikeVelocity) ImGui::SliderInt("Minimum", &p.strikeVelocityMin, 1, 126);
     }
 
-    if (ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen)) {
+    if (prefs_.editing && ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen)) {
         int group = o.group + 1, channel = o.channel + 1;
         if (ImGui::InputInt("Group", &group)) o.group = std::uint8_t(std::clamp(group, 1, 16) - 1);
         if (ImGui::InputInt("Channel", &channel)) o.channel = std::uint8_t(std::clamp(channel, 1, 16) - 1);
@@ -717,6 +880,8 @@ float KeyboardApp::drawPanel() {
         }
         ImGui::SameLine();
         if (ImGui::Button("Save As...")) showDialog(Dialog::SaveAs);
+        if (ImGui::Button("Import KeyEDO...")) showDialog(Dialog::Import);
+        ImGui::SetItemTooltip("A KeyEDO document, as a new document of one layout");
         ImGui::TextWrapped("%s", path_.empty() ? "Not saved yet." : path_.c_str());
     }
 

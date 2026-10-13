@@ -18,6 +18,7 @@ Preferences loadPreferences(const std::string& path) {
         flag("publish", p.publish);
         flag("panelOpen", p.panelOpen);
         flag("monitorOpen", p.monitorOpen);
+        flag("editing", p.editing);
     } catch (const nlohmann::json::exception&) {
     }
     return p;
@@ -25,7 +26,8 @@ Preferences loadPreferences(const std::string& path) {
 
 bool savePreferences(const std::string& path, const Preferences& p) {
     const nlohmann::json j = {
-        {"publish", p.publish}, {"panelOpen", p.panelOpen}, {"monitorOpen", p.monitorOpen}};
+        {"publish", p.publish}, {"panelOpen", p.panelOpen}, {"monitorOpen", p.monitorOpen},
+        {"editing", p.editing}};
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (out) out << j.dump(2) << "\n";
     return bool(out);

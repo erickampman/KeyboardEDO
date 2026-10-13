@@ -27,8 +27,9 @@ namespace kedo::app {
 
 class KeyboardApp {
 public:
-    // How to start: from the command line (main.cpp). `path` is the document
-    // `document` was loaded from, if any.
+    // How to start: from the command line (main.cpp). `path` is the .kedo
+    // bundle `document` was loaded from, if any (a KeyEDO file is imported:
+    // no path).
     struct Start {
         Document    document;
         std::string path;
@@ -57,10 +58,20 @@ public:
     bool animating() const { return !pointers_.empty() || mouseDown_; }
 
 private:
-    enum class Dialog { Open, SaveAs };
+    enum class Dialog { Open, Import, SaveAs };
 
     void rebuild(bool resetView);
     void applySettings();
+    // The document's layouts: the one showing is settings_ while it shows.
+    void storeLayout() { doc_.layout() = settings_; }
+    Document documentNow() const;
+    void selectLayout(int index);
+    void addLayout(LayoutSetup layout);   // after the current one, and shows it
+    void removeLayout();
+    void moveLayout(int by);
+    void setEditing(bool on);
+    void drawLayoutMenu(float width);
+    void drawLayoutsSection();
     void open(const std::string& path);
     bool save(const std::string& path);
     void showDialog(Dialog dialog);
@@ -82,10 +93,12 @@ private:
 
     SDL_Window* window_;
     ImFont* monoFont_;
-    Document settings_;       // what the controls show
-    Document applied_;        // what the keyboard and outputs were last set from
+    Document doc_;            // the document; its current layout is settings_ while it shows
     Document saved_;          // as last opened or saved, for the title's "edited"
-    std::string path_;        // the document's file; empty until saved
+    LayoutSetup settings_;    // the layout showing, as the controls set it
+    LayoutSetup applied_;     // what the keyboard and outputs were last set from
+    std::string appliedDestination_;
+    std::string path_;        // the document's .kedo bundle; empty until saved
     Preferences prefs_;       // app-level, remembered (publishing)
     std::string prefsPath_;   // in SDL's per-user preferences folder; empty if none
 

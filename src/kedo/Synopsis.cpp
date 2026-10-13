@@ -4,7 +4,7 @@
 
 namespace kedo {
 
-std::string synopsis(const Document& d, const LiveState& live) {
+std::string synopsis(const LayoutSetup& d, const LiveState& live) {
     std::vector<std::string> parts;
     const Tuning& t = d.tuning;
     parts.push_back(std::to_string(t.edo) + "-EDO");

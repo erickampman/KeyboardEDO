@@ -441,6 +441,12 @@ keys that carry their notes (milestone 4).
   same drawing, Performer and output as playing, and belongs in the same
   window as a mode.
 - Later: switching layouts by computer key or MIDI program change.
+- As built (2026-10-13): Edit or Play is an app preference, remembered,
+  Edit at first. A layout's name is its file's `name` key (KeyEDO ignores
+  it); a file without one is named after the file. Layout files are named
+  from their layouts' names ("Wicki 31" -> `wicki-31.json`, a second of the
+  same name `-2`), rewritten in full on every save. Which layout shows is
+  saved, but switching isn't an edit (no "(edited)" in the title).
 
 ## Behaviour kept from KeyEDO
 

@@ -158,7 +158,7 @@ Decided 2026-10-13 (decisions.md, "Documents with several layouts"): a
 document is a set of layouts chosen in advance, played in Play mode and set
 up in Edit mode, in one app.
 
-### 8a. `.kedo` bundles, several layouts, Play and Edit modes
+### 8a. `.kedo` bundles, several layouts, Play and Edit modes: done 2026-10-13
 
 A `.kedo` folder: `document.json` (format, version, layout order, the one
 showing, the destination) and `layouts/<name>.json`, each with its own
@@ -170,6 +170,26 @@ layouts, and their settings. Tests: a bundle round-trips; a newer version
 is refused; a KeyEDO file imports as one layout; a crash mid-save (the swap
 not done) leaves the old bundle; switching releases notes. File dialogs:
 SDL3's folder dialog to open a bundle on Linux.
+
+As built: `Document` is the bundle (its layouts, the one showing, the
+destination); what was `Document`, one KeyEDO-shaped setup, is
+`LayoutSetup`, now with a `name`. The toolbar has a layout menu and an
+Edit/Play toggle (remembered as a preference, Edit at first); Play mode's
+panel shows only Layouts, View and File. Open is a folder dialog (a bundle
+is a folder on Linux), Import KeyEDO... a file dialog, Save As adds `.kedo`.
+Tests (`DocumentTests`): a three-layout bundle round-trips, two layouts of
+one name getting their own files; a layout file opens alone as a KeyEDO
+document; a stale `.tmp` from an unfinished save doesn't stop the next; a
+layout file copied into `layouts/` appears after the listed ones; a file or
+plain folder isn't overwritten; a newer version and another format are
+refused; a KeyEDO file imports. Checked with `--snapshot --tap`: Edit and
+Play modes, switching to a layout with its own tuning and colouring, and
+Save rewriting the bundle.
+
+Not tested automatically: that switching releases held notes (it calls the
+Performer's `releaseAll`, as changing the destination does). Still to check
+by hand: the file dialogs on Linux (the folder dialog choosing a `.kedo`),
+and on the Mac, where `.kedo` isn't a package until the app has a bundle.
 
 ### 8b. Custom layouts
 

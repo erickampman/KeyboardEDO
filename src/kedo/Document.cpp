@@ -1,6 +1,8 @@
 #include "kedo/Document.h"
 
 #include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -55,7 +57,7 @@ void readEnum(const json& j, const char* key, E& value, int count) {
 
 } // namespace
 
-std::optional<Document> parseDocument(const std::string& text, std::string* error) {
+std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string* error) {
     json j;
     try {
         j = json::parse(text);
@@ -68,7 +70,9 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
         return std::nullopt;
     }
 
-    Document d;
+    LayoutSetup d;
+    read(j, "name", d.name);
+
     // Tuning
     read(j, "edoSteps", d.tuning.edo);
     d.tuning.edo = std::clamp(d.tuning.edo, Tuning::kMinEdo, Tuning::kMaxEdo);
@@ -129,7 +133,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
 
     // Everything else, kept as it was.
     static const std::set<std::string> known = {
-        "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
+        "name", "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
         "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
@@ -140,7 +144,7 @@ std::optional<Document> parseDocument(const std::string& text, std::string* erro
     return d;
 }
 
-std::string writeDocument(const Document& d) {
+std::string writeLayoutSetup(const LayoutSetup& d) {
     json j = keyEdoDefaults();
     for (const auto& [key, text] : d.extras) {
         try {
@@ -149,6 +153,8 @@ std::string writeDocument(const Document& d) {
         }
     }
 
+    if (d.name.empty()) j.erase("name");
+    else j["name"] = d.name;
     j["edoSteps"] = d.tuning.edo;
     j["originNoteName"] = pitchClassName(d.tuning.originPitchClass);
     j["originOctave"] = d.tuning.originOctave;
@@ -184,7 +190,7 @@ std::string writeDocument(const Document& d) {
     return j.dump(2) + "\n";
 }
 
-std::optional<Document> loadDocument(const std::string& path, std::string* error) {
+std::optional<LayoutSetup> loadLayoutSetup(const std::string& path, std::string* error) {
     std::ifstream in(path, std::ios::binary);
     if (!in) {
         if (error) *error = "can't open " + path;
@@ -192,16 +198,190 @@ std::optional<Document> loadDocument(const std::string& path, std::string* error
     }
     std::ostringstream text;
     text << in.rdbuf();
-    return parseDocument(text.str(), error);
+    return parseLayoutSetup(text.str(), error);
 }
 
-bool saveDocument(const std::string& path, const Document& document, std::string* error) {
+bool saveLayoutSetup(const std::string& path, const LayoutSetup& document, std::string* error) {
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
-    if (out) out << writeDocument(document);
+    if (out) out << writeLayoutSetup(document);
     if (!out) {
         if (error) *error = "can't write " + path;
         return false;
     }
+    return true;
+}
+
+// --- Documents: .kedo bundles ------------------------------------------------------
+
+namespace {
+
+namespace fs = std::filesystem;
+
+bool readFile(const fs::path& path, std::string& text, std::string* error) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        if (error) *error = "can't open " + path.string();
+        return false;
+    }
+    std::ostringstream all;
+    all << in.rdbuf();
+    text = all.str();
+    return true;
+}
+
+bool writeFile(const fs::path& path, const std::string& text, std::string* error) {
+    std::ofstream out(path, std::ios::binary | std::ios::trunc);
+    if (out) out << text;
+    if (!out) {
+        if (error) *error = "can't write " + path.string();
+        return false;
+    }
+    return true;
+}
+
+bool isBundle(const fs::path& path) {
+    std::error_code ec;
+    return fs::is_directory(path, ec) && fs::is_regular_file(path / "document.json", ec);
+}
+
+// A file name for a layout: its name, lower case, with anything but letters
+// and digits as one '-' ("Wicki 31" -> "wicki-31"); "layout" if that leaves
+// nothing.
+std::string slug(const std::string& name) {
+    std::string out;
+    for (const unsigned char c : name) {
+        if (std::isalnum(c)) out += char(std::tolower(c));
+        else if (!out.empty() && out.back() != '-') out += '-';
+    }
+    while (!out.empty() && out.back() == '-') out.pop_back();
+    return out.empty() ? "layout" : out;
+}
+
+std::optional<Document> loadBundle(const fs::path& path, std::string* error) {
+    auto fail = [&](const std::string& why) {
+        if (error) *error = path.filename().string() + ": " + why;
+        return std::nullopt;
+    };
+    std::string text;
+    if (!readFile(path / "document.json", text, error)) return std::nullopt;
+    json j;
+    try {
+        j = json::parse(text);
+    } catch (const json::exception& e) {
+        return fail(std::string("document.json: ") + e.what());
+    }
+    if (!j.is_object() || j.value("format", std::string()) != kDocumentFormat)
+        return fail("not a KeyboardEDO document");
+    const int version = j.value("version", 0);
+    if (version > kDocumentVersion)
+        return fail("made by a newer KeyboardEDO (format version " + std::to_string(version) + ")");
+
+    // The listed layouts in order, then any others in layouts/, by name.
+    std::vector<std::string> files;
+    if (const auto it = j.find("layouts"); it != j.end() && it->is_array())
+        for (const auto& f : *it)
+            if (f.is_string()) files.push_back(f.get<std::string>());
+    std::vector<std::string> unlisted;
+    std::error_code ec;
+    for (const auto& entry : fs::directory_iterator(path / "layouts", ec)) {
+        if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+        const std::string file = "layouts/" + entry.path().filename().string();
+        if (std::find(files.begin(), files.end(), file) == files.end()) unlisted.push_back(file);
+    }
+    std::sort(unlisted.begin(), unlisted.end());
+    files.insert(files.end(), unlisted.begin(), unlisted.end());
+
+    Document d;
+    d.layouts.clear();
+    for (const auto& file : files) {
+        std::string layoutText, why;
+        if (!readFile(path / file, layoutText, error)) return std::nullopt;
+        auto layout = parseLayoutSetup(layoutText, &why);
+        if (!layout) return fail(file + ": " + why);
+        if (layout->name.empty()) layout->name = fs::path(file).stem().string();
+        layout->destination.clear();   // the document's, below
+        d.layouts.push_back(std::move(*layout));
+    }
+    if (d.layouts.empty()) return fail("no layouts");
+    d.current = std::clamp(j.value("current", 0), 0, int(d.layouts.size()) - 1);
+    d.destination = j.value("midiDestinationName", std::string());
+    return d;
+}
+
+} // namespace
+
+bool isBundlePath(const std::string& path) {
+    return fs::path(path).extension() == ".kedo" || isBundle(path);
+}
+
+std::optional<Document> loadDocument(const std::string& path, std::string* error) {
+    std::error_code ec;
+    if (fs::is_directory(path, ec)) {
+        if (!isBundle(path)) {
+            if (error) *error = path + ": not a KeyboardEDO document (no document.json)";
+            return std::nullopt;
+        }
+        return loadBundle(path, error);
+    }
+    // A KeyEDO document: one layout.
+    auto layout = loadLayoutSetup(path, error);
+    if (!layout) return std::nullopt;
+    if (layout->name.empty()) layout->name = fs::path(path).stem().string();
+    Document d;
+    d.destination = layout->destination;
+    layout->destination.clear();
+    d.layouts = {std::move(*layout)};
+    return d;
+}
+
+bool saveDocument(const std::string& pathText, const Document& document, std::string* error) {
+    const fs::path path(pathText);
+    std::error_code ec;
+    if (fs::exists(path, ec) && !isBundle(path)) {
+        if (error) *error = pathText + " exists and isn't a KeyboardEDO document: not replaced";
+        return false;
+    }
+    if (document.layouts.empty()) {
+        if (error) *error = "a document needs a layout";
+        return false;
+    }
+    const fs::path tmp = pathText + ".tmp", old = pathText + ".old";
+    fs::remove_all(tmp, ec);   // a save that didn't finish
+    if (!fs::create_directories(tmp / "layouts", ec)) {
+        if (error) *error = "can't make " + tmp.string() + ": " + ec.message();
+        return false;
+    }
+
+    json j;
+    j["format"] = kDocumentFormat;
+    j["version"] = kDocumentVersion;
+    j["current"] = std::clamp(document.current, 0, int(document.layouts.size()) - 1);
+    if (!document.destination.empty()) j["midiDestinationName"] = document.destination;
+    json files = json::array();
+    std::set<std::string> used;
+    for (const auto& layout : document.layouts) {
+        std::string file = slug(layout.name);
+        for (int n = 2; used.count(file); ++n) file = slug(layout.name) + "-" + std::to_string(n);
+        used.insert(file);
+        file = "layouts/" + file + ".json";
+        LayoutSetup written = layout;
+        written.destination.clear();   // the document's
+        if (!writeFile(tmp / file, writeLayoutSetup(written), error)) return false;
+        files.push_back(file);
+    }
+    j["layouts"] = files;
+    if (!writeFile(tmp / "document.json", j.dump(2) + "\n", error)) return false;
+
+    // The swap: the old bundle aside, the new one in, the old one gone.
+    fs::remove_all(old, ec);
+    const bool replacing = fs::exists(path, ec);
+    if (replacing) fs::rename(path, old, ec);
+    if (!ec) fs::rename(tmp, path, ec);
+    if (ec) {
+        if (error) *error = "can't replace " + pathText + ": " + ec.message();
+        return false;
+    }
+    if (replacing) fs::remove_all(old, ec);
     return true;
 }
 

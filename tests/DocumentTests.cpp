@@ -1,7 +1,9 @@
 // Documents: KeyEDO's files open, ours keep KeyEDO's keys, and what this
-// version doesn't use survives a save.
+// version doesn't use survives a save; .kedo bundles of several layouts.
 
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <set>
 #include <string>
 
@@ -43,7 +45,7 @@ const char* const kKeyEdoDocument = R"({
 
 void testOpensKeyEdo() {
     std::string error;
-    const auto d = parseDocument(kKeyEdoDocument, &error);
+    const auto d = parseLayoutSetup(kKeyEdoDocument, &error);
     CHECK(d.has_value());
     if (!d) return;
     CHECK(d->tuning.edo == 12);
@@ -62,7 +64,7 @@ void testOpensKeyEdo() {
 }
 
 void testMidiFields() {
-    const auto d = parseDocument(R"({"edoSteps": 31, "originNoteName": "C#", "verticalControl": 2,
+    const auto d = parseLayoutSetup(R"({"edoSteps": 31, "originNoteName": "C#", "verticalControl": 2,
         "dragBehavior": 1, "midiChannel": 9, "midiGroup": 3, "midiDestinationName": "IAC Driver Bus 1"})");
     CHECK(d && d->tuning.edo == 31 && d->tuning.originPitchClass == 1);
     CHECK(d->play.vertical == VerticalControl::Pressure);
@@ -72,7 +74,7 @@ void testMidiFields() {
 }
 
 void testRoundTrip() {
-    Document d;
+    LayoutSetup d;
     d.tuning.edo = 19;
     d.tuning.originPitchClass = 2;
     d.layout.kind = LayoutKind::Tiled;
@@ -91,12 +93,12 @@ void testRoundTrip() {
     d.destination = "Synth:In";
     d.locked = true;
     d.extras["arpBpm"] = "96.0";
-    const auto back = parseDocument(writeDocument(d));
+    const auto back = parseLayoutSetup(writeLayoutSetup(d));
     CHECK(back.has_value());
     if (back) {
         // tiledRows follows the window and isn't saved; KeyEDO's keys we
         // don't use come back as extras, with our own value kept.
-        Document expected = d;
+        LayoutSetup expected = d;
         expected.layout.tiledRows = back->layout.tiledRows;
         expected.extras = back->extras;
         CHECK(*back == expected);
@@ -108,7 +110,7 @@ void testRoundTrip() {
 void testWritesKeyEdoKeys() {
     // Every key in KeyEDO's own document, so KeyEDO can open ours.
     const auto keyEdo = nlohmann::json::parse(kKeyEdoDocument);
-    const auto ours = nlohmann::json::parse(writeDocument(Document{}));
+    const auto ours = nlohmann::json::parse(writeLayoutSetup(LayoutSetup{}));
     for (const auto& [key, value] : keyEdo.items()) {
         CHECK(ours.contains(key));
         if (ours.contains(key)) CHECK(ours[key].type() == value.type() ||
@@ -122,24 +124,24 @@ void testWritesKeyEdoKeys() {
 
 void testScopes() {
     // An earlier KeyboardEDO's single switch, off: everything for the channel.
-    auto d = parseDocument(R"({"perNoteExpression": false})");
+    auto d = parseLayoutSetup(R"({"perNoteExpression": false})");
     CHECK(d && d->play.bendScope == ExpressionScope::Channel && d->play.controllerScope == ExpressionScope::Channel &&
           d->play.pressureScope == ExpressionScope::Channel);
     // Each on its own.
-    d = parseDocument(R"({"bendScope": "channel", "controllerScope": "note", "pressureScope": "bogus"})");
+    d = parseLayoutSetup(R"({"bendScope": "channel", "controllerScope": "note", "pressureScope": "bogus"})");
     CHECK(d && d->play.bendScope == ExpressionScope::Channel && d->play.controllerScope == ExpressionScope::Note &&
           d->play.pressureScope == ExpressionScope::Note);
-    const auto j = nlohmann::json::parse(writeDocument(*d));
+    const auto j = nlohmann::json::parse(writeLayoutSetup(*d));
     CHECK(j["bendScope"] == "channel" && j["controllerScope"] == "note" && !j.contains("perNoteExpression"));
 }
 
 void testBadInput() {
     std::string error;
-    CHECK(!parseDocument("not json", &error));
+    CHECK(!parseLayoutSetup("not json", &error));
     CHECK(!error.empty());
-    CHECK(!parseDocument("[1, 2]"));
+    CHECK(!parseLayoutSetup("[1, 2]"));
     // Out of range or the wrong type: defaults or clamped.
-    const auto d = parseDocument(R"({"edoSteps": 500, "originNoteName": "H", "keyLayoutViewType": 7,
+    const auto d = parseLayoutSetup(R"({"edoSteps": 500, "originNoteName": "H", "keyLayoutViewType": 7,
         "verticalCCNumber": "seven", "midiChannel": 40})");
     CHECK(d && d->tuning.edo == Tuning::kMaxEdo);
     CHECK(d->tuning.originPitchClass == 9);
@@ -159,6 +161,112 @@ void testPreferences() {
     std::remove(path.c_str());
 }
 
+namespace fs = std::filesystem;
+
+// Equal but for extras: KeyEDO's keys we don't use come back from a layout
+// file as extras (testRoundTrip).
+bool sameDocument(const std::optional<Document>& a, const Document& b) {
+    if (!a) return false;
+    Document x = *a, y = b;
+    for (auto* d : {&x, &y})
+        for (auto& l : d->layouts) l.extras.clear();
+    return x == y;
+}
+
+// Bundles, in the test's working directory.
+void testBundleRoundTrip() {
+    const std::string path = "kedo-test.kedo";
+    fs::remove_all(path);
+    Document d;
+    d.layouts[0].name = "Wicki 31";
+    d.layouts[0].tuning.edo = 31;
+    d.layouts[0].layout.kind = LayoutKind::Tiled;
+    LayoutSetup piano;
+    piano.name = "Piano";
+    piano.output.channel = 3;
+    d.layouts.push_back(piano);
+    LayoutSetup same;   // a second "Piano": its own file
+    same.name = "Piano";
+    same.tuning.edo = 19;
+    d.layouts.push_back(same);
+    d.current = 1;
+    d.destination = "Synth";
+
+    std::string error;
+    CHECK(saveDocument(path, d, &error));
+    CHECK(error.empty());
+    CHECK(fs::is_regular_file(fs::path(path) / "document.json"));
+    CHECK(fs::is_regular_file(fs::path(path) / "layouts" / "wicki-31.json"));
+    CHECK(fs::is_regular_file(fs::path(path) / "layouts" / "piano.json"));
+    CHECK(fs::is_regular_file(fs::path(path) / "layouts" / "piano-2.json"));
+    CHECK(!fs::exists(path + ".tmp") && !fs::exists(path + ".old"));
+    const auto back = loadDocument(path, &error);
+    CHECK(sameDocument(back, d));
+
+    // A layout file is a KeyEDO document: it opens on its own, without the
+    // document's destination.
+    const auto alone = loadLayoutSetup(path + "/layouts/piano.json");
+    CHECK(alone && alone->name == "Piano" && alone->output.channel == 3 && alone->destination.empty());
+
+    // Saving again replaces it, and a save that never finished (a stale .tmp)
+    // doesn't get in the way.
+    fs::create_directories(path + ".tmp/layouts");
+    d.layouts.pop_back();
+    CHECK(saveDocument(path, d, &error));
+    CHECK(!fs::exists(path + ".tmp") && !fs::exists(fs::path(path) / "layouts" / "piano-2.json"));
+    CHECK(sameDocument(loadDocument(path), d));
+
+    // A layout file copied in from elsewhere comes after the listed ones.
+    LayoutSetup copied;
+    copied.tuning.edo = 22;
+    std::ofstream(path + "/layouts/zz-copied.json") << writeLayoutSetup(copied);
+    const auto withCopy = loadDocument(path);
+    CHECK(withCopy && withCopy->layouts.size() == 3);
+    CHECK(withCopy && withCopy->layouts[2].tuning.edo == 22 && withCopy->layouts[2].name == "zz-copied");
+    fs::remove_all(path);
+}
+
+void testBundleRefusals() {
+    std::string error;
+    // Not over a file that isn't a bundle, nor a folder.
+    const std::string file = "kedo-test-file.kedo";
+    std::ofstream(file) << "precious";
+    CHECK(!saveDocument(file, Document{}, &error) && !error.empty());
+    std::ifstream in(file);
+    std::string kept;
+    in >> kept;
+    CHECK(kept == "precious");
+    std::remove(file.c_str());
+    fs::create_directories("kedo-test-folder");
+    CHECK(!saveDocument("kedo-test-folder", Document{}));
+    CHECK(!loadDocument("kedo-test-folder"));
+    fs::remove_all("kedo-test-folder");
+
+    // A newer version, or another format, is refused, not guessed at.
+    const std::string path = "kedo-test-newer.kedo";
+    fs::remove_all(path);
+    CHECK(saveDocument(path, Document{}));
+    std::ofstream(path + "/document.json") << R"({"format": "keyboardedo-document", "version": 99})";
+    error.clear();
+    CHECK(!loadDocument(path, &error) && error.find("newer") != std::string::npos);
+    std::ofstream(path + "/document.json") << R"({"format": "stagehand-rack", "version": 1})";
+    CHECK(!loadDocument(path));
+    fs::remove_all(path);
+}
+
+void testImportsKeyEdo() {
+    // A KeyEDO file: a document of one layout, named after the file, its
+    // destination the document's.
+    const std::string path = "Kedo Test Import.json";
+    std::ofstream(path) << kKeyEdoDocument;
+    const auto d = loadDocument(path);
+    CHECK(d && d->layouts.size() == 1 && d->current == 0);
+    CHECK(d && d->layout().name == "Kedo Test Import" && d->layout().destination.empty());
+    const auto setup = parseLayoutSetup(kKeyEdoDocument);
+    CHECK(d && setup && d->destination == setup->destination);
+    std::remove(path.c_str());
+}
+
 } // namespace
 
 int main() {
@@ -169,5 +277,8 @@ int main() {
     testScopes();
     testBadInput();
     testPreferences();
+    testBundleRoundTrip();
+    testBundleRefusals();
+    testImportsKeyEdo();
     return kedo::test::finish("Document");
 }

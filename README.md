@@ -8,7 +8,9 @@ diamond piano at other EDOs, and an isomorphic tiled layout at any EDO.
 
 It plays on the Mac (CoreMIDI) and Linux (the ALSA sequencer): to a chosen
 destination or from its own published source, in MIDI 2.0 or 1.0 as the
-receiver needs, and opens and saves KeyEDO-compatible documents.
+receiver needs. A document (`.kedo`, a folder) holds several layouts, each
+with its own tuning, switched between in Play mode and set up in Edit mode;
+KeyEDO's documents import as a document of one layout.
 [docs/decisions.md](docs/decisions.md) says why it's built this way, and
 [docs/roadmap.md](docs/roadmap.md) what comes next.
 
@@ -38,7 +40,8 @@ Run it:
 ```bash
 ./build/keyboardedo
 ./build/keyboardedo --edo 17 --layout tiled --publish
-./build/keyboardedo ~/"Library/Mobile Documents/com~apple~CloudDocs/KeyEDO/Untitled.json"
+./build/keyboardedo ~/Documents/"My set.kedo"
+./build/keyboardedo ~/"Library/Mobile Documents/com~apple~CloudDocs/KeyEDO/Untitled.json"   # imported
 ```
 
 `keyboardedo --help` lists the options. To see what it sends without a DAW,
@@ -78,7 +81,7 @@ To see the layouts without a UI:
 | `src/kedo/NoteSink.h` | what is played, before it's MIDI |
 | `src/kedo/UmpOutput.*` | NoteSink calls to UMP, MIDI 2.0 or 1.0 |
 | `src/kedo/Viewport.*`, `KeyStyle.*`, `UmpText.*` | the view transform, key colours and labels, UMP as text |
-| `src/kedo/Document.*` | KeyEDO-compatible JSON documents |
+| `src/kedo/Document.*` | `.kedo` documents of several layouts; each layout a KeyEDO-compatible JSON file |
 | `src/kedo/Synopsis.*`, `Preferences.*` | the one-line synopsis; app preferences |
 | `src/app/` | the app: SDL and ImGui (`KeyboardApp`, `Icons`), MIDI targets (`MidiTargets`) |
 | `external/uw-core` | shared UMP code (submodule) |
