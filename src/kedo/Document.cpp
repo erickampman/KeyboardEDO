@@ -10,6 +10,9 @@
 
 #include <nlohmann/json.hpp>
 
+#include "kedo/ComputerKeys.h"
+#include "kedo/CustomLayout.h"
+
 namespace kedo {
 
 namespace {
@@ -56,9 +59,34 @@ void readEnum(const json& j, const char* key, E& value, int count) {
     if (i >= 0 && i < count) value = E(i);
 }
 
+const char* const kLabelStyles[] = {"text", "name-octave", "name", "degree", "frequency"};
+
+std::optional<LabelStyle> labelStyleNamed(const std::string& name) {
+    for (int i = 0; i < 5; ++i)
+        if (name == kLabelStyles[i]) return LabelStyle(i);
+    return std::nullopt;
+}
+
+// A label's style, or for a file from before styles (milestone 8b), the
+// style whose text it has, so a converted key's labels follow its pitch.
+void readLabel(const json& j, const char* textKey, const char* styleKey, const CustomKey& k,
+               const Tuning& tuning, std::string& text, LabelStyle& style) {
+    read(j, textKey, text);
+    std::string name;
+    read(j, styleKey, name);
+    if (const auto named = labelStyleNamed(name)) {
+        style = *named;
+    } else if (j.find(styleKey) == j.end() && !text.empty()) {
+        for (const LabelStyle s : {LabelStyle::NameOctave, LabelStyle::Name, LabelStyle::Degree, LabelStyle::Frequency})
+            if (labelText(k, s, "", tuning) == text) style = s;
+    }
+    if (style != LabelStyle::Text) text.clear();
+}
+
 // A custom layout's key (decisions.md, "Custom layout"). Group and channel
 // are 0-based, as midiGroup and midiChannel, and left out when they're the
-// layout's; a fill colour is "#rrggbb".
+// layout's; a fill colour is "#rrggbb"; a label is its style, and its text
+// if it's typed.
 json customKeyJson(const CustomKey& k) {
     json j = {{"x", k.center.x}, {"y", k.center.y},
               {"shade", k.shade == KeyShade::Black ? "black" : "white"},
@@ -71,14 +99,17 @@ json customKeyJson(const CustomKey& k) {
         std::snprintf(hex, sizeof hex, "#%06x", unsigned(*k.color & 0xFFFFFF));
         j["color"] = hex;
     }
-    if (!k.label.empty()) j["label"] = k.label;
-    if (!k.sublabel.empty()) j["sublabel"] = k.sublabel;
+    j["labelStyle"] = kLabelStyles[int(k.labelStyle)];
+    j["sublabelStyle"] = kLabelStyles[int(k.sublabelStyle)];
+    if (k.labelStyle == LabelStyle::Text && !k.label.empty()) j["label"] = k.label;
+    if (k.sublabelStyle == LabelStyle::Text && !k.sublabel.empty()) j["sublabel"] = k.sublabel;
     if (k.group) j["group"] = *k.group;
     if (k.channel) j["channel"] = *k.channel;
+    if (k.computerKey) j["computerKey"] = computerKeyCode(k.computerKey);
     return j;
 }
 
-CustomKey customKeyFrom(const json& j) {
+CustomKey customKeyFrom(const json& j, const Tuning& tuning) {
     CustomKey k;
     if (!j.is_object()) return k;
     read(j, "x", k.center.x);
@@ -94,12 +125,12 @@ CustomKey customKeyFrom(const json& j) {
     read(j, "color", text);
     unsigned rgb = 0;
     if (text.size() == 7 && text[0] == '#' && std::sscanf(text.c_str() + 1, "%6x", &rgb) == 1) k.color = rgb;
-    read(j, "label", k.label);
-    read(j, "sublabel", k.sublabel);
     read(j, "edo", k.edo);
     k.edo = std::clamp(k.edo, 1, 1200);
     read(j, "octave", k.octave);
     read(j, "degree", k.degree);
+    readLabel(j, "label", "labelStyle", k, tuning, k.label, k.labelStyle);
+    readLabel(j, "sublabel", "sublabelStyle", k, tuning, k.sublabel, k.sublabelStyle);
     read(j, "number", k.number);
     k.number = std::clamp(k.number, 0, 127);
     read(j, "numberChosen", k.numberChosen);
@@ -109,6 +140,9 @@ CustomKey customKeyFrom(const json& j) {
     route = -1;
     read(j, "channel", route);
     if (route >= 0 && route < 16) k.channel = std::uint8_t(route);
+    std::string code;
+    read(j, "computerKey", code);
+    k.computerKey = computerKeyFromCode(code);
     return k;
 }
 
@@ -144,7 +178,12 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     // A custom layout says it's Tiled, for KeyEDO; its keys make it custom.
     if (const auto it = j.find("customKeys"); it != j.end() && it->is_array()) {
         d.layout.kind = LayoutKind::Custom;
-        for (const auto& key : *it) d.layout.customKeys.push_back(customKeyFrom(key));
+        std::set<int> computerKeys;   // each on one key: the first
+        for (const auto& key : *it) {
+            CustomKey k = customKeyFrom(key, d.tuning);
+            if (k.computerKey && !computerKeys.insert(k.computerKey).second) k.computerKey = 0;
+            d.layout.customKeys.push_back(k);
+        }
     }
     read(j, "selectedPresetIndex", d.layout.generatorIndex);
     read(j, "pianoLowest", d.layout.pianoLowest);

@@ -1,5 +1,6 @@
 #include "kedo/Layout.h"
 
+#include "kedo/ComputerKeys.h"
 #include "kedo/CustomLayout.h"
 
 #include <algorithm>
@@ -14,6 +15,17 @@ const double kSqrt2 = std::sqrt(2.0);
 
 int floorDiv(int a, int b) { return a / b - ((a % b != 0) && ((a < 0) != (b < 0))); }
 int ceilDiv(int a, int b) { return -floorDiv(-a, b); }
+
+// The step of the origin note in octave 3, where the default computer-key
+// mappings start (decisions.md, "Computer keyboard").
+int mappingStart(const Tuning& tuning) { return (3 - tuning.originOctave) * tuning.edo; }
+
+// The zigzag's computer key for `step` (diamond piano), 0 for none.
+int zigzagKey(const Tuning& tuning, int step) {
+    const auto& zigzag = computerKeyZigzag();
+    const int i = step - mappingStart(tuning);
+    return i >= 0 && i < int(zigzag.size()) ? zigzag[i] : 0;
+}
 
 } // namespace
 
@@ -52,6 +64,7 @@ PianoLayout::PianoLayout(const Tuning& tuning, int lowest, int highest) {
         k.step = note - tuning.originMidiNote();
         k.note = tuning.note(k.step);
         k.playable = tuning.isPlayable(k.step);
+        if (k.playable) k.computerKey = pianoComputerKey(note);
         k.shape = KeyShape::Rectangle;
         if (!isBlackPitchClass(pc)) {
             const double left = octaveX(note) + kWhiteIndex[pc] * kWhiteWidth - originX;
@@ -129,6 +142,7 @@ DiamondLayout::DiamondLayout(const Tuning& tuning) {
             k.step = it->second[i];
             k.note = tuning.note(k.step);
             k.playable = true;
+            k.computerKey = zigzagKey(tuning, k.step);
             k.shape = KeyShape::Diamond;
             k.shade = black ? KeyShade::Black : KeyShade::White;
             k.halfWidth = k.halfHeight = h;
@@ -180,6 +194,24 @@ TiledLayout::TiledLayout(const Tuning& tuning, const Generator& generator, int r
         const Point a = center(lo, row), b = center(hi, row);
         bounds_ = bounds_.unite({a.x - h, a.y - h, b.x - a.x + 2 * h, 2 * h});
     }
+    // Z on the origin note in octave 3: the leftmost such tile with three
+    // rows above it and the digit row's first key playable, so the mapping
+    // shows where the view opens; else the leftmost; else the nearest tile
+    // at or above it in row 0.
+    const int start = mappingStart(tuning_) - lowest_;
+    std::optional<std::pair<int, int>> best, fitting;   // (col, row)
+    auto x = [](const std::pair<int, int>& t) { return 2 * t.first + t.second; };
+    for (int row = 0; row <= std::max(0, rows_ - 4); ++row) {
+        const int rest = start - row * ur;
+        if (rest < 0 || rest % r1 != 0) continue;
+        const std::pair<int, int> t{rest / r1, row};
+        if (!best || x(t) < x(*best)) best = t;
+        if (row + 3 < rows_ && keyAtLattice(t.first - 3, row + 3).playable && (!fitting || x(t) < x(*fitting)))
+            fitting = t;
+    }
+    const auto chosen = fitting ? fitting : best;
+    zCol_ = chosen ? chosen->first : ceilDiv(start, r1);
+    zRow_ = chosen ? chosen->second : 0;
 }
 
 Point TiledLayout::center(int col, int row) const {
@@ -193,6 +225,11 @@ Key TiledLayout::keyAtLattice(int col, int row) const {
     k.step = lowest_ + col * generator_.right + row * generator_.upRight;
     k.note = tuning_.note(k.step);
     k.playable = k.step >= lowest_ && tuning_.isPlayable(k.step);
+    // Computer key row r, index i is tile (zCol_ + i - r, zRow_ + r).
+    if (const int r = row - zRow_; k.playable && r >= 0 && r < 4) {
+        const auto& keys = computerKeyRow(r);
+        if (const int i = col - zCol_ + r; i >= 0 && i < int(keys.size())) k.computerKey = keys[i];
+    }
     k.shape = KeyShape::Diamond;
     k.shade = KeyShade::White;
     k.center = center(col, row);
@@ -258,6 +295,12 @@ OctaveLayout::OctaveLayout(const Tuning& tuning) {
             k.halfWidth = k.halfHeight = h;
             k.col = col;
             k.row = level;
+            // The zigzag from the origin note in octave 3 (level 4, column 0)
+            // on along the columns: step i is on column i mod 2 * EDO, two
+            // levels further up each time round (a level is an octave).
+            if (const int i = col + edo * (level - 4); k.playable && level >= 4 && (level - 4) % 2 == 0 &&
+                                                         i < int(computerKeyZigzag().size()))
+                k.computerKey = computerKeyZigzag()[i];
             const double up = (col % 2 ? 2 * h : h) + level * 2 * h;   // centre above the bottom
             k.center = {h + col * h, top - up};
             keys_.push_back(k);

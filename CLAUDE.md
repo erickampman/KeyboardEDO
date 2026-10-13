@@ -23,8 +23,9 @@ Related repos:
 - Check UI changes with `keyboardedo --snapshot FILE.png [STEP...]`
   rather than asking the author to look. Steps run in order before the
   picture: `--click`, `--tap [shift+]X,Y`, `--double`, `--drag X1,Y1,X2,Y2`,
-  `--key [ctrl+][shift+]NAME` (`--help`). While steps run, the real mouse is
-  ignored. A snapshot run starts from the default preferences (Edit mode,
+  `--key [ctrl+][shift+]NAME`, `--press NAME` and `--release NAME` (a key
+  held and let go, e.g. `z`, `"left ctrl"`), `--move X,Y` (`--help`). While
+  steps run, the real mouse is ignored. A snapshot run starts from the default preferences (Edit mode,
   not publishing: add `--publish`) and saves none, so it never changes the
   author's. The author may have KeyboardEDO running too (publishing the same
   name): to listen to a test instance, find its ALSA client by pid in

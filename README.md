@@ -77,6 +77,7 @@ To see the layouts without a UI:
 | `src/kedo/Tuning.*` | EDO, origin, frequencies, note numbers, Pitch 7.9 / 7.25 |
 | `src/kedo/Generators.*` | Tiled generator presets |
 | `src/kedo/CustomLayout.*` | custom layouts: keys placed one by one, converting any layout |
+| `src/kedo/ComputerKeys.*` | computer keys: their codes, and the generated layouts' default mappings |
 | `src/kedo/Layout.*` | `PianoLayout`, `DiamondLayout`, `TiledLayout`: geometry and hit-testing |
 | `src/kedo/Performer.*` | pointers and keys in, notes and expression out |
 | `src/kedo/NoteSink.h` | what is played, before it's MIDI |

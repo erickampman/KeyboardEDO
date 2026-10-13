@@ -188,9 +188,15 @@ editor app: decided 2026-10-13, "Documents with several layouts"):
   converting the 12-EDO piano gives the diamond piano's arrangement of its
   keys (one each, black half a diamond up), keeping its range and its black
   and white.
-- **Labels follow pitch** (the author, 2026-10-13): a converted key's labels
-  (e.g. "A" over "110.0") follow a change of its pitch, as a note-name label
-  already does. To do (roadmap milestone 9, left from 8b).
+- **Labels follow pitch** (the author, 2026-10-13; built in milestone 9):
+  a key's label and the line under it each have a *style*: typed text, the
+  note's name and octave, the name alone, the degree (1-based) or the
+  frequency. All but text are worked out from the key's pitch when it's
+  drawn, so they follow any change of it. Converting gives each key the
+  styles of the layout it came from ("A" over "110.0" is name over
+  frequency); a new key's label is its name and octave; typing a label makes
+  it text. The file stores the style (`labelStyle`, `sublabelStyle`) and the
+  text only for text.
 - **The editor, as built** (session 2, 2026-10-13), in the panel's Keys
   section and on the keyboard:
   - Click selects, Shift-click adds or removes, drag moves (the grabbed key
@@ -525,11 +531,60 @@ keys that carry their notes (milestone 4).
 - **Converting keeps them** (the author, 2026-10-13): a note key's computer
   key before Convert to custom is still assigned after it, and can be
   changed. So generated layouts have assignments of their own (a default
-  mapping), which converting copies onto the custom keys. Nothing assigns
-  computer keys yet (KeyEDO's QWERTY mapping was never ported).
-- Still open: how a key is assigned, and what the generated layouts'
-  default mappings are (e.g. DAW rows on the piano).
+  mapping), which converting copies onto the custom keys.
 
+Settled at the start of milestone 9 (the author, 2026-10-13, taking each
+recommendation):
+1. **Assigning:** in the inspector, "Computer key: [Q] Assign... Clear".
+   Assign waits for the next key pressed; Escape cancels. A computer key
+   belongs to one note key, so assigning one that's taken moves it. Only a
+   custom layout's keys are assigned; a generated layout's mapping is fixed,
+   and changing it means converting to custom.
+2. **Default mappings**, from the origin note in octave 3 unless said:
+   - 12-EDO piano: the trackers' two rows. Z X C V B N M are white keys from
+     C3, S D G H J the black; Q W E R T Y U I O P [ ] white from C4, 2 3 5 6
+     7 9 0 = the black. A note key holds one computer key, so the rows can't
+     overlap as FL Studio's do: the Z row stops at B3, and , . / L ; are
+     unused.
+   - Diamond piano and Octave columns: consecutive steps zigzag across a
+     pair of rows, Z S X D C F ... / ' (20 steps), then on across Q 2 W 3
+     ... ] (23 steps): any EDO, and Octave columns' bottom zigzag is already
+     in step order (each pair is one level of its columns, the next pair
+     two levels up).
+   - Tiled: the computer keyboard's staggered rows as the lattice. Z is on
+     the tile of the origin note in octave 3 (the leftmost one with the
+     other three rows above it, so the mapping is in view when the layout
+     opens), A up-left of Z, S up-right, and so on up the Q and digit rows,
+     so a chord has one shape anywhere.
+3. **Octave shifting** the mapping: later.
+4. **Hover expression:** while computer keys hold notes, holding Ctrl
+   (Control on the Mac) and moving the mouse drives their expression as
+   Fixed drag would (horizontal and vertical controls, per note or channel
+   by their scopes), measured from where the mouse was when Ctrl went
+   down. Releasing Ctrl or the key resets it, as lifting a finger does.
+5. **Edit mode:** computer keys play there too, also on a custom layout
+   whose keys a click selects, to hear a layout while editing it.
+
+How it's built: a computer key is its **physical position** (the USB HID
+usage, which SDL's scancodes are), so a mapping is the same shape on QWERTY,
+AZERTY or Dvorak; the key shows the character the system's keyboard layout
+gives it. Files name it as the W3C `code` does ("KeyQ", "Digit2",
+"BracketLeft"). Letters, digits and the punctuation in the four rows can be
+assigned. Nothing plays while a text field has focus, and Cmd/Ctrl
+shortcuts aren't notes.
+
+As built (2026-10-13):
+- Each key shows its computer key, small, at the bottom of the key (on the
+  piano above the C's name), as the system's keyboard layout names it. A
+  View checkbox, "Computer keys", hides them; it's an app preference.
+- Duplicating a custom key doesn't copy its computer key (one note key
+  each). A file that puts one computer key on two keys keeps it on the
+  first.
+- On the diamond piano the zigzag plays consecutive steps, but as steps
+  stack in columns there, it doesn't look like a zigzag on the screen.
+- Hover expression uses the Playing section's Horizontal and Vertical
+  controls, now shown in Gliss mode too. Releasing a key resets its own
+  note's expression, and the channel's if it was the last one held.
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's

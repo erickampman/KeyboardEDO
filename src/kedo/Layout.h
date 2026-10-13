@@ -55,6 +55,7 @@ struct Key {
     int      col = 0;             // the layout's own coordinates: lattice (Tiled),
     int      row = 0;             // column and stack position (Diamond), white-key index (Piano),
                                   // index (Custom)
+    int      computerKey = 0;     // the computer key that plays it (ComputerKeys.h), 0: none
 
     // A custom layout's key carries its own look (KeyStyle uses these for
     // LayoutKind::Custom; the other layouts derive theirs).
@@ -171,6 +172,7 @@ private:
     Generator generator_;
     int rows_;
     int lowest_;
+    int zCol_ = 0, zRow_ = 0;   // the tile Z plays
     Rect bounds_;
 };
 
@@ -205,6 +207,11 @@ private:
 
 enum class LayoutKind { Piano, Tiled, Custom };
 
+// What a custom key's label (or the line under it) shows: the text typed, or
+// something worked out from its pitch when it's drawn, so it follows a pitch
+// change (decisions.md, "Custom layout").
+enum class LabelStyle { Text, NameOctave, Name, Degree, Frequency };
+
 // One key of a custom layout as the player places it (decisions.md, "Custom
 // layout"). Its pitch is `degree` steps of `edo` above the layout's origin
 // note in `octave` (with the origin at A, 17 / 3 / 5 is five 17-EDO steps above
@@ -219,7 +226,8 @@ struct CustomKey {
     double   halfHeight = 0;
     KeyShade shade = KeyShade::White;
     std::optional<std::uint32_t> color;   // fill, 0xRRGGBB, instead of the shade's
-    std::string label, sublabel;
+    std::string label, sublabel;         // the text, for LabelStyle::Text
+    LabelStyle labelStyle = LabelStyle::Text, sublabelStyle = LabelStyle::Text;
 
     int edo = 12, octave = 4, degree = 0;
 
@@ -228,6 +236,8 @@ struct CustomKey {
     int  number = 60;
     bool numberChosen = false;
     std::optional<std::uint8_t> group, channel;   // std::nullopt: the layout's
+
+    int computerKey = 0;   // the computer key that plays it (ComputerKeys.h), 0: none
 
     bool operator==(const CustomKey&) const = default;
 };

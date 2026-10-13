@@ -36,7 +36,8 @@ struct PlayConfig {
     // each key passed over (MIDI 2.0; UmpOutput restrikes for MIDI 1.0).
     bool glide = false;
 
-    // Fixed: what dragging sends. A full deflection is `expressionDistance`
+    // Fixed: what dragging sends; also what hover expression sends, in
+    // either drag mode. A full deflection is `expressionDistance`
     // layout units from where the pointer went down.
     HorizontalControl horizontal = HorizontalControl::Off;
     VerticalControl   vertical   = VerticalControl::Off;
@@ -87,6 +88,15 @@ public:
     void keyDown(int key, const Note& note, Modifiers mods = {});
     void keyUp(int key, Modifiers mods = {});
 
+    // Hover expression (decisions.md, "Computer keyboard"): while Ctrl is held,
+    // the mouse drives the expression of the notes computer keys hold, as a
+    // Fixed drag would, measured from where it was when Ctrl went down. Ending
+    // it, or releasing a key, resets that expression.
+    void hoverBegin(Point p);
+    void hoverMove(Point p);
+    void hoverEnd();
+    bool hovering() const { return hoverStart_.has_value(); }
+
     void releaseAllLatched();
     void releaseAll();
 
@@ -108,6 +118,10 @@ private:
     void strike(Touch& t, const Note& note, std::uint16_t velocity);
     void finish(Touch& t, bool latch);
     void expression(int id, Touch& t, Point p);
+    // Sends expression, `right` and `up` in full deflections, where `to`
+    // says each scope goes (false: nowhere).
+    template <typename To> void send(double right, double up, To&& to);
+    void hoverSend(double right, double up, const Touch* only = nullptr, bool channel = true);
     bool target(ExpressionScope scope, int id, const Touch& t, std::optional<int>& out) const;
     void resetExpression(int id, const Touch& t);
     std::uint16_t velocityFor(const Key& key, Point p) const;
@@ -125,6 +139,7 @@ private:
     std::map<int, int> latched_;         // Note::id -> the id it sounds as
     std::map<int, int> holds_;           // Note::id -> touches, keys and latches holding it
     std::optional<int> expressionOwner_; // channel-scope expression: the pointer driving it
+    std::optional<Point> hoverStart_;    // where the mouse was when hover expression began
 };
 
 } // namespace kedo

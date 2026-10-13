@@ -152,34 +152,72 @@ bool Performer::target(ExpressionScope scope, int id, const Touch& t, std::optio
     return true;
 }
 
-void Performer::expression(int id, Touch& t, Point p) {
-    const double d = config_.expressionDistance > 0 ? config_.expressionDistance : 150;
-    const double right = (p.x - t.start.x) / d;
-    const double up = -(p.y - t.start.y) / d;   // y is down
-
-    std::optional<int> to;
+template <typename To> void Performer::send(double right, double up, To&& to) {
+    std::optional<int> at;
     const bool hBend = config_.horizontal == HorizontalControl::PitchBend;
     const bool vBend = config_.vertical == VerticalControl::PitchBend;
-    if ((hBend || vBend) && target(config_.bendScope, id, t, to))
-        sink_.pitchBend(to, std::clamp((hBend ? right : 0) + (vBend ? up : 0), -1.0, 1.0));
+    if ((hBend || vBend) && to(config_.bendScope, at))
+        sink_.pitchBend(at, std::clamp((hBend ? right : 0) + (vBend ? up : 0), -1.0, 1.0));
 
     const double v = std::clamp(up, 0.0, 1.0);
-    if (config_.vertical == VerticalControl::Controller && target(config_.controllerScope, id, t, to))
-        sink_.controller(to, config_.verticalController, v);
-    else if (config_.vertical == VerticalControl::Pressure && target(config_.pressureScope, id, t, to))
-        sink_.pressure(to, v);
+    if (config_.vertical == VerticalControl::Controller && to(config_.controllerScope, at))
+        sink_.controller(at, config_.verticalController, v);
+    else if (config_.vertical == VerticalControl::Pressure && to(config_.pressureScope, at))
+        sink_.pressure(at, v);
+}
+
+void Performer::expression(int id, Touch& t, Point p) {
+    const double d = config_.expressionDistance > 0 ? config_.expressionDistance : 150;
+    send((p.x - t.start.x) / d, -(p.y - t.start.y) / d,   // y is down
+         [&](ExpressionScope scope, std::optional<int>& out) { return target(scope, id, t, out); });
 }
 
 void Performer::resetExpression(int id, const Touch& t) {
     if (config_.drag != DragBehavior::Fixed) return;
-    std::optional<int> to;
-    if ((config_.horizontal == HorizontalControl::PitchBend || config_.vertical == VerticalControl::PitchBend) &&
-        target(config_.bendScope, id, t, to))
-        sink_.pitchBend(to, 0.0);
-    if (config_.vertical == VerticalControl::Controller && target(config_.controllerScope, id, t, to))
-        sink_.controller(to, config_.verticalController, 0.0);
-    else if (config_.vertical == VerticalControl::Pressure && target(config_.pressureScope, id, t, to))
-        sink_.pressure(to, 0.0);
+    send(0, 0, [&](ExpressionScope scope, std::optional<int>& out) { return target(scope, id, t, out); });
+}
+
+// --- Hover expression ---------------------------------------------------------------
+//
+// Per-note messages go to each note a computer key holds (or only `only`'s);
+// channel ones once, if `channel` and no pointer is driving the channel.
+
+void Performer::hoverSend(double right, double up, const Touch* only, bool channel) {
+    bool channelSent = !channel || expressionOwner_.has_value();
+    for (const auto& [key, t] : keys_) {
+        if (!t.note || (only && &t != only)) continue;
+        send(right, up, [&](ExpressionScope scope, std::optional<int>& out) {
+            if (scope == ExpressionScope::Note) {
+                out = t.note->id;
+                return true;
+            }
+            if (channelSent) return false;
+            out.reset();
+            return true;
+        });
+        channelSent = true;
+    }
+    if (!channelSent)   // no key to go with: the channel alone
+        send(right, up, [](ExpressionScope scope, std::optional<int>& out) {
+            out.reset();
+            return scope == ExpressionScope::Channel;
+        });
+}
+
+void Performer::hoverBegin(Point p) { hoverStart_ = p; }
+
+void Performer::hoverMove(Point p) {
+    if (!hoverStart_) return;
+    if (std::none_of(keys_.begin(), keys_.end(), [](const auto& k) { return k.second.note.has_value(); })) return;
+    const double d = config_.expressionDistance > 0 ? config_.expressionDistance : 150;
+    hoverSend((p.x - hoverStart_->x) / d, -(p.y - hoverStart_->y) / d);
+}
+
+void Performer::hoverEnd() {
+    if (!hoverStart_) return;
+    hoverStart_.reset();
+    if (std::any_of(keys_.begin(), keys_.end(), [](const auto& k) { return k.second.note.has_value(); }))
+        hoverSend(0, 0);
 }
 
 // --- Computer keys ---------------------------------------------------------------
@@ -194,6 +232,12 @@ void Performer::keyDown(int key, const Note& note, Modifiers) {
 void Performer::keyUp(int key, Modifiers mods) {
     const auto it = keys_.find(key);
     if (it == keys_.end()) return;
+    if (hoverStart_ && it->second.note) {
+        // Its own expression reset; the channel's too if it was the last.
+        const bool last = std::count_if(keys_.begin(), keys_.end(),
+                                        [](const auto& k) { return k.second.note.has_value(); }) == 1;
+        hoverSend(0, 0, &it->second, last);
+    }
     finish(it->second, mods.latch || latchMode_);
     keys_.erase(it);
 }

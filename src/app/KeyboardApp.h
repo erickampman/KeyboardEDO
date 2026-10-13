@@ -94,7 +94,7 @@ private:
     void deleteSelected();
     void duplicateSelected();
     void nudge(double dx, double dy);
-    void pitchChanged(int index, double oldPitch);   // re-suggest the number, follow the label
+    void pitchChanged(int index);   // re-suggest the number
     void audition(int index);
     void drawKeyInspector();
     void open(const std::string& path);
@@ -114,6 +114,8 @@ private:
 
     bool inKeyboard(Point p) const { return viewport_.screen.contains(p); }
     Modifiers modifiers() const;
+    bool computerKey(const SDL_KeyboardEvent& key);   // true if it was used
+    std::string computerKeyLabel(int code) const;
     void zoomBy(double factor);
 
     SDL_Window* window_;
@@ -128,6 +130,9 @@ private:
     std::string prefsPath_;   // in SDL's per-user preferences folder; empty if none
 
     std::unique_ptr<Layout> layout_;
+    std::map<int, Key> computerKeys_;   // the layout's, by computer key
+    std::set<int> heldKeys_;            // computer keys down, playing
+    bool assigning_ = false;            // the inspector's Assign: the next key pressed
     MidiTargets targets_;     // before performer_, which plays into it
     Performer performer_;
     Viewport viewport_;
@@ -137,6 +142,7 @@ private:
     std::map<SDL_FingerID, int> pointers_;
     int nextPointer_ = 1;
     bool mouseDown_ = false;
+    Point mouseAt_;           // where the mouse last moved, in the window (hover expression)
 
     // File dialogs answer on SDL's terms (maybe another thread): queued here
     // and taken in frame().

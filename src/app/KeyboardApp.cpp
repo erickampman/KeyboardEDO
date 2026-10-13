@@ -7,6 +7,7 @@
 
 #include "Icons.h"
 #include "imgui.h"
+#include "kedo/ComputerKeys.h"
 #include "kedo/CustomLayout.h"
 #include "kedo/Synopsis.h"
 
@@ -103,6 +104,8 @@ void KeyboardApp::rebuild(bool resetView) {
     auto layout = makeLayout(settings_.layout, settings_.tuning);
     performer_.setLayout(layout.get());
     layout_ = std::move(layout);
+    computerKeys_ = computerKeyMap(*layout_);
+    heldKeys_.clear();   // setLayout released them
     performer_.setConfig(playConfig());
 
     if (resetView) {
@@ -131,7 +134,46 @@ void KeyboardApp::zoomBy(double factor) {
 }
 
 Modifiers KeyboardApp::modifiers() const {
-    return {.latch = (SDL_GetModState() & SDL_KMOD_SHIFT) != 0};
+    return {.latch = shiftDown_ || (SDL_GetModState() & SDL_KMOD_SHIFT) != 0};
+}
+
+// A computer key (decisions.md, "Computer keyboard"), by its physical place:
+// assigning it, or playing the note key it's on. True if it was used.
+bool KeyboardApp::computerKey(const SDL_KeyboardEvent& key) {
+    const ImGuiIO& io = ImGui::GetIO();
+    const int code = int(key.scancode);
+    if (key.down && assigning_) {
+        if (key.key == SDLK_ESCAPE) {
+            assigning_ = false;
+            return true;
+        }
+        if (!isAssignableComputerKey(code) || !editingKeys() || selected_.size() != 1) return true;
+        // One note key each: taken from any other.
+        pushUndo();
+        for (CustomKey& k : keys())
+            if (k.computerKey == code) k.computerKey = 0;
+        keys()[*selected_.begin()].computerKey = code;
+        assigning_ = false;
+        return true;
+    }
+    if (!key.down) {
+        if (!heldKeys_.erase(code)) return false;
+        performer_.keyUp(code, modifiers());
+        return true;
+    }
+    // Not while typing, and Cmd/Ctrl with a key is a shortcut.
+    if (io.WantTextInput || (key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL))) return false;
+    const auto it = computerKeys_.find(code);
+    if (it == computerKeys_.end()) return false;
+    if (!key.repeat && heldKeys_.insert(code).second) performer_.keyDown(code, it->second.note, modifiers());
+    return true;
+}
+
+// What a computer key is called on this keyboard ("Q", or "A" on AZERTY).
+std::string KeyboardApp::computerKeyLabel(int code) const {
+    const SDL_Keycode key = SDL_GetKeyFromScancode(SDL_Scancode(code), SDL_KMOD_NONE, false);
+    const char* name = key != SDLK_UNKNOWN ? SDL_GetKeyName(key) : "";
+    return name && *name ? name : computerKeyName(code);
 }
 
 // --- Input ------------------------------------------------------------------------
@@ -156,6 +198,10 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         break;
     }
     case SDL_EVENT_MOUSE_MOTION:
+        if (e.motion.which != SDL_TOUCH_MOUSEID) {
+            mouseAt_ = {e.motion.x, e.motion.y};
+            if (performer_.hovering()) performer_.hoverMove(viewport_.toLayout(mouseAt_));
+        }
         if (dragging_) editDrag({e.motion.x, e.motion.y});
         else if (mouseDown_ && e.motion.which != SDL_TOUCH_MOUSEID)
             performer_.pointerMove(0, viewport_.toLayout({e.motion.x, e.motion.y}));
@@ -231,9 +277,15 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
 
     case SDL_EVENT_KEY_UP:
         if (e.key.key == SDLK_LSHIFT || e.key.key == SDLK_RSHIFT) shiftDown_ = false;
+        if (e.key.key == SDLK_LCTRL || e.key.key == SDLK_RCTRL) performer_.hoverEnd();
+        computerKey(e.key);
         break;
     case SDL_EVENT_KEY_DOWN: {
         if (e.key.key == SDLK_LSHIFT || e.key.key == SDLK_RSHIFT) shiftDown_ = true;
+        // Ctrl down: hover expression, from where the mouse is.
+        if ((e.key.key == SDLK_LCTRL || e.key.key == SDLK_RCTRL) && !e.key.repeat)
+            performer_.hoverBegin(viewport_.toLayout(mouseAt_));
+        if (computerKey(e.key)) break;
         if (editingKeys() && !io.WantCaptureKeyboard && editKey(e.key)) break;
         if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) performer_.releaseAll();
         // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as; = (or +) and -
@@ -258,6 +310,10 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         // A release we'll never see would leave a note stuck.
         if (mouseDown_) performer_.pointerCancel(0);
         mouseDown_ = false;
+        performer_.hoverEnd();
+        for (const int code : heldKeys_) performer_.keyUp(code);
+        heldKeys_.clear();
+        assigning_ = false;
         dragging_ = false;
         shiftDown_ = false;   // its release goes elsewhere
         break;
@@ -557,7 +613,7 @@ bool KeyboardApp::editKey(const SDL_KeyboardEvent& key) {
 
 // A new key at `at` (snapped): the selected key's pitch a step up, or the
 // origin note in octave 4, in the layout's EDO; its note number suggested and
-// its label its note's name.
+// its label its note's name and octave.
 void KeyboardApp::addKeyAt(Point at) {
     pushUndo();
     CustomKey k;
@@ -574,7 +630,7 @@ void KeyboardApp::addKeyAt(Point at) {
     keys().push_back(k);
     const int index = int(keys().size()) - 1;
     keys()[index].number = suggestNumber(keys(), index, settings_.tuning);
-    keys()[index].label = noteNameOf(customPitch(keys()[index], settings_.tuning));
+    keys()[index].labelStyle = LabelStyle::NameOctave;
     selected_ = {index};
     audition(index);
 }
@@ -598,6 +654,7 @@ void KeyboardApp::duplicateSelected() {
         CustomKey copy = keys()[i];
         copy.center = {copy.center.x + 2 * gridStep(), copy.center.y};
         copy.numberChosen = false;
+        copy.computerKey = 0;   // one note key each
         keys().push_back(copy);
         copies.insert(int(keys().size()) - 1);
     }
@@ -612,12 +669,11 @@ void KeyboardApp::nudge(double dx, double dy) {
         if (i < int(keys().size())) keys()[i].center = {keys()[i].center.x + dx, keys()[i].center.y + dy};
 }
 
-// After a key's pitch changed: a suggested number follows it, and so does a
-// label that was its old note's name.
-void KeyboardApp::pitchChanged(int index, double oldPitch) {
+// After a key's pitch changed: a suggested number follows it. (Labels from
+// the pitch follow it by themselves.)
+void KeyboardApp::pitchChanged(int index) {
     CustomKey& k = keys()[index];
     if (!k.numberChosen) k.number = suggestNumber(keys(), index, settings_.tuning);
-    if (k.label == noteNameOf(oldPitch)) k.label = noteNameOf(customPitch(k, settings_.tuning));
 }
 
 // Sounds the key's note briefly through the outputs, as playing it would
@@ -747,6 +803,19 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
                                       : look.ink;
             list->AddText(font, detailSize, {c.x - size.x / 2, titleY + titleSize + 1},
                           color(detailInk), look.detail.c_str());
+        }
+        // Its computer key, small, near the bottom corner (piano: above the
+        // C's name).
+        if (k.computerKey && prefs_.showComputerKeys && detailSize >= 6) {
+            const std::string name = computerKeyLabel(k.computerKey);
+            const float size = detailSize;
+            const ImVec2 extent = font->CalcTextSizeA(size, FLT_MAX, 0, name.c_str());
+            const float y = k.shape == KeyShape::Diamond ? c.y + hh * 0.62f - extent.y / 2
+                                                         : c.y + hh - extent.y - (look.title.empty() ? 6 : 22) * zoom;
+            const ImVec2 at{c.x - extent.x / 2, y};
+            const Rgb& ink = look.ink;   // a little softer than the labels
+            list->AddText(font, size, at, color(Rgb{ink.r * 0.6f + 0.2f, ink.g * 0.6f + 0.2f, ink.b * 0.6f + 0.2f}),
+                          name.c_str());
         }
     }
     list->PopClipRect();
@@ -1015,11 +1084,10 @@ void KeyboardApp::drawKeyInspector() {
             edo = std::clamp(edo, 1, Tuning::kMaxEdo);
             while (degree >= edo) degree -= edo, ++octave;
             while (degree < 0) degree += edo, --octave;
-            const double old = customPitch(k, tuning);
             k.edo = edo;
             k.octave = std::clamp(octave, -1, 9);
             k.degree = degree;
-            pitchChanged(primary, old);
+            pitchChanged(primary);
             audition(primary);
         }
     } else {
@@ -1027,12 +1095,11 @@ void KeyboardApp::drawKeyInspector() {
             pushUndo();
             for (const int i : selected_) {
                 CustomKey& k = keys()[i];
-                const double old = customPitch(k, tuning);
                 k.octave += octaves;
                 k.degree += steps;
                 while (k.degree >= k.edo) k.degree -= k.edo, ++k.octave;
                 while (k.degree < 0) k.degree += k.edo, --k.octave;
-                pitchChanged(i, old);
+                pitchChanged(i);
             }
             audition(primary);
         };
@@ -1086,6 +1153,26 @@ void KeyboardApp::drawKeyInspector() {
                 break;
             }
         }
+    }
+    // Its computer key: pressed to assign (taken from any other key).
+    if (!several) {
+        CustomKey& k = keys()[primary];
+        const std::string shown = k.computerKey ? computerKeyLabel(k.computerKey) : "none";
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("Computer key: %s", assigning_ ? "press one..." : shown.c_str());
+        ImGui::SameLine();
+        if (ImGui::Button(assigning_ ? "Cancel##ck" : "Assign...")) assigning_ = !assigning_;
+        ImGui::SetItemTooltip("Then press a letter, digit or punctuation key (Escape cancels).\n"
+                              "A key already on another note key moves here");
+        if (k.computerKey) {
+            ImGui::SameLine();
+            if (ImGui::Button("Clear##ck")) {
+                pushUndo();
+                k.computerKey = 0;
+            }
+        }
+    } else {
+        assigning_ = false;
     }
     // Group and channel: the layout's (the MIDI section), or the key's own.
     auto route = [&](const char* label, std::optional<std::uint8_t> CustomKey::*field) {
@@ -1149,18 +1236,32 @@ void KeyboardApp::drawKeyInspector() {
             pushUndo(before);
             each([&](CustomKey& o) { o.halfHeight = (height + 1) * 0.5 * kHalfDiag; });
         }
-        char text[64] = {};
-        k.label.copy(text, sizeof text - 1);
-        if (ImGui::InputText("Label", text, sizeof text)) each([&](CustomKey& o) { o.label = text; });
-        undoable();
-        char sub[64] = {};
-        k.sublabel.copy(sub, sizeof sub - 1);
-        if (ImGui::InputText("Under it", sub, sizeof sub)) each([&](CustomKey& o) { o.sublabel = sub; });
-        undoable();
-        if (ImGui::Button("Label from pitch")) {
-            pushUndo();
-            each([&](CustomKey& o) { o.label = noteNameOf(customPitch(o, tuning)); });
-        }
+        // The label and the line under it: typed, or from the pitch (and
+        // following it). Typing over one from the pitch makes it typed.
+        static const char* const kStyles[] = {"Text", "Name and octave", "Name", "Degree", "Frequency"};
+        auto labelLine = [&](const char* name, std::string CustomKey::*text, LabelStyle CustomKey::*style) {
+            ImGui::PushID(name);
+            int chosen = int(k.*style);
+            if (ImGui::Combo(name, &chosen, kStyles, 5)) {
+                pushUndo(before);
+                each([&](CustomKey& o) {
+                    if (LabelStyle(chosen) == LabelStyle::Text && o.*style != LabelStyle::Text)
+                        o.*text = labelText(o, o.*style, o.*text, tuning);   // keep what it showed
+                    o.*style = LabelStyle(chosen);
+                });
+            }
+            char buf[64] = {};
+            labelText(k, k.*style, k.*text, tuning).copy(buf, sizeof buf - 1);
+            if (ImGui::InputText("##text", buf, sizeof buf))
+                each([&](CustomKey& o) {
+                    o.*text = buf;
+                    o.*style = LabelStyle::Text;
+                });
+            undoable();
+            ImGui::PopID();
+        };
+        labelLine("Label", &CustomKey::label, &CustomKey::labelStyle);
+        labelLine("Under it", &CustomKey::sublabel, &CustomKey::sublabelStyle);
     }
 }
 
@@ -1304,6 +1405,10 @@ float KeyboardApp::drawPanel() {
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
         ImGui::TextWrapped("Wheel scrolls, Shift-wheel sideways; Ctrl-wheel or pinch zooms.");
         ImGui::PopStyleColor();
+        if (ImGui::Checkbox("Computer keys", &prefs_.showComputerKeys) && !prefsPath_.empty())
+            savePreferences(prefsPath_, prefs_);
+        ImGui::SetItemTooltip("Show each key's computer key. Shift latches; Ctrl with the mouse\n"
+                              "sends expression (Playing) for the notes they hold");
     }
 
     if (prefs_.editing && ImGui::CollapsingHeader("Playing", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -1311,8 +1416,13 @@ float KeyboardApp::drawPanel() {
         if (p.drag == DragBehavior::Gliss) {
             ImGui::Checkbox("Glide (Pitch 7.25)", &p.glide);
             ImGui::SetItemTooltip("Slide one note's pitch from key to key instead of striking each (MIDI 2.0)");
-        } else {
+        }
+        // What a Fixed drag sends, and in either mode, moving the mouse with
+        // Ctrl held while computer keys hold notes (hover expression).
+        {
             enumCombo("Horizontal", p.horizontal, kHorizontal, ImGui::CalcItemWidth());
+            ImGui::SetItemTooltip("What dragging sends (Fixed), and moving the mouse with Ctrl held\n"
+                                  "while computer keys hold notes");
             enumCombo("Vertical", p.vertical, kVertical, ImGui::CalcItemWidth());
             if (p.vertical == VerticalControl::Controller &&
                 ImGui::InputInt("Controller", &p.verticalController))

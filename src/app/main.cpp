@@ -38,7 +38,10 @@ void usage() {
                  "    --tap [shift+]X,Y        press and release (Shift held, with shift+)\n"
                  "    --double X,Y             a double click\n"
                  "    --drag X1,Y1,X2,Y2       press, move, release\n"
-                 "    --key [ctrl+][shift+]NAME  a key, by SDL's name (z, delete, right...)\n");
+                 "    --key [ctrl+][shift+]NAME  a key, by SDL's name (z, delete, right...)\n"
+                 "    --press NAME             a key down, and held (e.g. z, \"left ctrl\")\n"
+                 "    --release NAME           that key up\n"
+                 "    --move X,Y               the mouse moved there, no button\n");
 }
 
 // --snapshot's own mouse: while it has steps, the real mouse's events are
@@ -47,7 +50,7 @@ constexpr SDL_MouseID kStepMouse = 0x5EED;
 
 // One input --snapshot gives the app, through the same path as a real one.
 struct Step {
-    enum Kind { Click, Tap, Double, Drag, Key } kind = Tap;
+    enum Kind { Click, Tap, Double, Drag, Key, Press, Release, Move } kind = Tap;
     float x = 0, y = 0, x2 = 0, y2 = 0;
     SDL_Keymod mod = SDL_KMOD_NONE;   // held during it
     SDL_Keycode key = SDLK_UNKNOWN;
@@ -91,6 +94,7 @@ void pushKey(SDL_Window* window, SDL_Keycode key, SDL_Keymod mod, bool down) {
     e.type = down ? SDL_EVENT_KEY_DOWN : SDL_EVENT_KEY_UP;
     e.key.windowID = SDL_GetWindowID(window);
     e.key.key = key;
+    e.key.scancode = SDL_GetScancodeFromKey(key, nullptr);
     e.key.mod = mod;
     e.key.down = down;
     SDL_PushEvent(&e);
@@ -104,9 +108,20 @@ void pushMods(SDL_Window* window, SDL_Keymod mod, bool down) {
 }
 
 bool runStep(SDL_Window* window, const Step& s, int frame) {
-    if (frame == 0 && s.kind != Step::Key) pushMods(window, s.mod, true);
+    const bool mouse = s.kind <= Step::Drag;
+    if (frame == 0 && mouse) pushMods(window, s.mod, true);
+    // The mouse goes there a frame before it presses, so ImGui knows it's
+    // left a panel (else a press just after a panel's is the panel's).
+    if (mouse) {
+        if (frame == 0) {
+            SDL_WarpMouseInWindow(window, s.x, s.y);
+            pushMouse(window, SDL_EVENT_MOUSE_MOTION, s.x, s.y);
+            return false;
+        }
+        --frame;
+    }
     auto done = [&](bool finished) {
-        if (finished && s.kind != Step::Key) pushMods(window, s.mod, false);
+        if (finished && mouse) pushMods(window, s.mod, false);
         return finished;
     };
     auto press = [&](float x, float y, Uint8 clicks) {
@@ -142,6 +157,14 @@ bool runStep(SDL_Window* window, const Step& s, int frame) {
     case Step::Key:
         pushKey(window, s.key, s.mod, frame == 0);
         return frame == 1;
+    case Step::Press:
+    case Step::Release:
+        pushKey(window, s.key, SDL_KMOD_NONE, s.kind == Step::Press);
+        return true;
+    case Step::Move:
+        SDL_WarpMouseInWindow(window, s.x, s.y);
+        pushMouse(window, SDL_EVENT_MOUSE_MOTION, s.x, s.y);
+        return true;
     }
     return true;
 }
@@ -184,19 +207,22 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(arg, "--snapshot")) snapshot = value;
         else if (!std::strcmp(arg, "--wait")) wait = std::atof(value);
         else if (!std::strcmp(arg, "--click") || !std::strcmp(arg, "--tap") || !std::strcmp(arg, "--double") ||
-                 !std::strcmp(arg, "--drag") || !std::strcmp(arg, "--key")) {
+                 !std::strcmp(arg, "--drag") || !std::strcmp(arg, "--key") || !std::strcmp(arg, "--press") ||
+                 !std::strcmp(arg, "--release") || !std::strcmp(arg, "--move")) {
             Step s;
             std::string text = value;
             s.mod = takeMods(text);
-            if (!std::strcmp(arg, "--key")) {
-                s.kind = Step::Key;
+            const bool press = !std::strcmp(arg, "--press"), release = !std::strcmp(arg, "--release");
+            if (!std::strcmp(arg, "--key") || press || release) {
+                s.kind = press ? Step::Press : release ? Step::Release : Step::Key;
                 s.key = SDL_GetKeyFromName(text.c_str());
                 if (s.key == SDLK_UNKNOWN) { usage(); return 2; }
             } else if (!std::strcmp(arg, "--drag")) {
                 s.kind = Step::Drag;
                 if (std::sscanf(text.c_str(), "%f,%f,%f,%f", &s.x, &s.y, &s.x2, &s.y2) != 4) { usage(); return 2; }
             } else {
-                s.kind = !std::strcmp(arg, "--click") ? Step::Click : !std::strcmp(arg, "--tap") ? Step::Tap : Step::Double;
+                s.kind = !std::strcmp(arg, "--click") ? Step::Click : !std::strcmp(arg, "--tap") ? Step::Tap
+                       : !std::strcmp(arg, "--move") ? Step::Move : Step::Double;
                 if (std::sscanf(text.c_str(), "%f,%f", &s.x, &s.y) != 2) { usage(); return 2; }
             }
             steps.push_back(s);

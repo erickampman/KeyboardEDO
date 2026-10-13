@@ -270,6 +270,7 @@ void testCustomKeys() {
     a.sublabel = "17";
     a.group = 2;
     a.channel = 9;
+    a.computerKey = 47;   // [
     CustomKey b;
     b.shade = KeyShade::Black;
     b.halfWidth = 11.5;
@@ -280,6 +281,7 @@ void testCustomKeys() {
     CHECK(j["keyLayoutViewType"] == 1);
     CHECK(j["customKeys"].size() == 2 && j["customKeys"][0]["color"] == "#12ab34");
     CHECK(!j["customKeys"][1].contains("group") && !j["customKeys"][1].contains("color"));
+    CHECK(j["customKeys"][0]["computerKey"] == "BracketLeft" && !j["customKeys"][1].contains("computerKey"));
     const auto back = parseLayoutSetup(text);
     CHECK(back && back->layout.kind == LayoutKind::Custom && back->layout.customKeys == d.layout.customKeys);
 
@@ -293,6 +295,46 @@ void testCustomKeys() {
     CHECK(bad && bad->layout.customKeys.size() == 2);
     CHECK(bad && bad->layout.customKeys[0].number == 127 && !bad->layout.customKeys[0].channel &&
           bad->layout.customKeys[0].edo == 1);
+}
+
+// A label is its style, with its text only when it's typed. A file from
+// before styles gets the style whose text a label has, so it follows pitch.
+void testLabelStyles() {
+    LayoutSetup d;
+    d.layout.kind = LayoutKind::Custom;
+    CustomKey k;
+    k.labelStyle = LabelStyle::NameOctave;
+    k.sublabelStyle = LabelStyle::Frequency;
+    d.layout.customKeys = {k};
+    const std::string text = writeLayoutSetup(d);
+    const auto j = nlohmann::json::parse(text)["customKeys"][0];
+    CHECK(j["labelStyle"] == "name-octave" && j["sublabelStyle"] == "frequency");
+    CHECK(!j.contains("label") && !j.contains("sublabel"));
+    const auto back = parseLayoutSetup(text);
+    CHECK(back && back->layout.customKeys == d.layout.customKeys);
+
+    // 8b's converted diamond piano ("A" over "110.0", A2 with an A origin),
+    // Tiled ("C#3" over "5": degree 4), and typed text.
+    const auto old = parseLayoutSetup(R"({"customKeys": [
+        {"edo": 12, "octave": 2, "degree": 0, "label": "A", "sublabel": "110.0"},
+        {"edo": 12, "octave": 3, "degree": 4, "label": "C#4", "sublabel": "5"},
+        {"edo": 12, "octave": 3, "degree": 4, "label": "Hi", "sublabel": "6"}]})");
+    CHECK(old && old->layout.customKeys.size() == 3);
+    if (!old || old->layout.customKeys.size() != 3) return;
+    const auto& keys = old->layout.customKeys;
+    CHECK(keys[0].labelStyle == LabelStyle::Name && keys[0].sublabelStyle == LabelStyle::Frequency);
+    CHECK(keys[0].label.empty() && keys[0].sublabel.empty());
+    CHECK(keys[1].labelStyle == LabelStyle::NameOctave && keys[1].sublabelStyle == LabelStyle::Degree);
+    CHECK(keys[2].labelStyle == LabelStyle::Text && keys[2].label == "Hi");
+    CHECK(keys[2].sublabelStyle == LabelStyle::Text && keys[2].sublabel == "6");
+    // A computer key on two keys stays on the first; an unknown one is none.
+    const auto twice = parseLayoutSetup(R"({"customKeys": [{"computerKey": "KeyQ"}, {"computerKey": "KeyQ"},
+        {"computerKey": "F13"}]})");
+    CHECK(twice && twice->layout.customKeys[0].computerKey == 20 && twice->layout.customKeys[1].computerKey == 0 &&
+          twice->layout.customKeys[2].computerKey == 0);
+    // An unknown style is text.
+    const auto odd = parseLayoutSetup(R"({"customKeys": [{"label": "A4", "labelStyle": "fancy"}]})");
+    CHECK(odd && odd->layout.customKeys[0].labelStyle == LabelStyle::Text && odd->layout.customKeys[0].label == "A4");
 }
 
 void testImportsKeyEdo() {
@@ -322,5 +364,6 @@ int main() {
     testBundleRefusals();
     testImportsKeyEdo();
     testCustomKeys();
+    testLabelStyles();
     return kedo::test::finish("Document");
 }

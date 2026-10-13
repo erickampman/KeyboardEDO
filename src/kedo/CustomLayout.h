@@ -14,6 +14,11 @@ namespace kedo {
 // of its EDO above the layout's origin note in the key's octave.
 double customPitch(const CustomKey& key, const Tuning& tuning);
 
+// What `key` shows for a label of `style`: `text` for LabelStyle::Text,
+// otherwise its nearest 12-EDO note's name (with its octave or not), its
+// degree counted from 1, or its frequency in Hz to a tenth.
+std::string labelText(const CustomKey& key, LabelStyle style, const std::string& text, const Tuning& tuning);
+
 // A layout of CustomKeys. Each becomes a Key carrying its Note: keys of one
 // note number, group and channel are one note (as Tiled's repeated steps),
 // and a key is playable while its pitch is within MIDI's range. Later keys

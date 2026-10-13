@@ -233,20 +233,56 @@ decisions.md, "Custom layout". Two sessions:
    converted diamond piano's labels ("A", "110.0") should follow a pitch
    change (only a label that's the note's name with its octave does now).
 
-## 9. Computer keyboard (KeyboardEDO)
+## 9. Computer keyboard (KeyboardEDO): done 2026-10-13
 
 Re-planned 2026-10-13 (decisions.md, "Computer keyboard"): not KeyEDO's
 QWERTY region moved with the arrow keys, which the author found too
 confusing, but a computer key the player assigns to each note key; no
 region or border on a custom layout. Shift latches. Hover expression
-(Control held) on the desktop. To settle at the start: how keys are
-assigned (in the inspector, by pressing the key?), and what generated
-layouts' default mappings are (e.g. DAW rows on the piano). They have one:
-Convert to custom keeps each note key's computer key, changeable after
-(the author, 2026-10-13).
+(Control held) on the desktop. Settled at the start of the session: keys
+assigned in the inspector by pressing them; default mappings (tracker rows
+on the piano, a zigzag of steps on the diamond piano and Octave columns,
+the staggered rows as a lattice on Tiled); computer keys play in Edit mode
+too; octave shifting later.
 
-Also, left from 8b: a converted key's labels follow a pitch change (the
-author, 2026-10-13), not only a label that's the old note's name.
+As built: a computer key is its HID usage (SDL's scancode), named in files
+as the W3C `code` (`src/kedo/ComputerKeys.*`). Every `Key` and `CustomKey`
+carries one; the generated layouts fill theirs in, Convert to custom copies
+them (the 12-EDO piano's onto its diamonds), and a custom layout's file
+stores them (`computerKey`), a duplicate kept on the first key only. The
+app plays them through the Performer's `keyDown` / `keyUp` (not while a text
+field has focus, nor with Cmd/Ctrl), draws each key's name small at the
+bottom of its key in the system's keyboard layout (View: "Computer keys", a
+preference, on), and the inspector assigns them ("Assign...", "Clear";
+duplicating a key doesn't copy its computer key). Hover expression is the
+Performer's `hoverBegin` / `hoverMove` / `hoverEnd`; the Playing section now
+shows Horizontal and Vertical in Gliss mode too, as hover uses them.
+
+Also, left from 8b: a converted key's labels follow a pitch change. Each of
+a custom key's two labels has a style (text, name and octave, name, degree,
+frequency), worked out from the pitch when drawn (decisions.md, "Custom
+layout"); the inspector chooses it, and 8b's files get the style whose text
+a label has.
+
+Tests: the four rows and their codes; every generated layout's mapping (at
+5, 12, 17, 31 and 72-EDO and three origin octaves) only on playable keys,
+each computer key once, Z on the origin note in octave 3; the piano's,
+diamond piano's, Tiled's and Octave columns' shapes; converting keeps every
+computer key; the file round-trips and drops duplicates; hover expression
+(per note and channel, reset by a key's release and by Ctrl's, a pointer
+keeping the channel); converted labels equal the original's and follow a
+pitch change; label styles round-trip, and 8b's labels are recognised.
+Checked with `--snapshot`, which gained `--press`, `--release` and `--move`
+steps (and now moves the mouse a frame before pressing, so a tap on the
+keyboard just after one on the panel isn't the panel's): playing Z and S on
+the piano, the diamond piano and Tiled mappings drawn, assigning X to a
+converted piano's C3 (moving it from D3), a converted "A / 110.0" key
+reading "B / 246.9" after two steps up, hover bend and CC 74 in the monitor,
+and Shift-latching a computer key.
+
+Still to check by hand: a real keyboard on X11 and Wayland, and a non-QWERTY
+layout's names; hover expression with a real mouse; on the Mac, Control
+(not Cmd) for hover.
 
 ## 10. Arpeggiator (KeyboardEDO)
 

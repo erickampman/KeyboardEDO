@@ -21,6 +21,9 @@ struct Preferences {
     // layouts". Edit at first, to find things.
     bool editing = true;
 
+    // Each note key shows its computer key (decisions.md, "Computer keyboard").
+    bool showComputerKeys = true;
+
     bool operator==(const Preferences&) const = default;
 };
 

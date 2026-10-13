@@ -1,11 +1,14 @@
 // The three layouts: positions, hit-testing, and the Tiled lattice's isomorphism.
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <set>
 
 #include "Check.h"
+#include "kedo/ComputerKeys.h"
 #include "kedo/CustomLayout.h"
+#include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 
 using namespace kedo;
@@ -354,6 +357,9 @@ void testConvertToCustom() {
                   ck->note.channel == k.note.channel);
             CHECK(std::abs(ck->note.pitch - k.note.pitch) < 1e-9);
             CHECK(ck->note.needsPitchAttribute() == k.note.needsPitchAttribute());
+            // The same labels, now from the pitch.
+            const KeyLook was = keyLook(k, t, c.kind, TileColor::Note, false, false);
+            CHECK(ck->label == was.title && ck->sublabel == was.detail);
             const auto [it, added] = idFor.emplace(k.note.id, ck->note.id);
             CHECK(it->second == ck->note.id);   // one note in, one note out
         }
@@ -362,6 +368,141 @@ void testConvertToCustom() {
         for (const auto& [from, to] : idFor) customIds.insert(to);
         CHECK(customIds.size() == idFor.size());   // and different notes stay different
         checkConsistent(*custom);
+    }
+}
+
+// Converted labels follow a pitch change: Tiled's name and degree, the
+// diamond piano's name and frequency; typed ones stay.
+void testLabelsFollowPitch() {
+    Tuning t;
+    t.edo = 17;
+    LayoutConfig config;
+    config.kind = LayoutKind::Tiled;
+    auto keys = convertToCustom(*makeLayout(config, t), t, LayoutKind::Tiled, TileColor::Note);
+    CustomKey k = keys.front();
+    k.octave = 4;
+    k.degree = 0;   // A4
+    const CustomLayout tiled({k}, t);
+    CHECK(tiled.keys()[0].label == "A4" && tiled.keys()[0].sublabel == "1");
+
+    config.kind = LayoutKind::Piano;
+    keys = convertToCustom(*makeLayout(config, t), t, LayoutKind::Piano, TileColor::Note);
+    const auto it = std::find_if(keys.begin(), keys.end(), [](const CustomKey& c) { return !c.label.empty() ||
+        c.labelStyle != LabelStyle::Text; });
+    CHECK(it != keys.end());
+    if (it == keys.end()) return;
+    k = *it;
+    CHECK(CustomLayout({k}, t).keys()[0].label == "A");
+    k.edo = 12;
+    k.octave = 3;
+    k.degree = 3;   // C4
+    const CustomLayout piano({k}, t);
+    CHECK(piano.keys()[0].label == "C" && piano.keys()[0].sublabel == "261.6");
+    CHECK(labelText(k, LabelStyle::NameOctave, "", t) == "C4");
+    CHECK(labelText(k, LabelStyle::Degree, "", t) == "4");
+    k.labelStyle = LabelStyle::Text;
+    k.label = "Mine";
+    CHECK(CustomLayout({k}, t).keys()[0].label == "Mine");
+}
+
+// The computer key named `name` on a US keyboard.
+int ck(const char* name) {
+    for (int key = 0; key < 256; ++key)
+        if (computerKeyName(key) == name) return key;
+    return 0;
+}
+
+// Default computer keys (decisions.md, "Computer keyboard"): only on playable
+// keys, each on one key, starting from the origin note in octave 3.
+void testComputerKeys() {
+    // The rows: 10, 11, 12 and 12 keys, all assignable and different.
+    std::set<int> all;
+    for (int row = 0; row < 4; ++row)
+        for (const int key : computerKeyRow(row)) {
+            CHECK(isAssignableComputerKey(key));
+            CHECK(computerKeyFromCode(computerKeyCode(key)) == key);
+            all.insert(key);
+        }
+    CHECK(all.size() == 45 && !isAssignableComputerKey(0) && computerKeyFromCode("Nope") == 0);
+    CHECK(computerKeyZigzag().size() == 43);
+
+    // Every generated layout at a few EDOs and origin octaves.
+    for (int edo : {5, 12, 17, 31, 72})
+        for (int octave : {0, 2, 4})
+            for (int kind = 0; kind < 2; ++kind) {
+                Tuning t;
+                t.edo = edo;
+                t.originOctave = octave;
+                const int presets = kind ? int(generatorPresets(edo).size()) : 1;
+                for (int p = 0; p < presets; ++p) {
+                    LayoutConfig c;
+                    c.kind = kind ? LayoutKind::Tiled : LayoutKind::Piano;
+                    c.generatorIndex = p;
+                    const auto layout = makeLayout(c, t);
+                    std::map<int, int> seen;
+                    for (const Key& k : layout->keysIn(layout->bounds()))
+                        if (k.computerKey) {
+                            CHECK(k.playable && isAssignableComputerKey(k.computerKey));
+                            CHECK(++seen[k.computerKey] == 1);
+                        }
+                    // Z plays the origin note in octave 3 where that's playable.
+                    const int start = (3 - octave) * edo;
+                    if (edo != 12 || kind) {
+                        const auto map = computerKeyMap(*layout);
+                        const auto z = map.find(ck("Z"));
+                        CHECK((z != map.end()) == t.isPlayable(start));
+                        if (z != map.end()) CHECK(z->second.step == start);
+                    }
+                }
+            }
+
+    // The piano: Z is C3 and Q C4, the black keys between.
+    Tuning t12;
+    LayoutConfig piano;
+    const auto map = computerKeyMap(*makeLayout(piano, t12));
+    auto number = [&](const char* name) { return map.count(ck(name)) ? int(map.at(ck(name)).note.number) : -1; };
+    CHECK(number("Z") == 48 && number("S") == 49 && number("M") == 59 && number(",") == -1);
+    CHECK(number("Q") == 60 && number("2") == 61 && number("]") == 79 && number("=") == 78 && number("1") == -1);
+    CHECK(map.size() == 12 + 20);
+
+    // The diamond piano: consecutive steps zigzag, Z S X D ..., then Q 2 W.
+    Tuning t17;
+    t17.edo = 17;
+    const auto diamonds = computerKeyMap(*makeLayout(piano, t17));
+    const int s0 = 3 * 17;
+    CHECK(diamonds.at(ck("Z")).step == s0 && diamonds.at(ck("S")).step == s0 + 1 &&
+          diamonds.at(ck("X")).step == s0 + 2 && diamonds.at(ck("'")).step == s0 + 19 &&
+          diamonds.at(ck("Q")).step == s0 + 20 && diamonds.at(ck("]")).step == s0 + 42);
+
+    // Tiled: A up-left of Z, S up-right, Q up-left of A; so isomorphic.
+    LayoutConfig wicki;
+    wicki.kind = LayoutKind::Tiled;
+    const Generator g = generatorPresets(17)[0];
+    const auto tiles = computerKeyMap(*makeLayout(wicki, t17));
+    const int z = tiles.at(ck("Z")).step;
+    CHECK(tiles.at(ck("X")).step == z + g.right);
+    CHECK(tiles.at(ck("S")).step == z + g.upRight && tiles.at(ck("A")).step == z + g.upLeft());
+    CHECK(tiles.at(ck("Q")).step == z + 2 * g.upLeft() && tiles.at(ck("2")).step == z + 3 * g.upLeft() + g.right);
+
+    // Octave columns: the same zigzag over the columns from level 4.
+    wicki.generatorIndex = int(generatorPresets(12).size()) - 1;
+    const auto columns = computerKeyMap(*makeLayout(wicki, t12));
+    const int c0 = 3 * 12;   // A3, the origin in octave 3
+    CHECK(columns.at(ck("Z")).step == c0 && columns.at(ck("S")).step == c0 + 1 &&
+          columns.at(ck("Q")).step == c0 + 20 && columns.at(ck("]")).step == c0 + 42);
+    CHECK(columns.at(ck("Z")).row == 4 && columns.at(ck("Z")).col == 0 && columns.at(ck("Q")).row == 4 &&
+          columns.at(ck("]")).row == 6);
+
+    // Converting keeps each key's computer key, the 12-EDO piano's too.
+    for (const Tuning& t : {t12, t17}) {
+        const auto layout = makeLayout(piano, t);
+        LayoutConfig custom;
+        custom.kind = LayoutKind::Custom;
+        custom.customKeys = convertToCustom(*layout, t, LayoutKind::Piano, TileColor::Note);
+        const auto before = computerKeyMap(*layout), after = computerKeyMap(*makeLayout(custom, t));
+        CHECK(before.size() == after.size());
+        for (const auto& [key, k] : before)
+            CHECK(after.count(key) && after.at(key).note.number == k.note.number);
     }
 }
 
@@ -455,6 +596,8 @@ int main() {
     testOctaveColumns();
     testTiledLowest();
     testConvertToCustom();
+    testLabelsFollowPitch();
+    testComputerKeys();
     testCustomPitch();
     testSuggestNumber();
     testCustomOverlap();

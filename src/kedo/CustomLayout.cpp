@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <map>
 #include <set>
 
 namespace kedo {
@@ -29,6 +31,22 @@ double customPitch(const CustomKey& key, const Tuning& tuning) {
     return (key.octave + 1) * 12 + tuning.originPitchClass + 12.0 * key.degree / edo;
 }
 
+std::string labelText(const CustomKey& key, LabelStyle style, const std::string& text, const Tuning& tuning) {
+    const double pitch = customPitch(key, tuning);
+    const StepLabel l = labelOfPitch(pitch);
+    char buf[32];
+    switch (style) {
+    case LabelStyle::Text: return text;
+    case LabelStyle::NameOctave: return pitchClassName(l.pitchClass) + std::to_string(l.octave);
+    case LabelStyle::Name: return pitchClassName(l.pitchClass);
+    case LabelStyle::Degree: return std::to_string(mod(key.degree, std::max(1, key.edo)) + 1);
+    case LabelStyle::Frequency:
+        std::snprintf(buf, sizeof buf, "%.1f", 440.0 * std::pow(2.0, (pitch - 69) / 12));
+        return buf;
+    }
+    return text;
+}
+
 // --- CustomLayout ------------------------------------------------------------------
 
 CustomLayout::CustomLayout(const std::vector<CustomKey>& keys, const Tuning& tuning) {
@@ -51,8 +69,9 @@ CustomLayout::CustomLayout(const std::vector<CustomKey>& keys, const Tuning& tun
         k.col = 0;
         k.row = int(i);
         k.color = c.color;
-        k.label = c.label;
-        k.sublabel = c.sublabel;
+        k.computerKey = c.computerKey;
+        k.label = labelText(c, c.labelStyle, c.label, tuning);
+        k.sublabel = labelText(c, c.sublabelStyle, c.sublabel, tuning);
         bounds_ = bounds_.unite(k.bounds());
         keys_.push_back(std::move(k));
     }
@@ -93,16 +112,20 @@ int suggestNumber(const std::vector<CustomKey>& keys, std::size_t index, const T
 std::vector<CustomKey> convertToCustom(const Layout& layout, const Tuning& tuning, LayoutKind kind,
                                        TileColor tileColor) {
     // The 12-EDO piano's rectangles become the diamond piano's arrangement of
-    // the same keys: a diamond each, the black ones half a diamond up.
+    // the same keys: a diamond each, the black ones half a diamond up, each
+    // keeping its computer key.
     std::vector<Key> keys = layout.keysIn(layout.bounds());
     if (std::any_of(keys.begin(), keys.end(), [](const Key& k) { return k.shape == KeyShape::Rectangle; })) {
-        std::set<int> steps;
+        std::map<int, int> steps;   // step -> computer key
         for (const Key& k : keys)
-            if (k.playable) steps.insert(k.step);
+            if (k.playable) steps[k.step] = k.computerKey;
         const DiamondLayout diamonds(tuning);
         keys.clear();
-        for (const Key& k : diamonds.keysIn(diamonds.bounds()))
-            if (steps.count(k.step)) keys.push_back(k);
+        for (Key k : diamonds.keysIn(diamonds.bounds()))
+            if (const auto it = steps.find(k.step); it != steps.end()) {
+                k.computerKey = it->second;
+                keys.push_back(k);
+            }
     }
 
     std::vector<CustomKey> out;
@@ -115,8 +138,17 @@ std::vector<CustomKey> convertToCustom(const Layout& layout, const Tuning& tunin
         c.halfHeight = k.halfHeight;
         c.shade = k.shade;
         if (kind == LayoutKind::Tiled) c.color = packed(look.fill);   // the tiles' colouring, kept
-        c.label = look.title;
-        c.sublabel = look.detail;
+        // Its labels as the layout's, in styles that follow its pitch: Tiled's
+        // name and degree on every tile, the diamond piano's name and
+        // frequency on the origin's note (the 12-EDO piano is drawn as the
+        // diamond piano now). A label left empty stays empty.
+        if (kind == LayoutKind::Tiled) {
+            c.labelStyle = LabelStyle::NameOctave;
+            c.sublabelStyle = LabelStyle::Degree;
+        } else if (!look.title.empty()) {
+            c.labelStyle = LabelStyle::Name;
+            c.sublabelStyle = LabelStyle::Frequency;
+        }
         // Its step as octave and degree of the tuning's EDO above the origin note.
         c.edo = tuning.edo;
         c.octave = tuning.originOctave + floorDiv(k.step, tuning.edo);
@@ -124,6 +156,7 @@ std::vector<CustomKey> convertToCustom(const Layout& layout, const Tuning& tunin
         c.number = k.note.number;
         c.group = k.note.group;
         c.channel = k.note.channel;
+        c.computerKey = k.computerKey;
         out.push_back(c);
     }
     return out;

@@ -275,6 +275,58 @@ void testDiamondGaps() {
     CHECK(p.isSounding(0));
 }
 
+// Hover expression: with Ctrl held, the mouse drives the computer keys'
+// notes as a Fixed drag would, in Gliss mode too; releasing resets.
+void testHoverExpression() {
+    Rig r;
+    PlayConfig c;   // Gliss
+    c.horizontal = HorizontalControl::PitchBend;
+    c.vertical = VerticalControl::Controller;
+    c.verticalController = 74;
+    c.controllerScope = ExpressionScope::Channel;
+    c.expressionDistance = 100;
+    r.performer.setConfig(c);
+
+    // Nothing held: nothing sent.
+    r.performer.hoverBegin({10, 10});
+    r.performer.hoverMove({60, 10});
+    CHECK(r.sink.take().empty());
+
+    r.performer.keyDown(20, r.tuning.note(0));
+    r.performer.keyDown(21, r.tuning.note(3));
+    r.sink.take();
+    r.performer.hoverMove({60, -40});   // from where Ctrl went down
+    CHECK((r.sink.log == Log{"bend 0", "cc ch 74", "bend 3"}));
+    CHECK(kedo::test::near(r.sink.values[0], 0.5) && kedo::test::near(r.sink.values[1], 0.5));
+    r.sink.take();
+    // A key let go resets its own note; the channel stays with the other.
+    r.performer.keyUp(20);
+    CHECK((r.sink.take() == Log{"bend 0", "off 0"}));
+    // Ctrl released: the rest reset, then nothing more.
+    r.performer.hoverEnd();
+    CHECK((r.sink.take() == Log{"bend 3", "cc ch 74"}));
+    CHECK(!r.performer.hovering());
+    r.performer.hoverMove({0, 0});
+    CHECK(r.sink.take().empty());
+
+    // The last key let go while hovering resets the channel too.
+    r.performer.hoverBegin({0, 0});
+    r.performer.hoverMove({0, -50});
+    r.sink.take();
+    r.performer.keyUp(21);
+    CHECK((r.sink.take() == Log{"bend 3", "cc ch 74", "off 3"}));
+
+    // A pointer driving the channel keeps it.
+    PlayConfig fixed = c;
+    fixed.drag = DragBehavior::Fixed;
+    r.performer.setConfig(fixed);
+    r.performer.pointerDown(1, r.at(1, 1));
+    r.performer.keyDown(20, r.tuning.note(0));
+    r.sink.take();
+    r.performer.hoverMove({0, -50});
+    CHECK((r.sink.take() == Log{"bend 0"}));
+}
+
 } // namespace
 
 int main() {
@@ -289,5 +341,6 @@ int main() {
     testKeysAndRelease();
     testNotesPassThrough();
     testDiamondGaps();
+    testHoverExpression();
     return kedo::test::finish("Performer");
 }
