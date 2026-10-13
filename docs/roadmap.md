@@ -235,9 +235,18 @@ decisions.md, "Custom layout". Two sessions:
 
 ## 9. Computer keyboard (KeyboardEDO)
 
-KeyEDO's QWERTY mappings: the classic DAW rows on the piano, and on Tiled an
-outlined region moved with the arrow keys. Shift latches. Hover expression
-(Control held) on the desktop.
+Re-planned 2026-10-13 (decisions.md, "Computer keyboard"): not KeyEDO's
+QWERTY region moved with the arrow keys, which the author found too
+confusing, but a computer key the player assigns to each note key; no
+region or border on a custom layout. Shift latches. Hover expression
+(Control held) on the desktop. To settle at the start: how keys are
+assigned (in the inspector, by pressing the key?), and what generated
+layouts' default mappings are (e.g. DAW rows on the piano). They have one:
+Convert to custom keeps each note key's computer key, changeable after
+(the author, 2026-10-13).
+
+Also, left from 8b: a converted key's labels follow a pitch change (the
+author, 2026-10-13), not only a label that's the old note's name.
 
 ## 10. Arpeggiator (KeyboardEDO)
 

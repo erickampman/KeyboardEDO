@@ -188,6 +188,9 @@ editor app: decided 2026-10-13, "Documents with several layouts"):
   converting the 12-EDO piano gives the diamond piano's arrangement of its
   keys (one each, black half a diamond up), keeping its range and its black
   and white.
+- **Labels follow pitch** (the author, 2026-10-13): a converted key's labels
+  (e.g. "A" over "110.0") follow a change of its pitch, as a note-name label
+  already does. To do (roadmap milestone 9, left from 8b).
 - **The editor, as built** (session 2, 2026-10-13), in the panel's Keys
   section and on the keyboard:
   - Click selects, Shift-click adds or removes, drag moves (the grabbed key
@@ -512,6 +515,29 @@ keys that carry their notes (milestone 4).
   from their layouts' names ("Wicki 31" -> `wicki-31.json`, a second of the
   same name `-2`), rewritten in full on every save. Which layout shows is
   saved, but switching isn't an edit (no "(edited)" in the title).
+
+## Computer keyboard (decided 2026-10-13, roadmap milestone 9)
+
+- **No QWERTY region.** KeyEDO's outlined region moved with the arrow keys
+  is too confusing (the author). Instead the player **assigns a computer
+  key to a note key**. On a custom layout there's no region and no border.
+- The arrow keys stay the custom layout editor's (nudging keys).
+- **Converting keeps them** (the author, 2026-10-13): a note key's computer
+  key before Convert to custom is still assigned after it, and can be
+  changed. So generated layouts have assignments of their own (a default
+  mapping), which converting copies onto the custom keys. Nothing assigns
+  computer keys yet (KeyEDO's QWERTY mapping was never ported).
+- Still open: how a key is assigned, and what the generated layouts'
+  default mappings are (e.g. DAW rows on the piano).
+
+## KeyEDO compatibility is not a goal (decided 2026-10-13)
+
+The author: there's no need to support KeyEDO in any way. Matching KeyEDO's
+Tiled presets, layouts or behaviour isn't a reason for a choice any more,
+and later work needn't keep KeyEDO able to read KeyboardEDO's files. What
+was built for it (KeyEDO's field names in layout files, importing its
+`.json` documents, the presets' order) stays until there's a reason to
+change it; whether to drop any of it is the author's call.
 
 ## Behaviour kept from KeyEDO
 
