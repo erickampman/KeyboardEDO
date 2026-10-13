@@ -134,17 +134,19 @@ layout (2026-10-13) can't be isomorphic**, and is its own `OctaveLayout`:
 
 ### Custom layout
 
-Keys the player places and edits:
-- **Edit mode:** drag keys to move them (snapping to a grid optional), add,
+Keys the player places and edits, in the app's Edit mode (not a separate
+editor app: decided 2026-10-13, "Documents with several layouts"):
+- **Editing:** drag keys to move them (snapping to a grid optional), add,
   delete and duplicate them, and an inspector (ImGui) for the selected key's
   label, colour, shape and size. Start blank or from any layout ("convert to
-  custom"). Saved as JSON.
+  custom"). Saved as one layout file in the document's bundle.
 - **What a key sends:** a note number, group and channel, and for a Pitch
   7.9 key, its pitch as **EDO / octave / degree** (e.g. 17-EDO, octave 3,
   degree 5), independent of the current tuning, so one layout can mix EDOs.
   Degree 0 is the current tuning's origin note (decided 2026-10-09): with
   the origin at A, 17-EDO / octave 3 / degree 5 is five 17-EDO steps above
-  A3.
+  A3. Since each layout now has its own tuning, "the current tuning" is the
+  custom layout's own.
 - **Note number:** the editor suggests one and the player can override it.
   The suggestion: the nearest 12-EDO note, so a receiver that ignores Pitch
   7.9 still plays close to the right pitch.
@@ -367,6 +369,10 @@ and nothing originates it.
 
 ## Documents (decided 2026-10-09, roadmap milestone 5)
 
+(Superseded in part by "Documents with several layouts", 2026-10-13: a
+document becomes a `.kedo` bundle of layouts. What follows is the single-file
+KeyEDO format, which becomes one layout's file and what KeyEDO imports read.)
+
 - **KeyEDO's JSON, KeyEDO's field names** (`src/kedo/Document.*`, with
   nlohmann/json as a shallow submodule pinned to v3.12.0). All 25 of the
   author's KeyEDO documents open.
@@ -381,6 +387,60 @@ and nothing originates it.
 - Open, Save and Save As use SDL3's native file dialogs, also on Cmd/Ctrl-O,
   S and Shift-S. The window title shows the file and "(edited)". There's no
   "save changes?" on quit yet.
+
+## Documents with several layouts (decided 2026-10-13, roadmap milestone 8a)
+
+A document is a **set of layouts chosen in advance**, switched between while
+playing, rather than one layout reconfigured on the fly. The author's
+reasons: a player wants several keyboards in one document, and a document
+mixing "fixed" and custom layouts is only odd if they're different kinds of
+thing. They aren't: a fixed layout's keys are generated from a few settings
+(EDO, generator, origin), a custom one's are stored, and both are a set of
+keys that carry their notes (milestone 4).
+
+- **A `.kedo` document is a folder** (a bundle), as StageHand's `.rack`:
+
+  ```
+  Set A.kedo/
+    document.json      format, version, the layouts in order, which one is
+                       showing, the MIDI destination
+    layouts/
+      wicki-31.json    one file per layout
+      my-hex.json
+  ```
+
+  `document.json` has `"format": "keyboardedo-document"` and a `version`; a
+  newer version is refused, not guessed at. Each layout is its own file, so
+  a layout can be copied between documents by copying the file, and diffs
+  stay readable. On macOS the app's `Info.plist` will declare `.kedo` a
+  package, so Finder and the file dialogs treat it as one file (once the Mac
+  app has a bundle); on Linux it's a folder.
+- **Each layout has its own tuning**, layout settings (kind and generator,
+  or a custom layout's keys) and playing and MIDI settings (drag,
+  expression, velocity, group, channel, bend ranges): a document can hold a
+  12-EDO piano and a 31-EDO Wicki-Hayden. A layout file uses KeyEDO's field
+  names, so it is shaped like a KeyEDO document.
+- **Per document:** the MIDI destination. Publish stays an app preference.
+- **Saving is safe**, as StageHand's: a complete new bundle is written next
+  to the old (`X.kedo.tmp`), then swapped into place.
+- **KeyEDO documents still open:** a `.json` file opens as an untitled
+  document with one layout. Saving it writes a `.kedo` bundle; the `.json`
+  is never written back. (Today's single-file documents, milestone 5, are
+  KeyEDO's format, so they open the same way.)
+- **Play and Edit modes.**
+  - Play: the keyboard and a selector for the document's layouts. The
+    tuning and layout settings are hidden, so nothing changes by accident
+    mid-performance. Switching layouts releases held notes (the author's
+    choice), then sends the new layout's setup (bend ranges) as a target
+    change does.
+  - Edit: add, remove, rename, duplicate and reorder layouts; change a
+    layout's settings; "convert to custom"; and (milestone 8b) edit a custom
+    layout's keys.
+  - The Lock button stays what it is: no scrolling or zooming, in either mode.
+- **Not a separate editor app** (the author, 2026-10-13): editing needs the
+  same drawing, Performer and output as playing, and belongs in the same
+  window as a mode.
+- Later: switching layouts by computer key or MIDI program change.
 
 ## Behaviour kept from KeyEDO
 

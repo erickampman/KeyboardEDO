@@ -152,13 +152,33 @@ real mouse and keyboard; and the Tiled presets against KeyEDO on the Mac
 (the author recalls them differently; KeyEDO's bottom row isn't chromatic
 either, but steps by the generator's "right").
 
-## 8. Custom layout (KeyboardEDO)
+## 8. Layouts in a document (KeyboardEDO)
 
-decisions.md, "Custom layout". A `CustomLayout` of placed keys; edit mode
-(drag, add, delete, duplicate, snap); the inspector, with pitch as EDO /
-octave / degree and a suggested, overridable note number; convert any layout
-to custom; save and load as JSON; auditioning edits through the output.
-Maybe two sessions: the layout and its file, then the editor.
+Decided 2026-10-13 (decisions.md, "Documents with several layouts"): a
+document is a set of layouts chosen in advance, played in Play mode and set
+up in Edit mode, in one app.
+
+### 8a. `.kedo` bundles, several layouts, Play and Edit modes
+
+A `.kedo` folder: `document.json` (format, version, layout order, the one
+showing, the destination) and `layouts/<name>.json`, each with its own
+tuning, layout and playing settings in KeyEDO's field names. Safe save
+(write `.kedo.tmp`, swap). KeyEDO `.json` files open as a one-layout untitled
+document. Play mode: a layout selector, switching releases held notes, the
+settings hidden. Edit mode: add, remove, rename, duplicate and reorder
+layouts, and their settings. Tests: a bundle round-trips; a newer version
+is refused; a KeyEDO file imports as one layout; a crash mid-save (the swap
+not done) leaves the old bundle; switching releases notes. File dialogs:
+SDL3's folder dialog to open a bundle on Linux.
+
+### 8b. Custom layouts
+
+decisions.md, "Custom layout". A `CustomLayout` of placed keys, saved as a
+layout file in the bundle; in Edit mode, drag, add, delete, duplicate, snap;
+the inspector, with pitch as EDO / octave / degree and a suggested,
+overridable note number; convert any layout to custom; auditioning edits
+through the output. Maybe two sessions: the layout and its file, then the
+editor.
 
 ## 9. Computer keyboard (KeyboardEDO)
 
