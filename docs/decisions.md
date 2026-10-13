@@ -146,13 +146,44 @@ editor app: decided 2026-10-13, "Documents with several layouts"):
   Degree 0 is the current tuning's origin note (decided 2026-10-09): with
   the origin at A, 17-EDO / octave 3 / degree 5 is five 17-EDO steps above
   A3. Since each layout now has its own tuning, "the current tuning" is the
-  custom layout's own.
+  custom layout's own. Kept (the author, 2026-10-13): changing a custom
+  layout's origin note or octave transposes every key, as is easy to undo.
 - **Note number:** the editor suggests one and the player can override it.
-  The suggestion: the nearest 12-EDO note, so a receiver that ignores Pitch
-  7.9 still plays close to the right pitch.
-- **Duplicates** (two keys, one note number, different pitches, on one
-  channel) are left for later. MIDI 2.0 treats them as one note for per-note
-  messages, so the editor will need to warn or allocate.
+  The suggestion (decided 2026-10-13): the **nearest free** number, the
+  nearest 12-EDO note unless another key on the same group and channel has
+  it, then the closest unused one. So a receiver that ignores Pitch 7.9
+  still plays close to the right pitch, and keys finer than 12-EDO don't
+  share a number (MIDI 2.0 would treat them as one note for per-note
+  messages).
+- **Duplicates** a player makes by overriding a number are left for later:
+  the editor will need to warn.
+- **Mixed EDOs** (confirmed 2026-10-13): each key keeps its own EDO, octave
+  and degree, so changing the layout's EDO never invalidates the keys; the
+  layout's EDO is only the default for keys added.
+- **Shapes** (2026-10-13): diamond or rectangle, chosen per key; rectangles
+  are what a converted 12-EDO piano is made of. No hexagons.
+- **Selecting:** in Edit mode a click on a custom layout's key selects it
+  (Shift adds to the selection) rather than playing it; auditioning is the
+  inspector's, and playing is Play mode's. A generated layout's keys still
+  play in Edit mode.
+- **Snapping:** key centres to a square grid of half a diamond's width (the
+  generated diamond layouts' centres lie on it, and their neighbours share
+  edges), with a finer half-step grid. Space between keys comes from making
+  them smaller, not from spacing the grid.
+- **Converting** keeps every playable key's place, shape, colour, pitch and
+  note number, so a converted layout plays exactly what it did. In the file
+  the layout says it's Tiled (`keyLayoutViewType` 1), with its keys in
+  `customKeys`, so KeyEDO opens it as something rather than failing.
+- **As built** (session 1, 2026-10-13): `CustomKey` in `LayoutConfig`, so
+  editing keys rebuilds the keyboard as any setting does; `CustomLayout`
+  (`src/kedo/CustomLayout.*`). Keys of one note number, group and channel
+  are one note to the Performer. A key carries its look: a colour (a
+  converted Tiled layout's tile colours) or a shade (a converted piano's
+  black and white), and two labels, the converted layout's name and
+  degree or frequency. Its label ink is dark or light by the fill. A
+  converted layout's grey, unplayable tiles aren't kept. Converting keeps
+  the view; the Layout menu's "Custom" starts from whatever keys the layout
+  had (none at first).
 - **Auditioning** (decided 2026-10-09): changing a key's values in the
   inspector sends that key's note through the configured output, as playing
   it would, so a DAW or synth listening there hears the change and can use

@@ -1,5 +1,7 @@
 #include "kedo/Layout.h"
 
+#include "kedo/CustomLayout.h"
+
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -287,6 +289,7 @@ std::optional<Key> OctaveLayout::keyForStep(int step) const {
 // --- makeLayout ---------------------------------------------------------------------
 
 std::unique_ptr<Layout> makeLayout(const LayoutConfig& config, const Tuning& tuning) {
+    if (config.kind == LayoutKind::Custom) return std::make_unique<CustomLayout>(config.customKeys, tuning);
     if (config.kind == LayoutKind::Tiled) {
         const auto presets = generatorPresets(tuning.edo);
         // A preset index from another EDO may be out of range: use the first.

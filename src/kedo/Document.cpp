@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -55,6 +56,66 @@ void readEnum(const json& j, const char* key, E& value, int count) {
     if (i >= 0 && i < count) value = E(i);
 }
 
+// A custom layout's key (decisions.md, "Custom layout"). Group and channel
+// are 0-based, as midiGroup and midiChannel, and left out when they're the
+// layout's; a fill colour is "#rrggbb".
+json customKeyJson(const CustomKey& k) {
+    json j = {{"x", k.center.x}, {"y", k.center.y},
+              {"shape", k.shape == KeyShape::Diamond ? "diamond" : "rectangle"},
+              {"shade", k.shade == KeyShade::Black ? "black" : "white"},
+              {"edo", k.edo}, {"octave", k.octave}, {"degree", k.degree},
+              {"number", k.number}, {"numberChosen", k.numberChosen}};
+    if (k.halfWidth > 0) j["halfWidth"] = k.halfWidth;
+    if (k.halfHeight > 0) j["halfHeight"] = k.halfHeight;
+    if (k.color) {
+        char hex[8];
+        std::snprintf(hex, sizeof hex, "#%06x", unsigned(*k.color & 0xFFFFFF));
+        j["color"] = hex;
+    }
+    if (!k.label.empty()) j["label"] = k.label;
+    if (!k.sublabel.empty()) j["sublabel"] = k.sublabel;
+    if (k.group) j["group"] = *k.group;
+    if (k.channel) j["channel"] = *k.channel;
+    return j;
+}
+
+CustomKey customKeyFrom(const json& j) {
+    CustomKey k;
+    if (!j.is_object()) return k;
+    read(j, "x", k.center.x);
+    read(j, "y", k.center.y);
+    std::string text;
+    read(j, "shape", text);
+    k.shape = text == "rectangle" ? KeyShape::Rectangle : KeyShape::Diamond;
+    text.clear();
+    read(j, "shade", text);
+    k.shade = text == "black" ? KeyShade::Black : KeyShade::White;
+    read(j, "halfWidth", k.halfWidth);
+    read(j, "halfHeight", k.halfHeight);
+    k.halfWidth = std::clamp(k.halfWidth, 0.0, 10000.0);
+    k.halfHeight = std::clamp(k.halfHeight, 0.0, 10000.0);
+    text.clear();
+    read(j, "color", text);
+    unsigned rgb = 0;
+    if (text.size() == 7 && text[0] == '#' && std::sscanf(text.c_str() + 1, "%6x", &rgb) == 1) k.color = rgb;
+    read(j, "label", k.label);
+    read(j, "sublabel", k.sublabel);
+    read(j, "edo", k.edo);
+    k.edo = std::clamp(k.edo, 1, 1200);
+    read(j, "octave", k.octave);
+    read(j, "degree", k.degree);
+    read(j, "number", k.number);
+    k.number = std::clamp(k.number, 0, 127);
+    read(j, "numberChosen", k.numberChosen);
+    int route = -1;
+    read(j, "group", route);
+    if (route >= 0 && route < 16) k.group = std::uint8_t(route);
+    route = -1;
+    read(j, "channel", route);
+    if (route >= 0 && route < 16) k.channel = std::uint8_t(route);
+    return k;
+}
+
 } // namespace
 
 std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string* error) {
@@ -84,6 +145,11 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
 
     // Layout
     readEnum(j, "keyLayoutViewType", d.layout.kind, 2);
+    // A custom layout says it's Tiled, for KeyEDO; its keys make it custom.
+    if (const auto it = j.find("customKeys"); it != j.end() && it->is_array()) {
+        d.layout.kind = LayoutKind::Custom;
+        for (const auto& key : *it) d.layout.customKeys.push_back(customKeyFrom(key));
+    }
     read(j, "selectedPresetIndex", d.layout.generatorIndex);
     read(j, "pianoLowest", d.layout.pianoLowest);
     read(j, "pianoHighest", d.layout.pianoHighest);
@@ -137,7 +203,7 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
         "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
-        "perNoteBendRange", "midiDestinationName", "midi1Expression",
+        "perNoteBendRange", "midiDestinationName", "midi1Expression", "customKeys",
     };
     for (const auto& [key, value] : j.items())
         if (!known.count(key)) d.extras[key] = value.dump();
@@ -159,7 +225,12 @@ std::string writeLayoutSetup(const LayoutSetup& d) {
     j["originNoteName"] = pitchClassName(d.tuning.originPitchClass);
     j["originOctave"] = d.tuning.originOctave;
 
-    j["keyLayoutViewType"] = int(d.layout.kind);
+    j["keyLayoutViewType"] = d.layout.kind == LayoutKind::Custom ? int(LayoutKind::Tiled) : int(d.layout.kind);
+    if (d.layout.kind == LayoutKind::Custom) {
+        json keys = json::array();
+        for (const auto& k : d.layout.customKeys) keys.push_back(customKeyJson(k));
+        j["customKeys"] = keys;
+    }
     j["selectedPresetIndex"] = d.layout.generatorIndex;
     j["pianoLowest"] = d.layout.pianoLowest;
     j["pianoHighest"] = d.layout.pianoHighest;

@@ -193,12 +193,23 @@ and on the Mac, where `.kedo` isn't a package until the app has a bundle.
 
 ### 8b. Custom layouts
 
-decisions.md, "Custom layout". A `CustomLayout` of placed keys, saved as a
-layout file in the bundle; in Edit mode, drag, add, delete, duplicate, snap;
-the inspector, with pitch as EDO / octave / degree and a suggested,
-overridable note number; convert any layout to custom; auditioning edits
-through the output. Maybe two sessions: the layout and its file, then the
-editor.
+decisions.md, "Custom layout". Two sessions:
+1. The layout and its file: `CustomLayout` (keys with place, shape, size,
+   look, EDO / octave / degree, note number, group and channel), its JSON
+   in the layout file, Convert to custom, drawing and playing it. Tests: a
+   converted layout plays exactly what the original did; the file round-trips;
+   nearest-free note numbers. **Done 2026-10-13:** tests convert every
+   generated layout (the piano, diamonds at 5, 17 and 31, every Tiled preset
+   at 12, 19 and 31) and find each playable key in the same place with the
+   same note number, pitch, group and channel, notes shared as before;
+   `customKeys` round-trips, bad values clamped; pitch from EDO / octave /
+   degree and the origin; nearest-free numbering (a same-pitch key's
+   number, other channels not competing, all 128 taken). Checked with
+   `--snapshot --tap`: converting Octave columns keeps its look and view.
+2. The editor, in Edit mode: select (Shift adds), drag, snap, add, delete,
+   duplicate, undo; the inspector, with pitch as EDO / octave / degree, the
+   suggested note number and its override; auditioning edits through the
+   output.
 
 ## 9. Computer keyboard (KeyboardEDO)
 

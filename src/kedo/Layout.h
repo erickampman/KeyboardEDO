@@ -1,7 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "kedo/Generators.h"
@@ -20,6 +22,7 @@ namespace kedo {
 struct Point {
     double x = 0;
     double y = 0;
+    bool operator==(const Point&) const = default;
 };
 
 struct Rect {
@@ -50,7 +53,14 @@ struct Key {
     double   halfWidth  = 0;      // a diamond's half-diagonals: halfWidth == halfHeight
     double   halfHeight = 0;
     int      col = 0;             // the layout's own coordinates: lattice (Tiled),
-    int      row = 0;             // column and stack position (Diamond), white-key index (Piano)
+    int      row = 0;             // column and stack position (Diamond), white-key index (Piano),
+                                  // index (Custom)
+
+    // A custom layout's key carries its own look (KeyStyle uses these for
+    // LayoutKind::Custom; the other layouts derive theirs).
+    std::optional<std::uint32_t> color;   // fill, 0xRRGGBB; else by shade
+    std::string label;                    // shown on the key; may be empty
+    std::string sublabel;                 // smaller, under it
 
     Rect bounds() const {
         return {center.x - halfWidth, center.y - halfHeight, 2 * halfWidth, 2 * halfHeight};
@@ -193,7 +203,32 @@ private:
 
 // --- Choosing one -------------------------------------------------------------
 
-enum class LayoutKind { Piano, Tiled };
+enum class LayoutKind { Piano, Tiled, Custom };
+
+// One key of a custom layout as the player places it (decisions.md, "Custom
+// layout"). Its pitch is `degree` steps of `edo` above the layout's origin
+// note in `octave` (with the origin at A, 17 / 3 / 5 is five 17-EDO steps above
+// A3), so keys of different EDOs can share a layout, and changing the
+// layout's EDO leaves them be.
+struct CustomKey {
+    Point    center;
+    KeyShape shape = KeyShape::Diamond;
+    double   halfWidth  = 0;      // 0: the standard diamond's
+    double   halfHeight = 0;
+    KeyShade shade = KeyShade::White;
+    std::optional<std::uint32_t> color;   // fill, 0xRRGGBB, instead of the shade's
+    std::string label, sublabel;
+
+    int edo = 12, octave = 4, degree = 0;
+
+    // The MIDI 2.0 note number. Suggested (the nearest free one: CustomLayout's
+    // suggestNumber) unless `numberChosen`, when the player set it.
+    int  number = 60;
+    bool numberChosen = false;
+    std::optional<std::uint8_t> group, channel;   // std::nullopt: the layout's
+
+    bool operator==(const CustomKey&) const = default;
+};
 
 struct LayoutConfig {
     LayoutKind kind       = LayoutKind::Piano;
@@ -201,12 +236,14 @@ struct LayoutConfig {
     int  tiledRows        = 8;
     int  pianoLowest      = 24;    // C1
     int  pianoHighest     = 108;   // C8
+    std::vector<CustomKey> customKeys;   // LayoutKind::Custom's
 
     bool operator==(const LayoutConfig&) const = default;
 };
 
 // Piano at 12-EDO is PianoLayout and at any other EDO DiamondLayout; Tiled is
-// TiledLayout at every EDO, or OctaveLayout for the Octave columns preset.
+// TiledLayout at every EDO, or OctaveLayout for the Octave columns preset;
+// Custom is CustomLayout.
 std::unique_ptr<Layout> makeLayout(const LayoutConfig& config, const Tuning& tuning);
 
 } // namespace kedo

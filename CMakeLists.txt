@@ -38,6 +38,7 @@ add_library(kedo-core STATIC
     src/kedo/Tuning.cpp
     src/kedo/Generators.cpp
     src/kedo/Layout.cpp
+    src/kedo/CustomLayout.cpp
     src/kedo/UmpOutput.cpp
     src/kedo/Performer.cpp
     src/kedo/Viewport.cpp

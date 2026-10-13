@@ -254,6 +254,48 @@ void testBundleRefusals() {
     fs::remove_all(path);
 }
 
+// A custom layout's keys, in its layout file; KeyEDO is told it's Tiled.
+void testCustomKeys() {
+    LayoutSetup d;
+    d.layout.kind = LayoutKind::Custom;
+    CustomKey a;
+    a.center = {42.5, -10};
+    a.edo = 31;
+    a.octave = 3;
+    a.degree = 17;
+    a.number = 99;
+    a.numberChosen = true;
+    a.color = 0x12ab34;
+    a.label = "D#";
+    a.sublabel = "17";
+    a.group = 2;
+    a.channel = 9;
+    CustomKey b;
+    b.shape = KeyShape::Rectangle;
+    b.shade = KeyShade::Black;
+    b.halfWidth = 11.5;
+    b.halfHeight = 55;
+    d.layout.customKeys = {a, b};
+    const std::string text = writeLayoutSetup(d);
+    const auto j = nlohmann::json::parse(text);
+    CHECK(j["keyLayoutViewType"] == 1);
+    CHECK(j["customKeys"].size() == 2 && j["customKeys"][0]["color"] == "#12ab34");
+    CHECK(!j["customKeys"][1].contains("group") && !j["customKeys"][1].contains("color"));
+    const auto back = parseLayoutSetup(text);
+    CHECK(back && back->layout.kind == LayoutKind::Custom && back->layout.customKeys == d.layout.customKeys);
+
+    // Without customKeys, a Tiled file stays Tiled; generated layouts write none.
+    LayoutSetup tiled;
+    tiled.layout.kind = LayoutKind::Tiled;
+    CHECK(!nlohmann::json::parse(writeLayoutSetup(tiled)).contains("customKeys"));
+    CHECK(parseLayoutSetup(writeLayoutSetup(tiled))->layout.kind == LayoutKind::Tiled);
+    // Bad values are clamped, and a key that isn't an object is a default one.
+    const auto bad = parseLayoutSetup(R"({"customKeys": [{"number": 400, "channel": 99, "edo": 0}, 7]})");
+    CHECK(bad && bad->layout.customKeys.size() == 2);
+    CHECK(bad && bad->layout.customKeys[0].number == 127 && !bad->layout.customKeys[0].channel &&
+          bad->layout.customKeys[0].edo == 1);
+}
+
 void testImportsKeyEdo() {
     // A KeyEDO file: a document of one layout, named after the file, its
     // destination the document's.
@@ -280,5 +322,6 @@ int main() {
     testBundleRoundTrip();
     testBundleRefusals();
     testImportsKeyEdo();
+    testCustomKeys();
     return kedo::test::finish("Document");
 }

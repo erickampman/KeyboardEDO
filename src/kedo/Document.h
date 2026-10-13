@@ -21,7 +21,7 @@ namespace kedo {
 struct LayoutSetup {
     std::string  name;            // shown in the layout menu; KeyEDO ignores it
     Tuning       tuning;
-    LayoutConfig layout{.pianoLowest = 36};   // C2, as KeyEDO's piano
+    LayoutConfig layout{.pianoLowest = 36, .customKeys = {}};   // C2, as KeyEDO's piano
     TileColor    tileColor = TileColor::Note;
     PlayConfig   play;
     OutputConfig output;          // group, channel, bend ranges, Per-Note Management

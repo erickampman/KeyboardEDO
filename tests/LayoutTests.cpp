@@ -5,6 +5,7 @@
 #include <set>
 
 #include "Check.h"
+#include "kedo/CustomLayout.h"
 #include "kedo/Layout.h"
 
 using namespace kedo;
@@ -291,6 +292,122 @@ void testTiledLowest() {
     }
 }
 
+// Custom layouts (decisions.md, "Custom layout").
+
+// Converting keeps every playable key's place, shape and note: the custom
+// layout plays exactly what the original did, and keys that shared a note
+// still do.
+void testConvertToCustom() {
+    struct Case { int edo; LayoutKind kind; int preset; int originOctave; };
+    std::vector<Case> cases = {{12, LayoutKind::Piano, 0, 0}, {17, LayoutKind::Piano, 0, 1},
+                               {31, LayoutKind::Piano, 0, 0}, {5, LayoutKind::Piano, 0, 2}};
+    for (int edo : {12, 19, 31})
+        for (int i = 0; i < int(generatorPresets(edo).size()); ++i) cases.push_back({edo, LayoutKind::Tiled, i, 0});
+    for (const auto& c : cases) {
+        Tuning t;
+        t.edo = c.edo;
+        t.originOctave = c.originOctave;
+        LayoutConfig config;
+        config.kind = c.kind;
+        config.generatorIndex = c.preset;
+        const auto original = makeLayout(config, t);
+        config.customKeys = convertToCustom(*original, t, c.kind, TileColor::Note);
+        config.kind = LayoutKind::Custom;
+        const auto made = makeLayout(config, t);
+        const auto* custom = dynamic_cast<CustomLayout*>(made.get());
+        CHECK(custom != nullptr);
+        if (!custom) continue;
+
+        std::map<int, int> idFor;   // the original's note ids -> the custom's
+        int playable = 0;
+        for (const Key& k : original->keysIn(original->bounds())) {
+            if (!k.playable) continue;
+            ++playable;
+            const auto ck = custom->keyAt(k.center);
+            CHECK(ck.has_value());
+            if (!ck) continue;
+            CHECK(ck->playable && ck->shape == k.shape && ck->shade == k.shade);
+            CHECK(near(ck->halfWidth, k.halfWidth) && near(ck->halfHeight, k.halfHeight));
+            CHECK(ck->note.number == k.note.number && ck->note.group == k.note.group &&
+                  ck->note.channel == k.note.channel);
+            CHECK(std::abs(ck->note.pitch - k.note.pitch) < 1e-9);
+            CHECK(ck->note.needsPitchAttribute() == k.note.needsPitchAttribute());
+            const auto [it, added] = idFor.emplace(k.note.id, ck->note.id);
+            CHECK(it->second == ck->note.id);   // one note in, one note out
+        }
+        CHECK(int(custom->keys().size()) == playable);
+        std::set<int> customIds;
+        for (const auto& [from, to] : idFor) customIds.insert(to);
+        CHECK(customIds.size() == idFor.size());   // and different notes stay different
+        checkConsistent(*custom);
+    }
+}
+
+void testCustomPitch() {
+    Tuning t;   // origin A
+    CustomKey k;
+    k.edo = 17;
+    k.octave = 3;
+    k.degree = 5;   // five 17-EDO steps above A3 (57)
+    CHECK(near(customPitch(k, t), 57 + 12.0 * 5 / 17));
+    t.edo = 31;     // the layout's EDO doesn't change a key's pitch
+    CHECK(near(customPitch(k, t), 57 + 12.0 * 5 / 17));
+    t.originPitchClass = 0;   // its origin note does: degree 0 is C3
+    CHECK(near(customPitch(k, t), 48 + 12.0 * 5 / 17));
+
+    // A key whose pitch is past MIDI's range is drawn, unplayable.
+    CustomKey high;
+    high.octave = 10;
+    high.degree = 0;   // A10, 141 semitones
+    const CustomLayout l({k, high}, Tuning{});
+    CHECK(l.keys()[0].playable && !l.keys()[1].playable);
+    CHECK(!l.keyForStep(0));
+}
+
+void testSuggestNumber() {
+    Tuning t;
+    t.originPitchClass = 0;   // C
+    auto key = [](int edo, int octave, int degree, int number) {
+        CustomKey k;
+        k.edo = edo;
+        k.octave = octave;
+        k.degree = degree;
+        k.number = number;
+        return k;
+    };
+    // Two 31-EDO keys by C4: the first has 60, so the second gets the free
+    // number nearest its pitch (60.39: 61).
+    std::vector<CustomKey> keys = {key(31, 4, 0, 60), key(31, 4, 1, 0)};
+    CHECK(suggestNumber(keys, 0, t) == 60);
+    CHECK(suggestNumber(keys, 1, t) == 61);
+    // A key of the same pitch is the same note: the same number.
+    keys.push_back(key(12, 4, 0, 0));
+    CHECK(suggestNumber(keys, 2, t) == 60);
+    // Another channel doesn't compete.
+    keys[1].channel = 5;
+    CHECK(suggestNumber(keys, 1, t) == 60);
+    // Below the pitch when that's nearer: 31-EDO degree 30 of C4 is 71.61 -> 72, taken -> 71.
+    keys = {key(12, 4, 12, 72), key(31, 4, 30, 0)};
+    CHECK(suggestNumber(keys, 1, t) == 71);
+    // All taken: the nearest 12-EDO note anyway.
+    keys.clear();
+    for (int n = 0; n < 128; ++n) keys.push_back(key(1, 20, n, n));   // numbers 0-127, pitches far above
+    keys.push_back(key(12, 4, 3, 0));                                   // D#4, 63
+    CHECK(suggestNumber(keys, 128, t) == 63);
+}
+
+// Overlapping keys: the later one is on top, and found first.
+void testCustomOverlap() {
+    CustomKey a, b;
+    a.center = {0, 0};
+    b.center = {20, 0};
+    b.number = 61;
+    const CustomLayout l({a, b}, Tuning{});
+    CHECK(l.keyAt({10, 0})->note.number == 61);
+    CHECK(l.keyAt({-30, 0})->note.number == 60);
+    CHECK(!l.keyAt({200, 0}));
+}
+
 void testMakeLayout() {
     Tuning t;
     LayoutConfig c;
@@ -315,6 +432,10 @@ int main() {
     testTiledRange();
     testOctaveColumns();
     testTiledLowest();
+    testConvertToCustom();
+    testCustomPitch();
+    testSuggestNumber();
+    testCustomOverlap();
     testMakeLayout();
     return kedo::test::finish("Layout");
 }

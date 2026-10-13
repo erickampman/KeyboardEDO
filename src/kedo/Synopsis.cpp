@@ -14,7 +14,10 @@ std::string synopsis(const LayoutSetup& d, const LiveState& live) {
     const bool standardPiano = d.layout.kind == LayoutKind::Piano && t.edo == 12;
     if (!standardPiano) parts.push_back(std::string(pitchClassName(t.originPitchClass)) + std::to_string(t.originOctave));
 
-    if (d.layout.kind == LayoutKind::Tiled) {
+    if (d.layout.kind == LayoutKind::Custom) {
+        const auto n = d.layout.customKeys.size();
+        parts.push_back("Custom: " + std::to_string(n) + (n == 1 ? " key" : " keys"));
+    } else if (d.layout.kind == LayoutKind::Tiled) {
         const auto presets = generatorPresets(t.edo);
         const int i = d.layout.generatorIndex;
         parts.push_back("Tiled: " + presets[i >= 0 && i < int(presets.size()) ? i : 0].name);

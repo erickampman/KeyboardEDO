@@ -6,6 +6,7 @@
 
 #include "Icons.h"
 #include "imgui.h"
+#include "kedo/CustomLayout.h"
 #include "kedo/Synopsis.h"
 
 namespace kedo::app {
@@ -111,6 +112,8 @@ void KeyboardApp::rebuild(bool resetView) {
                 viewport_.scroll.x = k->center.x - 2 * kHalfDiag;
                 originFrames_ = 2;
             }
+        // Custom: the bottom left, where the lowest keys usually are.
+        if (settings_.layout.kind == LayoutKind::Custom) originFrames_ = 2;
     }
 }
 
@@ -293,8 +296,10 @@ void KeyboardApp::applySettings() {
     if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
         performer_.setConfig(playConfig());
     if (keysChanged) {
+        // Becoming custom isn't new keys: converting keeps them where they are.
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
-                             settings_.layout.kind != applied_.layout.kind;
+                             (settings_.layout.kind != applied_.layout.kind &&
+                              settings_.layout.kind != LayoutKind::Custom);
         rebuild(newKeys);
     } else if (settings_.layout.kind == LayoutKind::Tiled && !animating() &&
                tiledRowsFor(viewport_.screen.h) != settings_.layout.tiledRows) {
@@ -721,7 +726,7 @@ void KeyboardApp::drawRoutingMenu() {
 // what the current layout uses. Returns its width.
 float KeyboardApp::drawPanel() {
     static const char* const kNotes[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    static const char* const kLayouts[] = {"Piano", "Tiled"};
+    static const char* const kLayouts[] = {"Piano", "Tiled", "Custom"};
     static const char* const kTileColors[] = {"Off", "Note", "Octave"};
     static const char* const kDrags[] = {"Gliss", "Fixed"};
     static const char* const kHorizontal[] = {"Off", "Pitch Bend"};
@@ -787,6 +792,19 @@ float KeyboardApp::drawPanel() {
                 ImGui::TextWrapped("Steps: right %+d, up-right %+d, up-left %+d", g.right, g.upRight, g.upLeft());
             ImGui::PopStyleColor();
             enumCombo("Tile colour", settings_.tileColor, kTileColors, ImGui::CalcItemWidth());
+        }
+        if (l.kind == LayoutKind::Custom) {
+            ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+            ImGui::TextWrapped("Keys placed one by one, each with its own pitch (EDO, octave, degree "
+                               "from the origin note) and note number. The EDO above is for keys added.");
+            ImGui::PopStyleColor();
+        } else {
+            if (ImGui::Button("Convert to custom")) {
+                l.customKeys = convertToCustom(*layout_, t, l.kind, settings_.tileColor);
+                l.kind = LayoutKind::Custom;
+            }
+            ImGui::SetItemTooltip("Make this layout's keys editable: each keeps its place, look,\n"
+                                  "pitch and note number, so it plays just as it does now");
         }
     }
 

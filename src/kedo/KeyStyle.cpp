@@ -64,7 +64,22 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
     const StepLabel label = tuning.label(key.step);
     const bool black = key.shade == KeyShade::Black;
 
-    if (kind == LayoutKind::Tiled) {
+    if (kind == LayoutKind::Custom) {
+        // Its own colour, or its shade as the piano it may have come from;
+        // its own labels; ink that shows on the fill.
+        const bool diamond = key.shape == KeyShape::Diamond;
+        if (key.color)
+            look.fill = {((*key.color >> 16) & 0xFF) / 255.0f, ((*key.color >> 8) & 0xFF) / 255.0f,
+                         (*key.color & 0xFF) / 255.0f};
+        else if (black) look.fill = diamond ? grey(0.0f) : grey(0.12f);
+        else look.fill = diamond ? grey(1.0f) : grey(0.90f);
+        if (!key.playable) look.fill = grey(0.28f);
+        look.outline = grey(0.30f);
+        const float light = 0.30f * look.fill.r + 0.59f * look.fill.g + 0.11f * look.fill.b;
+        look.ink = light > 0.5f ? grey(0.12f) : grey(0.95f);
+        look.title = key.label;
+        look.detail = key.sublabel;
+    } else if (kind == LayoutKind::Tiled) {
         // Colour by note or octave; name, octave and scale degree (1-based) on
         // every tile, the name greyer the further it is from 12-EDO.
         if (!key.playable) look.fill = grey(0.28f);
