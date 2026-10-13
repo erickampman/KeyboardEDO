@@ -19,11 +19,12 @@ option(KEDO_APP "Build the app (needs SDL3's platform dependencies)" ON)
 option(KEDO_SYSTEM_SDL "Use an installed SDL3 instead of external/SDL" OFF)
 
 # uw-core, a git submodule pinned to a commit. The core needs only its UMP
-# layer; the app adds uw::midi where it has a MIDI output (macOS so far; the
-# ALSA sequencer's is roadmap milestone 3b). Building uw::midi also builds
-# uw::base and the CLAP host, which need uw-core's own submodule
-# (git submodule update --init --recursive).
-if(APPLE AND KEDO_APP)
+# layer; the app adds uw::midi, its MIDI output (CoreMIDI, or the ALSA
+# sequencer on Linux). Building uw::midi also builds uw::base, uw::audio and
+# the CLAP host, which need uw-core's own submodule
+# (git submodule update --init --recursive), and on Linux JACK's and ALSA's
+# development packages.
+if(KEDO_APP)
     set(UW_CORE_UMP_ONLY OFF CACHE BOOL "" FORCE)
 else()
     set(UW_CORE_UMP_ONLY ON CACHE BOOL "" FORCE)

@@ -80,7 +80,8 @@ bool MidiTargets::setPublish(bool on) {
         pubHandle_ = uw::kInvalidMidiDestination;
         return true;
     }
-    // Always MIDI 2.0: CoreMIDI converts for MIDI 1.0 receivers.
+    // Always MIDI 2.0: CoreMIDI or the ALSA sequencer converts for MIDI 1.0
+    // receivers.
     pubHandle_ = midi_->openVirtual(kPublishedName, uw::MidiProtocol::Midi2, kPublishedId);
     if (publishing()) pub_.setup();
     return publishing();

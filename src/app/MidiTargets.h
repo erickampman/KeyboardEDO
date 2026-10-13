@@ -22,7 +22,7 @@ namespace kedo::app {
 class MidiTargets {
 public:
     // The name other apps see our published source by, and its CoreMIDI
-    // unique ID ("KBED"), fixed so hosts remember it from one launch to the
+    // unique ID (ALSA has none: there it's the client and port name) ("KBED"), fixed so hosts remember it from one launch to the
     // next, as KeyEDO's "KEDO". Different from KeyEDO's, so both can run.
     static constexpr const char* kPublishedName = "KeyboardEDO";
     static constexpr std::int32_t kPublishedId = 0x4B424544;
@@ -30,7 +30,8 @@ public:
     explicit MidiTargets(const OutputConfig& config);
     ~MidiTargets();
 
-    // False where uw-core has no MIDI output yet (Linux, until AlsaSeqOutput).
+    // False if the platform's MIDI couldn't be reached (on Linux, no
+    // /dev/snd/seq, or a kernel or alsa-lib without UMP).
     bool available() const { return midi_ != nullptr; }
 
     // The destinations to offer, refreshed when the system says they changed.

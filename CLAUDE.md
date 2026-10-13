@@ -41,8 +41,7 @@ Ubuntu packages SDL needs.
   Wayland by default.
 - Set up the json submodule for `push.recurseSubmodules check` as README says, once per clone.
 
-Next there: roadmap milestone 2's remaining Linux checks by hand (two-finger touch, a real mouse),
-and milestone 3b, the ALSA sequencer output in uw-core: until it lands the app plays to its monitor
-only. Record what you find in the roadmap and decisions.md. The synths to test
-against are in decisions.md, "What the synths do with it"; on Linux, play them in StageHand
-(Linux-first).
+It plays there through uw-core's `AlsaSeqOutput` (milestone 3b, 2026-10-12). Still to do by hand:
+roadmap milestone 2's Linux checks (two-finger touch, a real mouse), and 3b's real synths. Record
+what you find in the roadmap and decisions.md. The synths to test against are in decisions.md,
+"What the synths do with it"; on Linux, play them in StageHand (Linux-first).

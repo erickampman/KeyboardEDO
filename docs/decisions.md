@@ -255,8 +255,20 @@ As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*
 - Known gap: the bend-range setup goes out when a target opens, so a
   receiver that connects to the published source later misses it (as with
   KeyEDO). Milestone 11's stream messages are the place to fix it.
-- Linux has no MIDI output until uw-core's ALSA one (milestone 3b); the bar
-  says so and the monitor still shows what would be sent.
+- **On Linux** (2026-10-12, milestone 3b) it's uw-core's `AlsaSeqOutput`, on
+  two UMP sequencer clients: "KeyboardEDO" (MIDI 1.0) and "KeyboardEDO MIDI
+  2.0". The published source is the port "KeyboardEDO" on the MIDI 2.0
+  client, so its id is "KeyboardEDO MIDI 2.0:KeyboardEDO"; ALSA has no
+  persistent id, so hosts find it again by that name. Destinations include
+  legacy (pre-UMP) clients such as FluidSynth's and `aseqdump`, which count
+  as MIDI 1.0 and get ordinary sequencer events from the kernel.
+- A MIDI 1.0 receiver of the **published** source, on either platform, gets
+  the system's conversion: the note number as sent, without Pitch 7.9 (on
+  Linux, `aseqdump` subscribed to it showed note 69 for a 31-EDO C4).
+  "Send to" a MIDI 1.0 synth instead, for the nearest note and pitch bend.
+- Where the system's MIDI can't be reached (on Linux, no `/dev/snd/seq` or no
+  UMP support), the bar says "no MIDI output" and the monitor still shows
+  what would be sent.
 
 ## Expression as MIDI 1.0 (decided 2026-10-09)
 

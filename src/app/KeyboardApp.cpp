@@ -496,7 +496,7 @@ void KeyboardApp::drawToolbar() {
 void KeyboardApp::drawRoutingMenu() {
     if (!ImGui::BeginPopup("routing")) return;
     if (!targets_.available()) {
-        ImGui::TextDisabled("No MIDI output on this platform yet:");
+        ImGui::TextDisabled("No MIDI output (the system's MIDI couldn't be reached):");
         ImGui::TextDisabled("the monitor shows what would be sent.");
         ImGui::EndPopup();
         return;

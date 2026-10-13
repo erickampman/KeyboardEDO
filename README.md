@@ -6,10 +6,9 @@ notes, per-note pitch bend and controllers, Pitch 7.25 glides, with a MIDI 1.0
 fallback. Three keyboards, as KeyEDO's: a standard piano at 12-EDO, the
 diamond piano at other EDOs, and an isomorphic tiled layout at any EDO.
 
-So far it plays on the Mac: to a chosen destination or from its own
-published source, in MIDI 2.0 or 1.0 as the receiver needs, and opens and
-saves KeyEDO-compatible documents. Linux builds without MIDI output until
-uw-core has its ALSA side.
+It plays on the Mac (CoreMIDI) and Linux (the ALSA sequencer): to a chosen
+destination or from its own published source, in MIDI 2.0 or 1.0 as the
+receiver needs, and opens and saves KeyEDO-compatible documents.
 [docs/decisions.md](docs/decisions.md) says why it's built this way, and
 [docs/roadmap.md](docs/roadmap.md) what comes next.
 
@@ -49,11 +48,13 @@ run this alongside it with Publish on:
 ./build/kedo-midi-listen KeyboardEDO 60
 ```
 
-Linux needs SDL3's build dependencies (`external/SDL/docs/README-linux.md`).
-On Ubuntu, for X11 with touch and Wayland:
+Linux needs SDL3's build dependencies (`external/SDL/docs/README-linux.md`),
+and alsa-lib 1.2.10 or later with a 6.5 or later kernel for MIDI (UMP in the
+ALSA sequencer); uw-core's backends also need JACK's headers. On Ubuntu, for
+X11 with touch and Wayland:
 
 ```bash
-sudo apt install ninja-build pkg-config libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libdecor-0-dev libudev-dev libdbus-1-dev libibus-1.0-dev
+sudo apt install ninja-build pkg-config libasound2-dev libjack-jackd2-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libdecor-0-dev libudev-dev libdbus-1-dev libibus-1.0-dev
 ```
 
 To build only the core and its tests, configure with `-DKEDO_APP=OFF`; that
@@ -83,7 +84,7 @@ To see the layouts without a UI:
 | `external/uw-core` | shared UMP code (submodule) |
 | `external/SDL`, `external/imgui` | SDL 3.4 and Dear ImGui 1.92 (submodules) |
 | `tools/LayoutSvg.cpp` | draws layouts to SVG |
-| `tools/MidiListen.cpp` | `kedo-midi-listen`: prints what a source sends (macOS) |
+| `tools/MidiListen.cpp` | `kedo-midi-listen`: prints what a source sends |
 | `external/json` | nlohmann/json 3.12.0 (shallow submodule) |
 
 MIT licence, as uw-core.

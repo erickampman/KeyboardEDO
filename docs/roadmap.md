@@ -54,12 +54,27 @@ translates: the caller sends what `protocol(handle)` asks for, which is
 `CoreMidiInput` (a virtual source, and MIDI 2.0 and 1.0 destinations).
 `PlatformMidiOutput.h` sets `UW_HAVE_MIDI_OUTPUT` to 0 where there's none.
 
-### 3b. The ALSA sequencer's (uw-core, on the Linux PC)
+### 3b. The ALSA sequencer's (uw-core, on the Linux PC): done 2026-10-12 (uw-core `63c85d9`)
 
-`AlsaSeqOutput`: a UMP-enabled sequencer client with an output port per
-protocol, subscribing to a destination port, or published as a port others
-subscribe to. Extend `test-backends`. Needs a Linux machine; nothing here
-could compile it.
+`AlsaSeqOutput`: two UMP sequencer clients, one per protocol, as
+`AlsaSeqInput`'s (an application's sequencer client has one protocol), so a
+published port shows subscribers the protocol it sends. Destinations are
+sent to directly, without subscribing; published ports send to their
+subscribers. `AlsaSeqInput` now takes the kernel's largest input pool, as a
+300-message burst overran ALSA's default. `test-alsa-output` loops back
+through `AlsaSeqInput` in both protocols, follows a destination leaving and
+coming back, and checks a legacy client gets ordinary events.
+
+KeyboardEDO builds `uw::midi` on Linux too (JACK's headers now needed).
+Checked with `kedo-midi-listen`, `aseqdump` and `keyboardedo --snapshot
+--click`: the published source reaches a MIDI 2.0 listener with Pitch 7.9,
+and a legacy subscriber as the bare note number; a MIDI 2.0 destination gets
+MIDI 2.0, and a MIDI 1.0 UMP destination and `aseqdump` the nearest note
+with the bend range as CC 101/100/6/38; quitting sends the note-off and CC
+123.
+
+Still to check by hand: a real synth (StageHand, FluidSynth), and a USB
+MIDI 2.0 device's UMP endpoint ports.
 
 Declaring a UMP endpoint and function blocks moved to milestone 11, with the
 rest of identity and discovery: on the Mac it needs CoreMIDI's Objective-C
