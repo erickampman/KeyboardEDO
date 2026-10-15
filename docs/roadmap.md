@@ -314,9 +314,19 @@ the Mac and Linux), and changing tempo and pattern while it plays.
 ## 11. Identity and discovery (uw-core, KeyboardEDO)
 
 KeyEDO's controller roadmap tier 2: endpoint info and function blocks as
-UMP stream messages, a Product Instance ID per installation or document,
-Stream Configuration to agree the protocol, and timestamps (CoreMIDI host
-time, ALSA real-time events).
+UMP stream messages, a Product Instance ID, Stream Configuration to agree
+the protocol, and timestamps (CoreMIDI host time, ALSA real-time events).
+
+Decided 2026-10-15 (decisions.md, "Identity and discovery"): the Product
+Instance ID is per installation; one function block, spanning the groups
+the document's layouts use; CoreMIDI's endpoint API in a uw-core `.mm`.
+Likely more than a day, so in two parts:
+- 11a: the endpoint, function block and Product Instance ID (uw-core: the
+  ALSA sequencer's `snd_seq_create_ump_endpoint` / `_block`, CoreMIDI's
+  `MIDIUMPMutableEndpoint`; KeyboardEDO: what it declares). It fixes the
+  known gap of a late subscriber missing the bend-range setup.
+- 11b: Stream Configuration and timestamps, which would also let the
+  arpeggiator's steps be scheduled ahead.
 
 ## Later
 

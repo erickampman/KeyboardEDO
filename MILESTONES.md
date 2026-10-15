@@ -31,7 +31,7 @@
 
 ## M5: MIDI identity and discovery
 - [ ] UMP endpoint and function blocks (CoreMIDI Objective-C API on Mac)
-- [ ] Product Instance ID per installation / document
+- [ ] Product Instance ID per installation
 - [ ] Stream Configuration (protocol negotiation)
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 

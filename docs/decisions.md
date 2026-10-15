@@ -650,6 +650,36 @@ As built (2026-10-15):
 - Not done: MIDI clock or Flex Data tempo (KeyEDO's `rateSource` hook;
   controller roadmap 12), swing, and latching a new chord on a fresh press.
 
+## Identity and discovery (decided 2026-10-15, roadmap milestone 11)
+
+Settled with the author before the milestone:
+- **The Product Instance ID is per installation:** made once and kept in
+  the app's preferences, beside Publish. A host (Umpire, StageHand, a DAW)
+  that saved a route to KeyboardEDO finds it again whichever document is
+  open, and opening a document never changes the device a host sees. The
+  cost: another machine is another installation, so a project moved
+  between the Mac and the Linux PC finds KeyboardEDO by name, or is
+  reconnected by hand. A per-document ID, overriding it, can come later if
+  several documents are to be routed separately.
+- **The function block follows the document:** one output block,
+  "Keyboard", spanning the groups the document's layouts use (each layout's
+  group, and a custom key's own), so hosts are offered only groups that
+  carry notes. A block is one contiguous range, so groups 1 and 5 declare
+  1-5. It's the whole document's span, not the showing layout's, so
+  switching layouts in Play mode doesn't change the device; it's updated
+  when a document opens or a layout's group changes, and so is not marked
+  static. Channels aren't part of a function block. To check: how Umpire,
+  StageHand and Logic take a block changing.
+- **CoreMIDI's endpoint API goes in uw-core as Objective-C++:**
+  `MIDIUMPMutableEndpoint` and `MIDIUMPMutableFunctionBlock` exist only for
+  Objective-C (`__OBJC2__`, checked in the macOS 26.2 SDK), so uw-core gets
+  its first `.mm` file, built on Apple only, behind the C++ `MidiOutput`
+  seam, where StageHand and Umpire can use it too. To check: the endpoint
+  makes its own source and destination, so publishing moves from
+  `MIDISourceCreateWithProtocol` to the endpoint's source; whether its
+  unique ID can still be the fixed "KBED"; and using its destination for
+  stream configuration.
+
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's
