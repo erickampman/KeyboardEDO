@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cfloat>
 #include <cstdio>
+#include <chrono>
 #include <cmath>
+#include <tuple>
 
 #include "Icons.h"
 #include "imgui.h"
@@ -47,7 +49,8 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
       appliedDestination_(start.document.destination),
       path_(start.path),
       targets_(settings_.output),
-      performer_(targets_.sink()) {
+      arp_(targets_.sink(), [] { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }),
+      performer_(arp_) {
     if (start.ownPreferences) {
         // A check run (--snapshot): defaults, read from and saved to nowhere,
         // so it neither depends on nor changes the preferences of the
@@ -61,7 +64,33 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
     targets_.setConfig(settings_.output);
     targets_.setDestination(doc_.destination);
     targets_.setPublish(prefs_.publish || start.publish);
+    arp_.setConfig(settings_.arp);
     updateTitle();
+    arpThread_ = std::thread([this] { arpLoop(); });
+}
+
+void KeyboardApp::arpLoop() {
+    std::unique_lock lock(playLock_);
+    while (!quitting_) {
+        arp_.advance();
+        flush();
+        if (const auto next = arp_.nextEvent())
+            arpWake_.wait_until(lock, std::chrono::steady_clock::time_point(
+                                          std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                                              std::chrono::duration<double>(*next))));
+        else
+            arpWake_.wait(lock);
+    }
+}
+
+bool KeyboardApp::animating() const {
+    std::lock_guard lock(playLock_);
+    return !pointers_.empty() || mouseDown_ || dragging_ || auditionId_.has_value() || arp_.running();
+}
+
+void KeyboardApp::releaseAll() {
+    performer_.releaseAll();
+    arp_.stop();
 }
 
 // The Performer's settings: the document's, except that with expression sent
@@ -76,16 +105,22 @@ PlayConfig KeyboardApp::playConfig() const {
 }
 
 void KeyboardApp::setPublish(bool on) {
-    performer_.releaseAll();
+    releaseAll();
     targets_.setPublish(on);
     prefs_.publish = on;
     if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
 }
 
 KeyboardApp::~KeyboardApp() {
+    {
+        std::lock_guard lock(playLock_);
+        quitting_ = true;
+    }
+    arpWake_.notify_one();
+    arpThread_.join();
     // Release what's held while the outputs still exist; their destructor
     // then sends All Notes Off.
-    performer_.releaseAll();
+    releaseAll();
     flush();
 }
 
@@ -105,6 +140,21 @@ void KeyboardApp::rebuild(bool resetView) {
     performer_.setLayout(layout.get());
     layout_ = std::move(layout);
     computerKeys_ = computerKeyMap(*layout_);
+
+    // The arpeggiator's octave copies: the layout's own note at that pitch on
+    // the same group and channel, so EDO numbering holds; else 12 up.
+    using Place = std::tuple<int, int, long long>;
+    auto place = [](const Note& n, double pitch) {
+        return Place{n.group.value_or(255), n.channel.value_or(255), std::llround(pitch * 1e4)};
+    };
+    std::map<Place, Note> notes;
+    const Rect b = layout_->bounds();
+    for (const Key& k : layout_->keysIn({b.x - 1, b.y - 1, b.w + 2, b.h + 2}))
+        if (k.playable) notes.emplace(place(k.note, k.note.pitch), k.note);
+    arp_.setOctaveFinder([notes = std::move(notes), place](const Note& n, int octaves) {
+        const auto it = notes.find(place(n, n.pitch + 12.0 * octaves));
+        return it != notes.end() ? it->second : Arpeggiator::octaveAbove(n, octaves);
+    });
     heldKeys_.clear();   // setLayout released them
     performer_.setConfig(playConfig());
 
@@ -178,7 +228,17 @@ std::string KeyboardApp::computerKeyLabel(int code) const {
 
 // --- Input ------------------------------------------------------------------------
 
+// Takes the play lock, and wakes the arpeggiator's thread after, as what
+// happened may have given it notes.
+#define KEDO_PLAYING                                                        \
+    std::lock_guard lock(playLock_);                                        \
+    struct Wake {                                                           \
+        std::condition_variable_any& cv;                                    \
+        ~Wake() { cv.notify_one(); }                                        \
+    } wake{arpWake_}
+
 void KeyboardApp::handleEvent(const SDL_Event& e) {
+    KEDO_PLAYING;
     const ImGuiIO& io = ImGui::GetIO();
     switch (e.type) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
@@ -287,7 +347,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
             performer_.hoverBegin(viewport_.toLayout(mouseAt_));
         if (computerKey(e.key)) break;
         if (editingKeys() && !io.WantCaptureKeyboard && editKey(e.key)) break;
-        if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) performer_.releaseAll();
+        if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) releaseAll();
         // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as; = (or +) and -
         // zoom, and 0 back to zoom 1, about the keyboard's centre.
         const bool command = (e.key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL)) != 0;
@@ -325,6 +385,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
 // --- Frame --------------------------------------------------------------------------
 
 void KeyboardApp::frame() {
+    KEDO_PLAYING;
     int w = 0, h = 0;
     SDL_GetWindowSize(window_, &w, &h);
 
@@ -367,20 +428,29 @@ void KeyboardApp::frame() {
     updateTitle();
 }
 
-void KeyboardApp::flush() { targets_.flush(monitor_, kMonitorLines); }
+void KeyboardApp::flush() {
+    std::lock_guard lock(playLock_);
+    targets_.flush(monitor_, kMonitorLines);
+}
 
 // Apply what the settings bar (or a document) changed.
 void KeyboardApp::applySettings() {
     // A new destination or publishing starts from silence: notes held now
     // would never get their note-off there.
     if (doc_.destination != appliedDestination_) {
-        performer_.releaseAll();
+        releaseAll();
         targets_.setDestination(doc_.destination);
         appliedDestination_ = doc_.destination;
     }
     if (!(settings_.output == applied_.output)) {
-        performer_.releaseAll();
+        releaseAll();
         targets_.setConfig(settings_.output);
+    }
+    // The arpeggiator on or off: what's held is released the way it was
+    // played (through it, or past it), then it starts empty.
+    if (!(settings_.arp == applied_.arp)) {
+        if (settings_.arp.enabled != applied_.arp.enabled) releaseAll();
+        arp_.setConfig(settings_.arp);
     }
     const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
     if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
@@ -390,6 +460,7 @@ void KeyboardApp::applySettings() {
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
                              (settings_.layout.kind != applied_.layout.kind &&
                               settings_.layout.kind != LayoutKind::Custom);
+        arp_.stop();   // what Hold kept was the old keys' notes
         rebuild(newKeys);
     } else if (settings_.layout.kind == LayoutKind::Tiled && !animating() &&
                tiledRowsFor(viewport_.screen.h) != settings_.layout.tiledRows) {
@@ -411,7 +482,7 @@ void KeyboardApp::open(const std::string& path) {
     }
     const bool imported = !isBundlePath(path);
     status_ = imported ? "Imported: Save makes it a .kedo document" : "";
-    performer_.releaseAll();
+    releaseAll();
     doc_ = *document;
     saved_ = *document;
     settings_ = doc_.layout();
@@ -449,7 +520,7 @@ Document KeyboardApp::documentNow() const {
 void KeyboardApp::selectLayout(int index) {
     if (index == doc_.current || index < 0 || index >= int(doc_.layouts.size())) return;
     storeLayout();
-    performer_.releaseAll();
+    releaseAll();
     doc_.current = index;
     settings_ = doc_.layout();
     resetEditor();
@@ -465,7 +536,7 @@ void KeyboardApp::addLayout(LayoutSetup layout) {
 
 void KeyboardApp::removeLayout() {
     if (doc_.layouts.size() < 2) return;
-    performer_.releaseAll();
+    releaseAll();
     doc_.layouts.erase(doc_.layouts.begin() + doc_.current);
     doc_.current = std::min(doc_.current, int(doc_.layouts.size()) - 1);
     settings_ = doc_.layout();
@@ -768,8 +839,11 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     if (editingKeys())
         std::stable_partition(keys.begin(), keys.end(), [&](const Key& k) { return !selected_.count(k.row); });
     for (const Key& k : keys) {
+        // The arpeggiator's step sounds; what its Hold keeps shows latched.
+        const bool held = arp_.heldByHold(k.note.id);
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
-                                     performer_.isSounding(k.note.id), performer_.isLatched(k.note.id));
+                                     performer_.isSounding(k.note.id) || arp_.sounding(k.note.id) || held,
+                                     performer_.isLatched(k.note.id) || held);
         const ImVec2 c = vec(viewport_.toScreen(k.center));
         const float hw = float(k.halfWidth) * zoom, hh = float(k.halfHeight) * zoom;
 
@@ -881,7 +955,7 @@ void KeyboardApp::drawToolbar() {
     ImGui::SetItemTooltip(sending ? "The protocol notes are sent in" : "Choose where notes go with the antenna button");
 
     // Routing and modes, from the right.
-    const int buttons = 6;
+    const int buttons = 7;
     ImGui::SameLine(vp->Size.x - buttons * (icon + gap) - ImGui::GetStyle().WindowPadding.x + gap);
     if (iconButton("routing", Icon::Routing, icon, "Where notes go", sending)) ImGui::OpenPopup("routing");
     drawRoutingMenu();
@@ -898,8 +972,14 @@ void KeyboardApp::drawToolbar() {
                    performer_.latchMode()))
         performer_.setLatchMode(!performer_.latchMode());
     ImGui::SameLine();
+    if (iconButton("arp", Icon::Arpeggiator, icon,
+                   settings_.arp.enabled ? "Arpeggiator: on. Its settings are in the panel"
+                                         : "Arpeggiator: step through the notes held",
+                   settings_.arp.enabled))
+        settings_.arp.enabled = !settings_.arp.enabled;
+    ImGui::SameLine();
     if (iconButton("panic", Icon::Panic, icon, "All Notes Off")) {
-        performer_.releaseAll();
+        releaseAll();
         targets_.allNotesOff();
     }
     ImGui::SameLine();
@@ -1458,6 +1538,33 @@ float KeyboardApp::drawPanel() {
         ImGui::Checkbox("Strike velocity", &p.strikeVelocity);
         ImGui::SetItemTooltip("Louder toward the top of a key");
         if (p.strikeVelocity) ImGui::SliderInt("Minimum", &p.strikeVelocityMin, 1, 126);
+    }
+
+    // In Play mode too: pattern, division and tempo are changed while
+    // playing (decisions.md, "Arpeggiator").
+    if (ImGui::CollapsingHeader("Arpeggiator", ImGuiTreeNodeFlags_DefaultOpen)) {
+        static const char* const kPatterns[] = {"Up", "Down", "Up-Down", "Down-Up", "As Played", "Random"};
+        static const char* const kDivisions[] = {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32",
+                                                 "1/2T", "1/4T", "1/8T", "1/16T"};
+        static const char* const kVelocities[] = {"As played", "Fixed", "Random"};
+        ArpConfig& a = settings_.arp;
+        ImGui::Checkbox("On##arp", &a.enabled);
+        ImGui::SetItemTooltip("Step through the notes held, one at a time (also the toolbar button)");
+        enumCombo("Pattern", a.pattern, kPatterns, ImGui::CalcItemWidth());
+        enumCombo("Division", a.division, kDivisions, ImGui::CalcItemWidth());
+        ImGui::SetItemTooltip("A step's length; T: triplets");
+        float bpm = float(a.bpm);
+        if (ImGui::DragFloat("Tempo", &bpm, 0.5f, 1, 999, "%.1f bpm", ImGuiSliderFlags_AlwaysClamp)) a.bpm = bpm;
+        int gate = int(std::lround(a.gate * 100));
+        if (ImGui::SliderInt("Gate", &gate, 1, 100, "%d%%")) a.gate = gate / 100.0;
+        ImGui::SetItemTooltip("How much of its step each note sounds");
+        ImGui::SliderInt("Octaves", &a.octaves, 1, 4);
+        ImGui::SetItemTooltip("The pattern, then again an octave higher for each octave more");
+        enumCombo("Velocity##arp", a.velocity, kVelocities, ImGui::CalcItemWidth());
+        if (a.velocity == ArpVelocity::Fixed) ImGui::SliderInt("Fixed velocity", &a.fixedVelocity, 1, 127);
+        ImGui::Checkbox("Hold", &a.hold);
+        ImGui::SetItemTooltip("Released notes keep playing, and new ones add to them.\n"
+                              "All Notes Off or Escape clears them; so does turning Hold off");
     }
 
     if (prefs_.editing && ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen)) {

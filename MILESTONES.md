@@ -26,8 +26,8 @@
 - [x] Computer keyboard: per-key HID assignment, default mappings, hover expression
 
 ## M4: Arpeggiator
-- [ ] ArpeggiatorEngine as a NoteSink between Performer and output
-- [ ] Patterns, divisions, gate, octave span, velocity source, hold
+- [x] ArpeggiatorEngine as a NoteSink between Performer and output
+- [x] Patterns, divisions, gate, octave span, velocity source, hold
 
 ## M5: MIDI identity and discovery
 - [ ] UMP endpoint and function blocks (CoreMIDI Objective-C API on Mac)

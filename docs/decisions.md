@@ -48,7 +48,7 @@ transport sends what `UmpOutput::take()` returns.
 - `Performer`: KeyEDO's touch handling, once for all layouts. Each pointer is
   tracked by id, so multitouch is the normal case, not an iOS special case.
 - `NoteSink`: what is played, before it's MIDI (note on/off, glide,
-  expression with or without a note). The arpeggiator will be a NoteSink
+  expression with or without a note). The `Arpeggiator` is a NoteSink
   between the Performer and the output.
 - `UmpOutput`: a NoteSink that makes UMP.
 
@@ -451,8 +451,8 @@ KeyEDO format, which becomes one layout's file and what KeyEDO imports read.)
   nlohmann/json as a shallow submodule pinned to v3.12.0). All 25 of the
   author's KeyEDO documents open.
 - Missing fields keep defaults and bad ones are clamped, so any KeyEDO file
-  opens. Fields this version doesn't use (the arpeggiator's, hover
-  expression) are kept and written back unchanged.
+  opens. Fields this version doesn't use (hover expression, the
+  arpeggiator's rate source) are kept and written back unchanged.
 - Every key KeyEDO reads is written, with KeyEDO's defaults where we have no
   value, so KeyEDO can open our files. Our own fields (`glide`,
   `perNoteExpression`, `perNoteManagement`, `bendRange`, `perNoteBendRange`,
@@ -585,6 +585,71 @@ As built (2026-10-13):
 - Hover expression uses the Playing section's Horizontal and Vertical
   controls, now shown in Gliss mode too. Releasing a key resets its own
   note's expression, and the channel's if it was the last one held.
+## Arpeggiator (decided 2026-10-15, roadmap milestone 10)
+
+KeyEDO's `ArpeggiatorEngine`, as `Arpeggiator` (`src/kedo/Arpeggiator.*`), a
+NoteSink between the Performer and the outputs. Off, it passes every call
+through. On, the notes played are a pool it steps through, one note at a
+time. Settled with the author at the start:
+- **Hold is KeyEDO's:** released notes stay in the pool and new ones add to
+  it; it empties only when the arpeggiator is turned off, by All Notes Off
+  or Escape, on a new layout or tuning, or (our addition) when Hold is
+  turned off, which drops the notes only Hold was keeping, as a pedal would.
+- **Octave span is KeyEDO's:** the pattern, then the pattern again an octave
+  up for each octave more (Up-Down at 2 octaves is up-down, then up-down an
+  octave higher).
+- **Controls:** an Arp button in the toolbar, and an Arpeggiator section in
+  the panel, shown in Play mode too: pattern, division and tempo are played
+  with.
+- **Per layout:** each layout file has its own, under KeyEDO's field names
+  and values (`arpIsEnabled`, `arpPattern` "Up-Down", `arpDivision` "1/8T",
+  `arpBpm`, `arpGate`, `arpOctaveSpan`, `arpVelocitySource`, `arpHold`), plus
+  our `arpFixedVelocity`. `arpRateSource` stays an extra (only "Internal").
+  So the toolbar button, as Lock, edits the layout.
+
+As built (2026-10-15):
+- KeyEDO's six patterns, ten divisions, gate (1-100% of a step, a hard end so
+  notes never overlap), octaves 1-4, velocity as played, fixed (a 7-bit
+  setting, 64 by default, near KeyEDO's 0x7F00) or random (KeyEDO's range),
+  tempo 1-999 bpm.
+- **Patterns go by pitch**, not note number, so a custom layout's numbering
+  doesn't reorder them. Up-Down and Down-Up don't repeat their ends. Random
+  is shuffled afresh each round.
+- **The first note plays at once**, and the steps count from it. As the rest
+  of a chord arrives, the pattern carries on after the step played last,
+  rather than playing the first note again.
+- **A tempo change keeps the phase:** the next step comes a new step's length
+  after the last. A stall of more than a step (the computer busy) carries on
+  from now rather than playing the missed steps at once.
+- **Octave copies are the layout's own notes:** the key with that pitch +1200
+  cents on the same group and channel, so 31-EDO's copy of n93 is n124
+  (checked in the monitor). Past the layout's keys, 12 is added to the
+  pitch and number.
+- **Expression:** the channel's passes through. A note's own (Fixed drag
+  per-note bend, controllers, poly pressure) goes to its step while that
+  sounds, and is sent again after each of its later note-ons, as Per-Note
+  Management resets it. A glide moves the held note's pitch, and its
+  sounding step's.
+- **Turning it on or off** releases what's held first, through the path it
+  was played on, then starts empty, so nothing is left stuck (KeyEDO's
+  reason for its All Notes Off there).
+- Auditioning in the custom layout editor goes straight to the outputs, not
+  through the arpeggiator.
+- **Drawing:** the key the step is playing shows as sounding, and notes only
+  Hold keeps show latched.
+- **Timing: a thread of its own.** The frame loop waits for vsync, so
+  stepping from it would put up to a frame (~16 ms) of jitter in every step.
+  The arpeggiator has no timer: it's given a clock and says when it next has
+  something to do (`nextEvent()`); the app's thread waits until then on a
+  condition variable, calls `advance()` and sends. One recursive lock guards
+  what both threads touch (the Performer, arpeggiator, outputs and monitor):
+  the main thread holds it while handling events and building a frame, not
+  while rendering or presenting, so a step can wait at most for one frame's
+  build. MIDI timestamps (milestone 11) would let steps be sent ahead and
+  land exactly.
+- Not done: MIDI clock or Flex Data tempo (KeyEDO's `rateSource` hook;
+  controller roadmap 12), swing, and latching a new chord on a fresh press.
+
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's

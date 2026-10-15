@@ -7,6 +7,7 @@
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <type_traits>
 
 #include <nlohmann/json.hpp>
 
@@ -24,15 +25,7 @@ using json = nlohmann::json;
 // every key.
 const json& keyEdoDefaults() {
     static const json defaults = {
-        {"arpBpm", 120.0},
-        {"arpDivision", "1/16"},
-        {"arpGate", 0.5},
-        {"arpHold", false},
-        {"arpIsEnabled", false},
-        {"arpOctaveSpan", 1},
-        {"arpPattern", "Up"},
         {"arpRateSource", "Internal"},
-        {"arpVelocitySource", "As Played"},
         {"hoverExpressionEnabled", false},
     };
     return defaults;
@@ -232,6 +225,28 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     read(j, "perNoteBendRange", d.output.perNoteBendRange);
     read(j, "midiDestinationName", d.destination);
 
+    // Arpeggiator: KeyEDO's fields and names ("Up-Down", "1/8T"), and our
+    // fixed velocity.
+    read(j, "arpIsEnabled", d.arp.enabled);
+    read(j, "arpBpm", d.arp.bpm);
+    d.arp.bpm = std::clamp(d.arp.bpm, 1.0, 999.0);
+    read(j, "arpGate", d.arp.gate);
+    d.arp.gate = std::clamp(d.arp.gate, 0.01, 1.0);
+    read(j, "arpOctaveSpan", d.arp.octaves);
+    d.arp.octaves = std::clamp(d.arp.octaves, 1, 4);
+    read(j, "arpHold", d.arp.hold);
+    read(j, "arpFixedVelocity", d.arp.fixedVelocity);
+    d.arp.fixedVelocity = std::clamp(d.arp.fixedVelocity, 1, 127);
+    auto named = [&](const char* key, auto& value, int count, auto nameOf) {
+        std::string text;
+        read(j, key, text);
+        for (int i = 0; i < count; ++i)
+            if (text == nameOf(std::remove_reference_t<decltype(value)>(i))) value = std::remove_reference_t<decltype(value)>(i);
+    };
+    named("arpPattern", d.arp.pattern, kArpPatterns, arpPatternName);
+    named("arpDivision", d.arp.division, kArpDivisions, arpDivisionName);
+    named("arpVelocitySource", d.arp.velocity, kArpVelocities, arpVelocityName);
+
     // Everything else, kept as it was.
     static const std::set<std::string> known = {
         "name", "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
@@ -239,6 +254,8 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
         "perNoteBendRange", "midiDestinationName", "midi1Expression", "customKeys",
+        "arpIsEnabled", "arpBpm", "arpGate", "arpOctaveSpan", "arpHold", "arpFixedVelocity", "arpPattern",
+        "arpDivision", "arpVelocitySource",
     };
     for (const auto& [key, value] : j.items())
         if (!known.count(key)) d.extras[key] = value.dump();
@@ -290,6 +307,16 @@ std::string writeLayoutSetup(const LayoutSetup& d) {
     j["midi1Expression"] = d.output.midi1Expression;
     j["bendRange"] = d.output.bendRange;
     j["perNoteBendRange"] = d.output.perNoteBendRange;
+    j["arpIsEnabled"] = d.arp.enabled;
+    j["arpBpm"] = d.arp.bpm;
+    j["arpDivision"] = arpDivisionName(d.arp.division);
+    j["arpGate"] = d.arp.gate;
+    j["arpHold"] = d.arp.hold;
+    j["arpOctaveSpan"] = d.arp.octaves;
+    j["arpPattern"] = arpPatternName(d.arp.pattern);
+    j["arpVelocitySource"] = arpVelocityName(d.arp.velocity);
+    j["arpFixedVelocity"] = d.arp.fixedVelocity;
+
     if (d.destination.empty()) j.erase("midiDestinationName");
     else j["midiDestinationName"] = d.destination;
 

@@ -69,6 +69,14 @@ void draw(ImDrawList* d, Icon icon, ImVec2 o, float s, ImU32 c, float w) {
         d->AddLine(p(12, 13), p(12, 21), c, w);
         break;
     }
+    case Icon::Arpeggiator:
+        // Four notes rising, one after another: a dot and a stem each.
+        for (int i = 0; i < 4; ++i) {
+            const float x = 4.5f + 4.6f * i, y = 18.5f - 3.6f * i;
+            d->AddCircleFilled(p(x, y), 2.0f * u, c);
+            d->AddLine(p(x + 1.8f, y), p(x + 1.8f, y - 6.5f), c, w * 0.8f);
+        }
+        break;
     case Icon::Panic:
         // Stop: a filled square in a circle.
         d->AddCircle(p(12, 12), 9 * u, c, 24, w);

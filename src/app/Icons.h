@@ -12,6 +12,7 @@ enum class Icon {
     Locked,      // padlock, closed
     Unlocked,    // padlock, open
     Latch,       // pin
+    Arpeggiator, // notes climbing a stair
     Panic,       // stop square: All Notes Off
     Monitor,     // lines of text: the MIDI monitor
     Configure,   // sliders: the settings panel

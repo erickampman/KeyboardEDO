@@ -1,5 +1,7 @@
 #include "kedo/Synopsis.h"
 
+#include <cmath>
+#include <cstdio>
 #include <vector>
 
 namespace kedo {
@@ -48,6 +50,15 @@ std::string synopsis(const LayoutSetup& d, const LiveState& live) {
         parts.push_back(fixed);
     }
     if (p.strikeVelocity) parts.push_back("Strike Vel");
+    // KeyEDO's "Arp Up 1/16 120bpm".
+    if (const ArpConfig& a = d.arp; a.enabled) {
+        char bpm[16];
+        std::snprintf(bpm, sizeof bpm, "%g", std::round(a.bpm * 10) / 10);
+        std::string arp = std::string("Arp ") + arpPatternName(a.pattern) + " " + arpDivisionName(a.division) + " " + bpm + " bpm";
+        if (a.octaves > 1) arp += " " + std::to_string(a.octaves) + " oct";
+        if (a.hold) arp += " hold";
+        parts.push_back(arp);
+    }
     if (live.latch) parts.push_back("Latch");
     if (d.locked) parts.push_back("Locked");
 

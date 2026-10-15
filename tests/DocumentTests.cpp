@@ -58,9 +58,12 @@ void testOpensKeyEdo() {
     // Older KeyEDO documents have no MIDI fields: defaults.
     CHECK(d->output.channel == 0 && d->output.group == 0);
     CHECK(d->destination.empty());
-    // The arpeggiator isn't here yet, but its settings are kept.
-    CHECK(d->extras.count("arpPattern") && d->extras.at("arpPattern") == "\"Down-Up\"");
-    CHECK(d->extras.count("arpIsEnabled") && d->extras.at("arpIsEnabled") == "true");
+    // The arpeggiator's settings, by KeyEDO's names; its rate source isn't
+    // used, and is kept.
+    CHECK(d->arp.enabled && d->arp.pattern == ArpPattern::DownUp && d->arp.division == ArpDivision::Sixteenth);
+    CHECK(d->arp.bpm == 120 && d->arp.gate == 0.5 && d->arp.octaves == 1 && !d->arp.hold);
+    CHECK(d->arp.velocity == ArpVelocity::AsPlayed);
+    CHECK(!d->extras.count("arpPattern") && d->extras.count("arpRateSource"));
 }
 
 void testMidiFields() {
@@ -71,6 +74,13 @@ void testMidiFields() {
     CHECK(d->play.drag == DragBehavior::Fixed);
     CHECK(d->output.channel == 9 && d->output.group == 3);
     CHECK(d->destination == "IAC Driver Bus 1");
+
+    // Arpeggiator values out of range are clamped, unknown names ignored.
+    const auto a = parseLayoutSetup(R"({"arpBpm": 5000, "arpGate": 0, "arpOctaveSpan": 9,
+        "arpPattern": "Sideways", "arpDivision": "1/4T", "arpFixedVelocity": 0})");
+    CHECK(a && a->arp.bpm == 999 && a->arp.gate == 0.01 && a->arp.octaves == 4);
+    CHECK(a->arp.pattern == ArpPattern::Up && a->arp.division == ArpDivision::QuarterTriplet);
+    CHECK(a->arp.fixedVelocity == 1);
 }
 
 void testRoundTrip() {
@@ -92,7 +102,10 @@ void testRoundTrip() {
     d.output.midi1Expression = false;
     d.destination = "Synth:In";
     d.locked = true;
-    d.extras["arpBpm"] = "96.0";
+    d.arp = {.enabled = true, .pattern = ArpPattern::Random, .division = ArpDivision::EighthTriplet,
+             .bpm = 96.5, .gate = 0.8, .octaves = 3, .velocity = ArpVelocity::Fixed, .fixedVelocity = 90,
+             .hold = true};
+    d.extras["hoverExpressionEnabled"] = "true";
     const auto back = parseLayoutSetup(writeLayoutSetup(d));
     CHECK(back.has_value());
     if (back) {
@@ -102,8 +115,8 @@ void testRoundTrip() {
         expected.layout.tiledRows = back->layout.tiledRows;
         expected.extras = back->extras;
         CHECK(*back == expected);
-        CHECK(back->extras.count("arpBpm") && back->extras.at("arpBpm") == "96.0");
-        CHECK(back->extras.count("arpPattern"));
+        CHECK(back->extras.count("hoverExpressionEnabled") && back->extras.at("hoverExpressionEnabled") == "true");
+        CHECK(back->extras.count("arpRateSource"));
     }
 }
 

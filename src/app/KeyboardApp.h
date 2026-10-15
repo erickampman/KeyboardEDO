@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <deque>
 #include <map>
 #include <memory>
@@ -7,11 +8,13 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <SDL3/SDL.h>
 
 #include "MidiTargets.h"
+#include "kedo/Arpeggiator.h"
 #include "kedo/Document.h"
 #include "kedo/Preferences.h"
 #include "kedo/KeyStyle.h"
@@ -46,6 +49,8 @@ public:
     KeyboardApp(const KeyboardApp&) = delete;
     KeyboardApp& operator=(const KeyboardApp&) = delete;
 
+    // These three take the play lock, which the arpeggiator's thread also
+    // takes (decisions.md, "Arpeggiator").
     // Called for every SDL event, after ImGui has seen it.
     void handleEvent(const SDL_Event& e);
 
@@ -59,12 +64,17 @@ public:
     // True while something is moving (a pointer is down, a key is dragged, an
     // audition is to end), so the loop keeps drawing at the display's rate
     // instead of waiting for events.
-    bool animating() const { return !pointers_.empty() || mouseDown_ || dragging_ || auditionId_.has_value(); }
+    // The arpeggiator playing counts, so the key it's on is drawn.
+    bool animating() const;
 
 private:
     enum class Dialog { Open, Import, SaveAs };
 
     void rebuild(bool resetView);
+    // Releases what's held and stops the arpeggiator, Hold or not.
+    void releaseAll();
+    // The arpeggiator's thread: steps it on time, and sends what it plays.
+    void arpLoop();
     void applySettings();
     // The document's layouts: the one showing is settings_ while it shows.
     void storeLayout() { doc_.layout() = settings_; }
@@ -133,8 +143,16 @@ private:
     std::map<int, Key> computerKeys_;   // the layout's, by computer key
     std::set<int> heldKeys_;            // computer keys down, playing
     bool assigning_ = false;            // the inspector's Assign: the next key pressed
-    MidiTargets targets_;     // before performer_, which plays into it
+    MidiTargets targets_;     // before arp_ and performer_, which play into it
+    Arpeggiator arp_;         // between the Performer and the outputs
     Performer performer_;
+    // The arpeggiator steps on a thread of its own, as the frame loop waits
+    // for vsync. The lock guards everything both threads touch: the
+    // Performer, arpeggiator, outputs and monitor (recursive: frame() flushes).
+    mutable std::recursive_mutex playLock_;
+    std::condition_variable_any arpWake_;
+    bool quitting_ = false;
+    std::thread arpThread_;
     Viewport viewport_;
     int originFrames_ = 0;    // frames left to keep Tiled's bottom row in view (frame())
 

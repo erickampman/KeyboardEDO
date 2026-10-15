@@ -140,6 +140,14 @@ void testSynopsis() {
     d.play.bendScope = ExpressionScope::Channel;
     d.play.vertical = VerticalControl::Pressure;
     CHECK(synopsis(d, {}).find("Fixed (H bend, V poly pressure)") != std::string::npos);
+
+    // The arpeggiator, when it's on, as KeyEDO's.
+    CHECK(synopsis(d, {}).find("Arp") == std::string::npos);
+    d.arp = {.enabled = true, .pattern = ArpPattern::UpDown, .division = ArpDivision::EighthTriplet, .bpm = 96};
+    CHECK(synopsis(d, {}).find(dot + "Arp Up-Down 1/8T 96 bpm") != std::string::npos);
+    d.arp.octaves = 2;
+    d.arp.hold = true;
+    CHECK(synopsis(d, {}).find("Arp Up-Down 1/8T 96 bpm 2 oct hold") != std::string::npos);
 }
 
 } // namespace

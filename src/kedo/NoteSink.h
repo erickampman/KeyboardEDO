@@ -6,8 +6,8 @@
 #include "kedo/Note.h"
 
 // What the keyboard plays, before it becomes MIDI. The Performer calls a
-// NoteSink; UmpOutput turns the calls into UMP, and the arpeggiator (later)
-// will sit between them as a NoteSink that calls another.
+// NoteSink; UmpOutput turns the calls into UMP, and the Arpeggiator sits
+// between them as a NoteSink that calls another.
 namespace kedo {
 
 // noteOn() gives the whole Note; later calls name it by Note::id.

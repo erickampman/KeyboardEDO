@@ -284,10 +284,32 @@ Still to check by hand: a real keyboard on X11 and Wayland, and a non-QWERTY
 layout's names; hover expression with a real mouse; on the Mac, Control
 (not Cmd) for hover.
 
-## 10. Arpeggiator (KeyboardEDO)
+## 10. Arpeggiator (KeyboardEDO): done 2026-10-15
 
-KeyEDO's `ArpeggiatorEngine` as a NoteSink between the Performer and the
-output: patterns, divisions, gate, octave span, velocity source, hold.
+decisions.md, "Arpeggiator". KeyEDO's `ArpeggiatorEngine` as `Arpeggiator`, a
+NoteSink between the Performer and the outputs: its six patterns (by pitch),
+ten divisions, gate, octave span, velocity source (and a fixed velocity),
+tempo and hold, KeyEDO's Hold and octave span as the author chose. Per
+layout, in KeyEDO's fields; an Arp toolbar button, an Arpeggiator panel
+section in both modes, and the synopsis's "Arp Up 1/16 120 bpm". It has no
+timer: the app runs it on a thread of its own, woken at its next event, so
+vsync doesn't jitter the steps.
+
+Tests (`ArpeggiatorTests`, with a hand-stepped clock): passing through when
+off; step and gate times at 120 bpm, triplets and whole notes; a 100% gate
+ending each note as the next starts; every pattern, carrying on after the
+chord's first note; KeyEDO's octave span, with and without the layout's
+octave notes; releasing, the last key silencing at once; Hold adding and
+clearing; the three velocity sources; a tempo change keeping phase, and a
+stall playing one step; on/off emptying it; per-note expression re-sent on
+each step and channel expression passing through; under a Performer, with
+latch. `DocumentTests`: KeyEDO's arp fields read, round-tripped and clamped.
+`ViewTests`: the synopsis. Checked with `--snapshot`: Z, C and B held
+arpeggiate C3 E3 G3 in the monitor; Play mode's panel; Hold keeping released
+notes cycling, drawn latched; at 31-EDO, two octaves give n93 then n124.
+
+Still to check by hand: hearing it (steadiness of the steps on a synth, on
+the Mac and Linux), and changing tempo and pattern while it plays.
 
 ## 11. Identity and discovery (uw-core, KeyboardEDO)
 

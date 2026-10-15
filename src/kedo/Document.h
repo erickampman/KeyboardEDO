@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "kedo/Arpeggiator.h"
 #include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 #include "kedo/Performer.h"
@@ -25,14 +26,15 @@ struct LayoutSetup {
     TileColor    tileColor = TileColor::Note;
     PlayConfig   play;
     OutputConfig output;          // group, channel, bend ranges, Per-Note Management
+    ArpConfig    arp;             // KeyEDO's arp* fields
     bool         locked = false;
 
     // KeyEDO's destination, read from and written to KeyEDO's own files
     // only: in a .kedo bundle the destination is the Document's.
     std::string destination;
 
-    // Fields this version doesn't use (KeyEDO's arpeggiator, hover
-    // expression), as JSON text by key, written back unchanged on save.
+    // Fields this version doesn't use (KeyEDO's hover expression and arp
+    // rate source), as JSON text by key, written back unchanged on save.
     std::map<std::string, std::string> extras;
 
     bool operator==(const LayoutSetup&) const = default;
