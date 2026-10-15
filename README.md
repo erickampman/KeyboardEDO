@@ -60,6 +60,13 @@ X11 with touch and Wayland:
 sudo apt install ninja-build pkg-config libasound2-dev libjack-jackd2-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libdecor-0-dev libudev-dev libdbus-1-dev libibus-1.0-dev
 ```
 
+Under GNOME on Wayland the window's title bar and borders come from libdecor's
+GTK plugin (`libdecor-0-plugin-1-gtk`). VS Code's and VSCodium's snaps leak
+their GTK environment into their terminals (`GDK_BACKEND=x11`, their own
+GSettings schemas), which leaves a window that can't be moved or resized, or
+aborts in GLib. The app restores the originals the snap saves as
+`NAME_VSCODE_SNAP_ORIG`, and unsets a `GDK_BACKEND` that excludes Wayland.
+
 To build only the core and its tests, configure with `-DKEDO_APP=OFF`; that
 needs none of these.
 

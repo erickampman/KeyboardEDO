@@ -235,6 +235,34 @@ int main(int argc, char** argv) {
         return 2;
     }
 
+#ifdef __linux__
+    // On Wayland the title bar and borders come from libdecor's GTK plugin (the only GTK
+    // here). VS Code's snaps leak their GTK environment into their terminals, saving each
+    // original as NAME_VSCODE_SNAP_ORIG: GDK_BACKEND=x11 stops the plugin, leaving a window
+    // that can't be moved or resized, and the snap's GSettings schemas abort GLib. Restore them.
+    {
+        const std::string suffix = "_VSCODE_SNAP_ORIG";
+        std::vector<std::pair<std::string, std::string>> originals;
+        for (char** e = environ; *e; ++e) {
+            const std::string entry = *e;
+            const auto eq = entry.find('=');
+            if (eq == std::string::npos || eq <= suffix.size() ||
+                entry.compare(eq - suffix.size(), suffix.size(), suffix) != 0) continue;
+            originals.emplace_back(entry.substr(0, eq - suffix.size()), entry.substr(eq + 1));
+        }
+        for (const auto& [name, value] : originals) {
+            if (value.empty()) unsetenv(name.c_str());
+            else setenv(name.c_str(), value.c_str(), 1);
+            unsetenv((name + suffix).c_str());
+        }
+        // XDG_DATA_HOME, with the snap's own schemas, has no saved original.
+        if (const char* data = std::getenv("XDG_DATA_HOME");
+            !originals.empty() && data && std::strstr(data, "/snap/"))
+            unsetenv("XDG_DATA_HOME");
+    }
+    if (const char* gdk = std::getenv("GDK_BACKEND"); gdk && !std::strstr(gdk, "wayland"))
+        unsetenv("GDK_BACKEND");
+#endif
     SDL_SetAppMetadata("KeyboardEDO", "0.1.0", "com.unlikelyware.keyboardedo");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
