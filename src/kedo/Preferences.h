@@ -11,6 +11,12 @@ struct Preferences {
     // Offer the published "KeyboardEDO" source. Off until turned on once.
     bool publish = false;
 
+    // The published source's UMP Product Instance ID: made once per
+    // installation (makeProductInstanceId) and kept, so hosts find this
+    // KeyboardEDO again whatever document is open (decisions.md, "Identity
+    // and discovery"). Empty until made.
+    std::string productInstanceId;
+
     // The window's panes: the settings panel (open at first, to find things)
     // and the MIDI monitor.
     bool panelOpen   = true;
@@ -26,6 +32,9 @@ struct Preferences {
 
     bool operator==(const Preferences&) const = default;
 };
+
+// A new Product Instance ID: 16 random hex digits.
+std::string makeProductInstanceId();
 
 // From and to a small JSON file. A missing or unreadable file gives the
 // defaults; unknown keys are ignored.

@@ -10,6 +10,13 @@ MidiTargets::MidiTargets(const OutputConfig& config)
 #if UW_HAVE_MIDI_OUTPUT
     midi_ = uw::PlatformMidiOutput::create("KeyboardEDO");
 #endif
+    // No SysEx manufacturer ID of our own: device identity zero but for the
+    // version (0.1.0 as 0, 1, 0, 0). Sends MIDI 2.0 only, as published.
+    identity_.name     = kPublishedName;
+    identity_.revision = {0, 1, 0, 0};
+    identity_.midi1    = false;
+    identity_.midi2    = true;
+    identity_.blocks   = {{"Keyboard", 0, 1, uw::ump::FunctionBlock::Direction::Output, true}};
 }
 
 MidiTargets::~MidiTargets() {
@@ -81,10 +88,28 @@ bool MidiTargets::setPublish(bool on) {
         return true;
     }
     // Always MIDI 2.0: CoreMIDI or the ALSA sequencer converts for MIDI 1.0
-    // receivers.
-    pubHandle_ = midi_->openVirtual(kPublishedName, uw::MidiProtocol::Midi2, kPublishedId);
-    if (publishing()) pub_.setup();
+    // receivers. A UMP endpoint where the platform has them for apps.
+    pubHandle_ = midi_->openEndpoint(identity_, uw::MidiProtocol::Midi2, kPublishedId);
+    if (publishing()) {
+        pub_.setup();
+        answered_ = midi_->inquiries(pubHandle_);
+    }
     return publishing();
+}
+
+void MidiTargets::setGroups(std::uint8_t first, std::uint8_t count) {
+    auto& block = identity_.blocks.front();
+    if (block.firstGroup == first && block.groupCount == count) return;
+    block.firstGroup = first;
+    block.groupCount = count;
+    if (!midi_ || !publishing()) return;
+    // A new endpoint, on CoreMIDI: nothing held carries over to it, and a
+    // receiver that reconnects needs the setup.
+    pub_.allNotesOff();
+    std::deque<std::string> discard;
+    flush(discard, 0);
+    midi_->setFunctionBlocks(pubHandle_, identity_.blocks);
+    pub_.setup();
 }
 
 void MidiTargets::setConfig(const OutputConfig& config) {
@@ -118,6 +143,10 @@ void MidiTargets::flush(std::deque<std::string>& monitor, std::size_t monitorLin
 }
 
 void MidiTargets::poll() {
+    if (midi_ && publishing() && midi_->inquiries(pubHandle_) != answered_) {
+        answered_ = midi_->inquiries(pubHandle_);
+        pub_.setup();
+    }
     if (!midi_ || midi_->changes() == listedAt_) return;
     destinations();   // refresh the list
     if (destinationOpen() && !midi_->sync(destHandle_)) {

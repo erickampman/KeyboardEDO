@@ -518,4 +518,19 @@ bool saveDocument(const std::string& pathText, const Document& document, std::st
     return true;
 }
 
+GroupSpan groupSpan(const Document& document, const LayoutSetup* showing) {
+    int lowest = 15, highest = 0;
+    auto use = [&](int group) {
+        lowest  = std::min(lowest, group);
+        highest = std::max(highest, group);
+    };
+    for (std::size_t i = 0; i < document.layouts.size(); ++i) {
+        const LayoutSetup& l = showing && int(i) == document.current ? *showing : document.layouts[i];
+        use(l.output.group);
+        if (l.layout.kind == LayoutKind::Custom)
+            for (const CustomKey& k : l.layout.customKeys) use(k.group.value_or(l.output.group));
+    }
+    return {std::uint8_t(lowest), std::uint8_t(highest - lowest + 1)};
+}
+
 } // namespace kedo

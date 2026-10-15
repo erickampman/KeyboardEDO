@@ -88,4 +88,15 @@ bool saveDocument(const std::string& path, const Document& document, std::string
 // True if `path` names a .kedo bundle (or would: it ends in .kedo).
 bool isBundlePath(const std::string& path);
 
+// The groups a document's notes go out on, 0-based, as one contiguous run
+// (a function block's: groups 1 and 5 make 1-5): each layout's group, and a
+// custom layout's keys' own (decisions.md, "Identity and discovery").
+// `showing`, if given, stands for document.layout(): the settings being
+// edited, not yet stored.
+struct GroupSpan {
+    std::uint8_t first = 0, count = 1;
+    bool operator==(const GroupSpan&) const = default;
+};
+GroupSpan groupSpan(const Document& document, const LayoutSetup* showing = nullptr);
+
 } // namespace kedo

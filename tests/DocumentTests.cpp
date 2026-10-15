@@ -168,9 +168,13 @@ void testPreferences() {
     std::remove(path.c_str());
     CHECK(!loadPreferences(path).publish);   // none yet: defaults
     CHECK(loadPreferences(path).panelOpen && !loadPreferences(path).monitorOpen);
-    CHECK(savePreferences(path, {.publish = true, .panelOpen = false, .monitorOpen = true}));
+    CHECK(loadPreferences(path).productInstanceId.empty());
+    const std::string id = makeProductInstanceId();
+    CHECK(id.size() == 16 && id != makeProductInstanceId());
+    CHECK(savePreferences(path, {.publish = true, .productInstanceId = id, .panelOpen = false, .monitorOpen = true}));
     const Preferences back = loadPreferences(path);
     CHECK(back.publish && !back.panelOpen && back.monitorOpen);
+    CHECK(back.productInstanceId == id);
     std::remove(path.c_str());
 }
 
@@ -365,7 +369,35 @@ void testImportsKeyEdo() {
 
 } // namespace
 
+// The function block's groups: every layout's, and custom keys' own.
+void testGroupSpan() {
+    Document d;
+    CHECK((groupSpan(d) == GroupSpan{0, 1}));
+    d.layouts[0].output.group = 4;
+    CHECK((groupSpan(d) == GroupSpan{4, 1}));
+    LayoutSetup second;
+    second.output.group = 1;
+    d.layouts.push_back(second);
+    CHECK((groupSpan(d) == GroupSpan{1, 4}));   // groups 2 and 5: 2-5
+    // A custom key on its own group; a key without one is its layout's.
+    LayoutSetup custom;
+    custom.output.group = 2;
+    custom.layout.kind = LayoutKind::Custom;
+    custom.layout.customKeys.resize(2);
+    custom.layout.customKeys[0].group = 9;
+    d.layouts.push_back(custom);
+    CHECK((groupSpan(d) == GroupSpan{1, 9}));
+    // Custom keys of a layout that isn't custom (kept from before) don't count.
+    d.layouts[2].layout.kind = LayoutKind::Piano;
+    CHECK((groupSpan(d) == GroupSpan{1, 4}));
+    // The settings being edited stand in for the showing layout.
+    LayoutSetup editing = d.layout();
+    editing.output.group = 0;
+    CHECK((groupSpan(d, &editing) == GroupSpan{0, 3}));   // groups 1, 2 and 3
+}
+
 int main() {
+    testGroupSpan();
     testOpensKeyEdo();
     testMidiFields();
     testRoundTrip();

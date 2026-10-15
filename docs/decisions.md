@@ -355,7 +355,9 @@ As KeyEDO's routing menu, through uw-core's `MidiOutput` (`src/app/MidiTargets.*
   held first; quitting sends note-offs and All Notes Off.
 - Known gap: the bend-range setup goes out when a target opens, so a
   receiver that connects to the published source later misses it (as with
-  KeyEDO). Milestone 11's stream messages are the place to fix it.
+  KeyEDO). Since milestone 11a a peer that sends UMP discovery to the
+  published endpoint gets it again; a plain receiver still doesn't, as
+  CoreMIDI says nothing when one connects ("Identity and discovery").
 - **On Linux** (2026-10-12, milestone 3b) it's uw-core's `AlsaSeqOutput`, on
   two UMP sequencer clients: "KeyboardEDO" (MIDI 1.0) and "KeyboardEDO MIDI
   2.0". The published source is the port "KeyboardEDO" on the MIDI 2.0
@@ -679,6 +681,59 @@ Settled with the author before the milestone:
   `MIDISourceCreateWithProtocol` to the endpoint's source; whether its
   unique ID can still be the fixed "KBED"; and using its destination for
   stream configuration.
+
+Done on the Mac 2026-10-15 (roadmap milestone 11a; uw-core `5cf9aad`):
+- **Publish is a UMP endpoint.** `MidiTargets` publishes through uw-core's
+  `MidiOutput::openEndpoint`: name "KeyboardEDO", the installation's
+  Product Instance ID (16 random hex digits, `productInstanceId` in the
+  preferences file, made on first launch; a `--snapshot` run makes its own
+  and saves none), MIDI 2.0 only, and the block "Keyboard" (output, UI hint
+  sender) over `groupSpan(document)`. No SysEx manufacturer ID of our own,
+  so device identity is zero but for the version (0, 1, 0, 0).
+- **The fixed unique ID stays.** The endpoint's source takes "KBED" as
+  `MIDISourceCreateWithProtocol`'s did, and keeps it when the endpoint is
+  remade. A MIDI 1.0 receiver of it still gets CoreMIDI's conversion.
+- **A block change remakes the endpoint.** On macOS 26.6 other apps never
+  see a change to an enabled `MIDIUMPMutableEndpoint`'s blocks:
+  `reconfigureWithFirstGroup`, renaming, and `registerFunctionBlocks`
+  between `setEnabled:NO` and `YES` all change only our own process's
+  copy, and other processes get "updated" notifications with the old
+  values. Stream messages sent on its source don't help either (CoreMIDI
+  takes them in only as the endpoint goes). Only a new endpoint shows the
+  new span, so `setFunctionBlocks` makes one, same name and unique ID;
+  apps connected to the old one connect again, as after a relaunch (a host
+  that remembers the unique ID). Rare, as the span is the whole document's:
+  only opening a document or changing a group moves it, and then held notes
+  are ended first and the setup sent again.
+- **CoreMIDI doesn't answer discovery for an app's endpoint**, and doesn't
+  itself discover it: a peer's Endpoint Discovery reaches our destination
+  callback and nothing goes back. So uw-core answers (`ump::answerDiscovery`:
+  endpoint info, device identity, name, Product Instance ID, a stream
+  configuration of MIDI 2.0 without timestamps, block info and name) on the
+  endpoint's source, which every receiver of it hears.
+- **Block numbers differ.** CoreMIDI's API numbers the registered block 1
+  (`functionBlockID`); in-band, UMP's first block is 0, and that's what the
+  answers use, so a raw-UMP peer and a CoreMIDI host each see it the way
+  they expect.
+- **The bend-range gap, half fixed.** Each answered discovery counts
+  (`MidiOutput::inquiries`), and `MidiTargets::poll` sends the setup again
+  when the count moves: a UMP-aware peer that asks gets it. A receiver that
+  only connects (REAPER, kedo-midi-listen) still misses it: CoreMIDI has no
+  notification of a connection to a source. 11b's Stream Configuration
+  doesn't change that; on Linux the sequencer announces subscriptions, so
+  there it can be fixed.
+- **A process started after the endpoint may not list it.** A fresh
+  process's `MIDIUMPEndpointManager` showed no endpoints at all (none of the
+  Network MIDI 2.0 session's either) within 3 seconds, while one already
+  running got "added" at once. To look at with a real host (Logic,
+  Umpire), and whether hosts take the remade endpoint well.
+- **Linux isn't done.** `AlsaSeqOutput` has no `openEndpoint` yet, so there
+  it's `openVirtual` as before and the identity goes nowhere. It needs the
+  Linux PC: `snd_seq_create_ump_endpoint` / `snd_seq_create_ump_block` on
+  the MIDI 2.0 client (port 0 is the endpoint's, so before any other port
+  there), answering discovery with the same `ump::answerDiscovery`, and
+  the setup resent on `SND_SEQ_EVENT_PORT_SUBSCRIBED` for the published
+  port.
 
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 

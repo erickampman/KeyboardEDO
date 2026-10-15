@@ -45,6 +45,14 @@ public:
     bool destinationOpen() const { return destHandle_ != uw::kInvalidMidiDestination; }
     uw::MidiProtocol destinationProtocol() const { return dest_.config().protocol; }
 
+    // The published source is a UMP endpoint (decisions.md, "Identity and
+    // discovery"): set its Product Instance ID before publishing, and its
+    // one function block's groups (0-based) whenever the document's change.
+    // A new span remakes the endpoint on CoreMIDI, so it's only applied when
+    // it differs.
+    void setProductInstanceId(const std::string& id) { identity_.productInstanceId = id; }
+    void setGroups(std::uint8_t first, std::uint8_t count);
+
     bool setPublish(bool on);
     bool publishing() const { return pubHandle_ != uw::kInvalidMidiDestination; }
 
@@ -58,7 +66,10 @@ public:
     // to `monitor` as text, tagged with where it went.
     void flush(std::deque<std::string>& monitor, std::size_t monitorLines);
 
-    // Hotplug: reopens the destination when it comes back. Call once a frame.
+    // Hotplug: reopens the destination when it comes back. And a peer that
+    // asks the published endpoint what it is (UMP discovery) has just
+    // started listening: it gets the bend-range setup again. Call once a
+    // frame.
     void poll();
 
 private:
@@ -89,6 +100,9 @@ private:
     std::string wanted_;   // the destination asked for: id or name
     uw::MidiDestinationHandle destHandle_ = uw::kInvalidMidiDestination;
     uw::MidiDestinationHandle pubHandle_ = uw::kInvalidMidiDestination;
+
+    uw::ump::EndpointInfo identity_;   // what the published endpoint declares
+    std::uint64_t answered_ = 0;       // its inquiries() when setup last went out
 
     std::vector<uw::MidiDestinationInfo> list_;
     std::uint64_t listedAt_ = ~std::uint64_t(0);

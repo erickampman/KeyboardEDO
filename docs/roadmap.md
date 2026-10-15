@@ -328,6 +328,20 @@ Likely more than a day, so in two parts:
 - 11b: Stream Configuration and timestamps, which would also let the
   arpeggiator's steps be scheduled ahead.
 
+11a done on the Mac 2026-10-15 (uw-core `5cf9aad`; decisions.md, "Identity
+and discovery"): the published source is a CoreMIDI UMP endpoint with the
+installation's Product Instance ID and a "Keyboard" block over the
+document's groups, keeping "KBED"; it answers discovery itself, and sends
+the bend-range setup again to a peer that asks. Checked with
+kedo-midi-listen, a MIDI 1.0 receiver and a discovery sent by hand. Still
+to do:
+- On the Linux PC: `AlsaSeqOutput::openEndpoint` and `setFunctionBlocks`
+  (ALSA's UMP endpoint and block), discovery answered, and the setup
+  resent when a receiver subscribes.
+- With real hosts (Logic, Umpire, StageHand): that they show the endpoint
+  and block, find it again by Product Instance ID, and take a block change
+  (on CoreMIDI, a remade endpoint).
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).

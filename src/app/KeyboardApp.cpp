@@ -60,9 +60,17 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
         SDL_free(folder);
         prefs_ = loadPreferences(prefsPath_);
     }
+    if (prefs_.productInstanceId.empty()) {
+        // Made once per installation (a check run's is its own, unsaved).
+        prefs_.productInstanceId = makeProductInstanceId();
+        if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
+    }
     rebuild(true);
     targets_.setConfig(settings_.output);
     targets_.setDestination(doc_.destination);
+    targets_.setProductInstanceId(prefs_.productInstanceId);
+    appliedSpan_ = groupSpan(doc_);
+    targets_.setGroups(appliedSpan_.first, appliedSpan_.count);
     targets_.setPublish(prefs_.publish || start.publish);
     arp_.setConfig(settings_.arp);
     updateTitle();
@@ -407,7 +415,10 @@ void KeyboardApp::frame() {
         dragging_ = false;
     }
     applySettings();
-    targets_.poll();
+    {
+        std::lock_guard lock(playLock_);
+        targets_.poll();
+    }
 
     // After a reset, Tiled's bottom row at the bottom: clampTo turns the
     // bottom of the layout into the lowest scroll that shows it, or centres
@@ -445,6 +456,14 @@ void KeyboardApp::applySettings() {
     if (!(settings_.output == applied_.output)) {
         releaseAll();
         targets_.setConfig(settings_.output);
+    }
+    // The published endpoint's function block spans the whole document's
+    // groups, so switching layouts leaves it be (decisions.md, "Identity and
+    // discovery"); opening a document or changing a group may move it.
+    if (const GroupSpan span = groupSpan(doc_, &settings_); !(span == appliedSpan_)) {
+        std::lock_guard lock(playLock_);
+        targets_.setGroups(span.first, span.count);
+        appliedSpan_ = span;
     }
     // The arpeggiator on or off: what's held is released the way it was
     // played (through it, or past it), then it starts empty.

@@ -135,6 +135,7 @@ private:
     LayoutSetup settings_;    // the layout showing, as the controls set it
     LayoutSetup applied_;     // what the keyboard and outputs were last set from
     std::string appliedDestination_;
+    GroupSpan appliedSpan_;   // the published function block's groups
     std::string path_;        // the document's .kedo bundle; empty until saved
     Preferences prefs_;       // app-level, remembered (publishing)
     std::string prefsPath_;   // in SDL's per-user preferences folder; empty if none
