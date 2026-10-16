@@ -29,8 +29,9 @@ struct KeyLook {
 KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor tileColor,
                 bool sounding, bool latched);
 
-// The background behind each keyboard: light for the diamonds, dark for the
-// piano and tiles, as KeyEDO.
+// The background behind each keyboard: slate blue for the diamonds (between
+// their black and white), a darker slate for the piano, dark grey for the
+// tiles.
 Rgb keyboardBackground(LayoutKind kind, const Tuning& tuning);
 
 // The nearest 12-EDO note's name and octave, e.g. "F#3": a custom key's

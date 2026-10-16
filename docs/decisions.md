@@ -753,6 +753,14 @@ expression over 150 points of drag; gliss holds the note across the diamond
 layout's gaps (KeyEDO on the Mac). Two pointers on two tiles that play the
 same step hold one note, which ends when the last lets go.
 
+### Background colours (2026-10-16)
+
+KeyEDO's backgrounds were dark grey behind the piano and near-white behind
+the diamonds; the first was dull and the second too bright. The diamonds now
+sit on a slate blue between their black and white keys, outlined in dark
+slate so the white keys keep an edge; the piano on a darker slate of the same
+hue. The tiles keep dark grey: their colours are enough.
+
 ## UI: SDL3 and Dear ImGui (decided 2026-10-09)
 
 The author chose SDL3 with Dear ImGui over DGL, NanoVG and ImGui (Umpire's

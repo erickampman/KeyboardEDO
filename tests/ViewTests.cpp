@@ -82,7 +82,9 @@ void testKeyLook() {
     c4.playable = true;
     CHECK(keyLook(c4, twelve, LayoutKind::Piano, TileColor::Off, false, false).title == "C4");
 
-    CHECK(keyboardBackground(LayoutKind::Piano, t).r > 0.5f);
+    // The diamonds' background sits between their black and white keys.
+    const Rgb diamonds = keyboardBackground(LayoutKind::Piano, t);
+    CHECK(diamonds.g > 0.3f && diamonds.g < 0.7f);
     CHECK(keyboardBackground(LayoutKind::Piano, twelve).r < 0.5f);
 }
 

@@ -96,7 +96,7 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
         // The diamond piano: black and white, the origin's note named with its
         // frequency (KeyEDO's EDOKeyView).
         look.fill = black ? grey(0.0f) : grey(1.0f);
-        look.outline = grey(0.55f);
+        look.outline = {0.10f, 0.13f, 0.16f};   // dark slate: an edge on the background
         look.ink = black ? grey(1.0f) : grey(0.0f);
         if (mod(key.step, tuning.edo) == 0) {
             look.title = noteName(label, false);
@@ -118,7 +118,9 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
 }
 
 Rgb keyboardBackground(LayoutKind kind, const Tuning& tuning) {
-    if (kind == LayoutKind::Piano && tuning.edo != 12) return grey(0.95f);
+    if (kind == LayoutKind::Piano)
+        return tuning.edo != 12 ? Rgb{0.40f, 0.49f, 0.55f}    // the diamonds: slate blue, both shades show
+                                : Rgb{0.17f, 0.22f, 0.27f};   // the piano: dark slate blue
     return grey(0.11f);
 }
 
