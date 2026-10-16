@@ -870,16 +870,16 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
         float titleSize = 13 * zoom, detailSize = 10 * zoom;
         if (k.shape == KeyShape::Diamond) {
             const ImVec2 top{c.x, c.y - hh}, right{c.x + hw, c.y}, bottom{c.x, c.y + hh}, left{c.x - hw, c.y};
-            list->AddQuadFilled(top, right, bottom, left, color(look.fill));
-            list->AddQuad(top, right, bottom, left, color(look.outline), 1.0f);
+            list->AddQuadFilled(top, right, bottom, left, color(look.fill, look.opacity));
+            list->AddQuad(top, right, bottom, left, color(look.outline, look.opacity), 1.0f);
             if (editingKeys() && selected_.count(k.row))   // the editor's selection
                 list->AddQuad(top, right, bottom, left, IM_COL32(40, 150, 255, 255), 3.0f);
             titleY = c.y - (look.detail.empty() ? titleSize / 2 : titleSize * 0.8f);
         } else {
             const ImVec2 a{c.x - hw, c.y - hh}, b{c.x + hw, c.y + hh};
             const float round = 3 * zoom;
-            list->AddRectFilled(a, b, color(look.fill), round, ImDrawFlags_RoundCornersBottom);
-            list->AddRect(a, b, color(look.outline), round, ImDrawFlags_RoundCornersBottom, 1.0f);
+            list->AddRectFilled(a, b, color(look.fill, look.opacity), round, ImDrawFlags_RoundCornersBottom);
+            list->AddRect(a, b, color(look.outline, look.opacity), round, ImDrawFlags_RoundCornersBottom, 1.0f);
             titleSize = 10 * zoom;
             titleY = b.y - titleSize - 6 * zoom;
         }
@@ -887,7 +887,7 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
         if (titleSize < 6) continue;   // too small to read
         if (!look.title.empty()) {
             const ImVec2 size = font->CalcTextSizeA(titleSize, FLT_MAX, 0, look.title.c_str());
-            list->AddText(font, titleSize, {c.x - size.x / 2, titleY}, color(look.ink), look.title.c_str());
+            list->AddText(font, titleSize, {c.x - size.x / 2, titleY}, color(look.ink, look.opacity), look.title.c_str());
         }
         if (!look.detail.empty()) {
             const ImVec2 size = font->CalcTextSizeA(detailSize, FLT_MAX, 0, look.detail.c_str());
@@ -895,7 +895,7 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
                                       ? Rgb{0.0f, 0.48f, 1.0f}   // KeyEDO's blue frequency
                                       : look.ink;
             list->AddText(font, detailSize, {c.x - size.x / 2, titleY + titleSize + 1},
-                          color(detailInk), look.detail.c_str());
+                          color(detailInk, look.opacity), look.detail.c_str());
         }
         // Its computer key, small, near the bottom corner (piano: above the
         // C's name).

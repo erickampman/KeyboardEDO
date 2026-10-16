@@ -13,6 +13,8 @@ Rgb grey(float v) { return {v, v, v}; }
 // Pressed is KeyEDO's pink; latched is orange, so the two can be told apart.
 const Rgb kPressed{1.0f, 0.42f, 0.62f};
 const Rgb kLatched{1.0f, 0.68f, 0.28f};
+// How opaque a key with no note is.
+const float kNoNote = 0.45f;
 
 int mod(int a, int b) { return ((a % b) + b) % b; }
 
@@ -73,7 +75,7 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
             look.fill = {((*key.color >> 16) & 0xFF) / 255.0f, ((*key.color >> 8) & 0xFF) / 255.0f,
                          (*key.color & 0xFF) / 255.0f};
         else look.fill = black ? grey(0.0f) : grey(1.0f);
-        if (!key.playable) look.fill = grey(0.28f);
+        if (!key.playable) look.fill = grey(0.28f), look.opacity = kNoNote;
         look.outline = grey(0.30f);
         const float light = 0.30f * look.fill.r + 0.59f * look.fill.g + 0.11f * look.fill.b;
         look.ink = light > 0.5f ? grey(0.12f) : grey(0.95f);
@@ -82,7 +84,7 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
     } else if (kind == LayoutKind::Tiled) {
         // Colour by note or octave; name, octave and scale degree (1-based) on
         // every tile, the name greyer the further it is from 12-EDO.
-        if (!key.playable) look.fill = grey(0.28f);
+        if (!key.playable) look.fill = grey(0.28f), look.opacity = kNoNote;
         else if (tileColor == TileColor::Note) look.fill = hsb(label.pitchClass / 12.0, 0.42, 0.92);
         else if (tileColor == TileColor::Octave) look.fill = octaveColor(key.step, tuning.edo);
         else look.fill = grey(0.88f);
@@ -118,10 +120,13 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
 }
 
 Rgb keyboardBackground(LayoutKind kind, const Tuning& tuning) {
-    if (kind == LayoutKind::Piano)
-        return tuning.edo != 12 ? Rgb{0.40f, 0.49f, 0.55f}    // the diamonds: slate blue, both shades show
-                                : Rgb{0.17f, 0.22f, 0.27f};   // the piano: dark slate blue
-    return grey(0.11f);
+    const Rgb slate{0.40f, 0.49f, 0.55f};   // between black and white keys, so both show
+    switch (kind) {
+    case LayoutKind::Piano: return tuning.edo != 12 ? slate : Rgb{0.17f, 0.22f, 0.27f};
+    case LayoutKind::Tiled: return slate;
+    case LayoutKind::Custom: return {0.11f, 0.14f, 0.18f};   // darker still, black keys show
+    }
+    return slate;
 }
 
 } // namespace kedo

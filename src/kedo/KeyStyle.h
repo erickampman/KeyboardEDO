@@ -22,6 +22,7 @@ struct KeyLook {
     Rgb ink;              // label colour
     std::string title;    // e.g. "C2", "A", "F#3"; empty for none
     std::string detail;   // smaller, under the title: frequency or scale degree
+    float opacity = 1;    // under 1 for keys with no note, so the background shows through
 };
 
 // The look of `key` from `kind`'s layout (Piano covers both the piano and the
@@ -29,9 +30,9 @@ struct KeyLook {
 KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor tileColor,
                 bool sounding, bool latched);
 
-// The background behind each keyboard: slate blue for the diamonds (between
-// their black and white), a darker slate for the piano, dark grey for the
-// tiles.
+// The background behind each keyboard: slate blue for the diamonds and the
+// tiles (between black and white keys), a darker slate for the piano, darker
+// still for Custom.
 Rgb keyboardBackground(LayoutKind kind, const Tuning& tuning);
 
 // The nearest 12-EDO note's name and octave, e.g. "F#3": a custom key's

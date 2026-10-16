@@ -64,9 +64,11 @@ void testKeyLook() {
     look = keyLook(k, t, LayoutKind::Tiled, TileColor::Note, false, false);
     CHECK(look.title == "A#2");
     CHECK(look.detail == "2");
-    k.playable = false;
+    CHECK(look.opacity == 1);
+    k.playable = false;   // no note: no label, and see-through
     look = keyLook(k, t, LayoutKind::Tiled, TileColor::Note, false, false);
     CHECK(look.title.empty());
+    CHECK(look.opacity < 1);
 
     // Pressed and latched differ from the key's own colour and from each other.
     k.playable = true;
