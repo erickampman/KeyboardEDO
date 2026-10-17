@@ -352,6 +352,17 @@ toolbar button shows and hides it. Check each layout with `--snapshot`:
 the canvas keeps working at the narrower width (hit-testing, Gliss drags
 stopping at the bar's edge).
 
+Done on the Mac 2026-10-17 (decisions.md, "Performance bar", for what was
+settled while building it): `kedo::PerformanceControls` (ControlsTests)
+keeps the controls' places and sends what moves; knob assignments are
+saved in `document.json`. Checked with `--snapshot`: the bar, the
+assignment popup, the bar hidden, the bend fader springing back to centre,
+and a Gliss drag stopping at the keyboard's left edge, on the piano. Still
+to do:
+- Try it by hand with a real synth (IFSynth or PlainOldSynth: Timbre and
+  Pressure), and with two fingers on a touchscreen (bend and keys at once).
+- On the Linux PC: build, and check the bar under Wayland and X11.
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).

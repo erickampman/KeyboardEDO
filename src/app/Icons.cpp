@@ -97,6 +97,14 @@ void draw(ImDrawList* d, Icon icon, ImVec2 o, float s, ImU32 c, float w) {
             d->AddCircle(p(knob, y), 2.6f * u, c, 16, w);
         }
         break;
+    case Icon::Performance:
+        // A fader on the left, its handle low, and a knob on the right.
+        d->AddLine(p(7, 3), p(7, 21), c, w);
+        d->AddRectFilled(p(4, 13), p(10, 17), ImGui::GetColorU32(ImGuiCol_WindowBg), 1 * u);
+        d->AddRect(p(4, 13), p(10, 17), c, 1 * u, 0, w);
+        d->AddCircle(p(16.5f, 12), 4.5f * u, c, 20, w);
+        d->AddLine(p(16.5f, 12), p(16.5f + 3.2f * std::cos(-2.3f), 12 + 3.2f * std::sin(-2.3f)), c, w);
+        break;
     }
 }
 

@@ -50,7 +50,8 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
       path_(start.path),
       targets_(settings_.output),
       arp_(targets_.sink(), [] { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }),
-      performer_(arp_) {
+      performer_(arp_),
+      controls_(targets_.sink()) {
     if (start.ownPreferences) {
         // A check run (--snapshot): defaults, read from and saved to nowhere,
         // so it neither depends on nor changes the preferences of the
@@ -73,6 +74,7 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& star
     targets_.setGroups(appliedSpan_.first, appliedSpan_.count);
     targets_.setPublish(prefs_.publish || start.publish);
     arp_.setConfig(settings_.arp);
+    controls_.setKnobs(doc_.knobs);
     updateTitle();
     arpThread_ = std::thread([this] { arpLoop(); });
 }
@@ -236,6 +238,15 @@ std::string KeyboardApp::computerKeyLabel(int code) const {
 
 // --- Input ------------------------------------------------------------------------
 
+Point KeyboardApp::dragPoint(Point screen) const {
+    if (settings_.play.drag == DragBehavior::Gliss) {
+        const Rect& s = viewport_.screen;
+        screen.x = std::clamp(screen.x, s.x, std::max(s.x, s.right() - 1));
+        screen.y = std::clamp(screen.y, s.y, std::max(s.y, s.bottom() - 1));
+    }
+    return viewport_.toLayout(screen);
+}
+
 // Takes the play lock, and wakes the arpeggiator's thread after, as what
 // happened may have given it notes.
 #define KEDO_PLAYING                                                        \
@@ -272,7 +283,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         }
         if (dragging_) editDrag({e.motion.x, e.motion.y});
         else if (mouseDown_ && e.motion.which != SDL_TOUCH_MOUSEID)
-            performer_.pointerMove(0, viewport_.toLayout({e.motion.x, e.motion.y}));
+            performer_.pointerMove(0, dragPoint({e.motion.x, e.motion.y}));
         break;
     case SDL_EVENT_MOUSE_BUTTON_UP:
         if (dragging_ && e.button.button == SDL_BUTTON_LEFT) dragging_ = false;
@@ -300,7 +311,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         if (it == pointers_.end()) break;
         int w = 0, h = 0;
         SDL_GetWindowSize(window_, &w, &h);
-        performer_.pointerMove(it->second, viewport_.toLayout({e.tfinger.x * w, e.tfinger.y * h}));
+        performer_.pointerMove(it->second, dragPoint({e.tfinger.x * w, e.tfinger.y * h}));
         break;
     }
     case SDL_EVENT_FINGER_UP:
@@ -397,12 +408,15 @@ void KeyboardApp::frame() {
     int w = 0, h = 0;
     SDL_GetWindowSize(window_, &w, &h);
 
-    // The toolbar across the top, the settings panel down the right, the
-    // monitor under the keyboard; the keyboard gets what's left.
+    // The toolbar across the top, the performance bar down the left, the
+    // settings panel down the right, the monitor under the keyboard; the
+    // keyboard gets what's left.
     drawToolbar();
+    const float barWidth = prefs_.barOpen ? drawBar() : 0.0f;
     const float panelWidth = prefs_.panelOpen ? drawPanel() : 0.0f;
-    const float monitorHeight = prefs_.monitorOpen ? drawMonitor(float(w) - panelWidth) : 0.0f;
-    viewport_.screen = {0, barHeight_, std::max(0.0, double(w) - panelWidth),
+    const float monitorHeight =
+        prefs_.monitorOpen ? drawMonitor(barWidth, std::max(0.0f, float(w) - barWidth - panelWidth)) : 0.0f;
+    viewport_.screen = {barWidth, barHeight_, std::max(0.0, double(w) - barWidth - panelWidth),
                         std::max(0.0, double(h) - barHeight_ - monitorHeight)};
 
     takeDialogResults();
@@ -471,6 +485,7 @@ void KeyboardApp::applySettings() {
         if (settings_.arp.enabled != applied_.arp.enabled) releaseAll();
         arp_.setConfig(settings_.arp);
     }
+    if (!(doc_.knobs == controls_.knobs())) controls_.setKnobs(doc_.knobs);
     const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
     if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
         performer_.setConfig(playConfig());
@@ -914,6 +929,11 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     list->PopClipRect();
 }
 
+void KeyboardApp::setBarOpen(bool open) {
+    prefs_.barOpen = open;
+    if (!prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
+}
+
 void KeyboardApp::setPanes(bool panel, bool monitor) {
     if (panel == prefs_.panelOpen && monitor == prefs_.monitorOpen) return;
     prefs_.panelOpen = panel;
@@ -936,6 +956,12 @@ void KeyboardApp::drawToolbar() {
     const float gap = ImGui::GetStyle().ItemSpacing.x;
 
     const float rowY = ImGui::GetCursorPosY();
+    // The performance bar's button on the left, over it, as Settings' is on
+    // the right.
+    if (iconButton("performance", Icon::Performance, icon, "Performance bar: bend, mod wheel, knobs, arpeggiator",
+                   prefs_.barOpen))
+        setBarOpen(!prefs_.barOpen);
+    ImGui::SameLine();
     if (iconButton("open", Icon::Open, icon, "Open... (Cmd/Ctrl-O)")) showDialog(Dialog::Open);
     ImGui::SameLine();
     if (iconButton("save", Icon::Save, icon, "Save (Cmd/Ctrl-S; Shift for Save As)")) {
@@ -992,7 +1018,7 @@ void KeyboardApp::drawToolbar() {
         performer_.setLatchMode(!performer_.latchMode());
     ImGui::SameLine();
     if (iconButton("arp", Icon::Arpeggiator, icon,
-                   settings_.arp.enabled ? "Arpeggiator: on. Its settings are in the panel"
+                   settings_.arp.enabled ? "Arpeggiator: on. Its settings are in the performance bar"
                                          : "Arpeggiator: step through the notes held",
                    settings_.arp.enabled))
         settings_.arp.enabled = !settings_.arp.enabled;
@@ -1559,33 +1585,6 @@ float KeyboardApp::drawPanel() {
         if (p.strikeVelocity) ImGui::SliderInt("Minimum", &p.strikeVelocityMin, 1, 126);
     }
 
-    // In Play mode too: pattern, division and tempo are changed while
-    // playing (decisions.md, "Arpeggiator").
-    if (ImGui::CollapsingHeader("Arpeggiator", ImGuiTreeNodeFlags_DefaultOpen)) {
-        static const char* const kPatterns[] = {"Up", "Down", "Up-Down", "Down-Up", "As Played", "Random"};
-        static const char* const kDivisions[] = {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32",
-                                                 "1/2T", "1/4T", "1/8T", "1/16T"};
-        static const char* const kVelocities[] = {"As played", "Fixed", "Random"};
-        ArpConfig& a = settings_.arp;
-        ImGui::Checkbox("On##arp", &a.enabled);
-        ImGui::SetItemTooltip("Step through the notes held, one at a time (also the toolbar button)");
-        enumCombo("Pattern", a.pattern, kPatterns, ImGui::CalcItemWidth());
-        enumCombo("Division", a.division, kDivisions, ImGui::CalcItemWidth());
-        ImGui::SetItemTooltip("A step's length; T: triplets");
-        float bpm = float(a.bpm);
-        if (ImGui::DragFloat("Tempo", &bpm, 0.5f, 1, 999, "%.1f bpm", ImGuiSliderFlags_AlwaysClamp)) a.bpm = bpm;
-        int gate = int(std::lround(a.gate * 100));
-        if (ImGui::SliderInt("Gate", &gate, 1, 100, "%d%%")) a.gate = gate / 100.0;
-        ImGui::SetItemTooltip("How much of its step each note sounds");
-        ImGui::SliderInt("Octaves", &a.octaves, 1, 4);
-        ImGui::SetItemTooltip("The pattern, then again an octave higher for each octave more");
-        enumCombo("Velocity##arp", a.velocity, kVelocities, ImGui::CalcItemWidth());
-        if (a.velocity == ArpVelocity::Fixed) ImGui::SliderInt("Fixed velocity", &a.fixedVelocity, 1, 127);
-        ImGui::Checkbox("Hold", &a.hold);
-        ImGui::SetItemTooltip("Released notes keep playing, and new ones add to them.\n"
-                              "All Notes Off or Escape clears them; so does turning Hold off");
-    }
-
     if (prefs_.editing && ImGui::CollapsingHeader("MIDI", ImGuiTreeNodeFlags_DefaultOpen)) {
         int group = o.group + 1, channel = o.channel + 1;
         if (ImGui::InputInt("Group", &group)) o.group = std::uint8_t(std::clamp(group, 1, 16) - 1);
@@ -1625,10 +1624,238 @@ float KeyboardApp::drawPanel() {
     return width;
 }
 
-// The MIDI monitor, under the keyboard. Returns its height.
-float KeyboardApp::drawMonitor(float width) {
+// --- The performance bar ----------------------------------------------------------------
+
+namespace {
+
+// How far a drag moves a fader or knob from end to end, in points.
+constexpr float kKnobTravel = 160;
+
+// A vertical fader, `size` across and high, from `lo` (bottom) to `hi`. A
+// drag moves it by as much as the pointer moves, wherever it's grabbed, so a
+// click doesn't make it jump. `spring`: back to `rest` when let go (a bend
+// wheel). `rest` is marked on the track. Returns true when it changed.
+bool fader(const char* id, float& value, float lo, float hi, float rest, ImVec2 size, bool spring) {
+    const float before = value;
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton(id, size);
+    const float handle = size.x * 0.55f;
+    if (ImGui::IsItemActive())
+        value = std::clamp(value - ImGui::GetIO().MouseDelta.y / (size.y - handle) * (hi - lo), lo, hi);
+    else if (spring)
+        value = rest;
+
+    ImDrawList* d = ImGui::GetWindowDrawList();
+    const float cx = at.x + size.x / 2;
+    const float travel = size.y - handle;
+    auto yFor = [&](float v) { return at.y + handle / 2 + (1 - (v - lo) / (hi - lo)) * travel; };
+    d->AddRectFilled(at, {at.x + size.x, at.y + size.y}, ImGui::GetColorU32(ImGuiCol_FrameBg), size.x * 0.2f);
+    d->AddLine({cx, at.y + handle / 2}, {cx, at.y + size.y - handle / 2}, ImGui::GetColorU32(ImGuiCol_Border), 3);
+    d->AddLine({at.x + 3, yFor(rest)}, {at.x + size.x - 3, yFor(rest)}, ImGui::GetColorU32(ImGuiCol_TextDisabled), 1);
+    const float y = yFor(value);
+    const ImU32 fill = ImGui::GetColorU32(ImGui::IsItemActive()    ? ImGuiCol_SliderGrabActive
+                                          : ImGui::IsItemHovered() ? ImGuiCol_ButtonHovered
+                                                                   : ImGuiCol_SliderGrab);
+    d->AddRectFilled({at.x + 2, y - handle / 2}, {at.x + size.x - 2, y + handle / 2}, fill, 3);
+    d->AddLine({at.x + 5, y}, {at.x + size.x - 5, y}, ImGui::GetColorU32(ImGuiCol_Text), 1.5f);
+    return value != before;
+}
+
+// A knob, `diameter` across, 0..1: dragging up turns it up, wherever the
+// pointer goes; a double click sets it to `start`. Returns true when it
+// changed.
+bool knob(const char* id, float& value, float start, float diameter) {
+    const float before = value;
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    ImGui::InvisibleButton(id, {diameter, diameter});
+    if (ImGui::IsItemActive()) value = std::clamp(value - ImGui::GetIO().MouseDelta.y / kKnobTravel, 0.0f, 1.0f);
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) value = start;
+
+    // A 270-degree sweep, from bottom left round to bottom right.
+    constexpr float kFrom = 0.75f * 3.14159265f, kSweep = 1.5f * 3.14159265f;
+    ImDrawList* d = ImGui::GetWindowDrawList();
+    const ImVec2 c{at.x + diameter / 2, at.y + diameter / 2};
+    const float r = diameter / 2 - 3;
+    d->PathArcTo(c, r, kFrom, kFrom + kSweep, 32);
+    d->PathStroke(ImGui::GetColorU32(ImGuiCol_FrameBg), ImDrawFlags_None, 4.0f);
+    if (value > 0) {
+        d->PathArcTo(c, r, kFrom, kFrom + kSweep * value, 32);
+        d->PathStroke(ImGui::GetColorU32(ImGuiCol_SliderGrabActive), ImDrawFlags_None, 4.0f);
+    }
+    const ImU32 face = ImGui::GetColorU32(ImGui::IsItemActive()    ? ImGuiCol_FrameBgActive
+                                          : ImGui::IsItemHovered() ? ImGuiCol_FrameBgHovered
+                                                                   : ImGuiCol_FrameBg);
+    d->AddCircleFilled(c, r - 5, face, 32);
+    const float angle = kFrom + kSweep * value;
+    d->AddLine({c.x + (r - 14) * std::cos(angle) * 0.3f, c.y + (r - 14) * std::sin(angle) * 0.3f},
+               {c.x + (r - 6) * std::cos(angle), c.y + (r - 6) * std::sin(angle)}, ImGui::GetColorU32(ImGuiCol_Text),
+               2.5f);
+    return value != before;
+}
+
+// Text centred in the next `width` points of the line.
+void centredText(const char* text, float width, bool disabled = false) {
+    const float x = ImGui::GetCursorPosX();
+    ImGui::SetCursorPosX(x + std::max(0.0f, (width - ImGui::CalcTextSize(text).x) / 2));
+    if (disabled) ImGui::TextDisabled("%s", text);
+    else ImGui::TextUnformatted(text);
+}
+
+} // namespace
+
+// The performance bar down the left (decisions.md, "Performance bar"): the
+// bend fader and mod wheel, four knobs in two columns, and the arpeggiator.
+// The same in every layout and in both modes; knobs are assigned in Edit
+// mode. Returns its width.
+float KeyboardApp::drawBar() {
     const ImGuiViewport* vp = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos({vp->Pos.x, vp->Pos.y + vp->Size.y - kMonitorHeight});
+    const float em = ImGui::GetFontSize();
+    const float width = 15 * em;
+    ImGui::SetNextWindowPos({vp->Pos.x, vp->Pos.y + barHeight_});
+    ImGui::SetNextWindowSize({width, vp->Size.y - barHeight_});
+    bool open = true;
+    ImGui::Begin("Performance", &open,
+                 ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse |
+                     ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    if (!open) setBarOpen(false);
+    const float inner = ImGui::GetContentRegionAvail().x;
+    const float gap = ImGui::GetStyle().ItemSpacing.x;
+    const float column = (inner - gap) / 2;
+
+    // Bend and mod wheel side by side, each centred in its half.
+    const ImVec2 faderSize{2.6f * em, 10 * em};
+    const float faderIndent = (column - faderSize.x) / 2;
+    const float top = ImGui::GetCursorPosY();
+    ImGui::SetCursorPosX(ImGui::GetCursorPosX() + faderIndent);
+    float bend = float(controls_.bend());
+    if (fader("##bend", bend, -1, 1, 0, faderSize, true)) controls_.setBend(bend);
+    ImGui::SetItemTooltip("Pitch bend, over the bend range (%g semitones); springs back", settings_.output.bendRange);
+    ImGui::SameLine(0, 0);
+    ImGui::SetCursorPos({ImGui::GetStyle().WindowPadding.x + column + gap + faderIndent, top});
+    float wheel = float(controls_.wheel());
+    if (fader("##wheel", wheel, 0, 1, 0, faderSize, false)) controls_.setWheel(wheel);
+    ImGui::SetItemTooltip("Mod wheel (CC 1): %d", int(std::lround(wheel * 127)));
+    centredText("Bend", column);
+    ImGui::SameLine(ImGui::GetStyle().WindowPadding.x + column + gap);
+    centredText("Mod", column);
+
+    // The knobs, two by two: a click on a name assigns it, in Edit mode.
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    const float diameter = std::min(column, 4.2f * em);
+    for (int row = 0; row < kKnobCount / 2; ++row) {
+        const float rowTop = ImGui::GetCursorPosY();
+        for (int col = 0; col < 2; ++col) {
+            const int i = row * 2 + col;
+            const KnobAssignment& k = controls_.knobs()[i];
+            const float x = ImGui::GetStyle().WindowPadding.x + col * (column + gap);
+            ImGui::PushID(i);
+            ImGui::SetCursorPos({x + (column - diameter) / 2, rowTop});
+            float value = float(controls_.knob(i));
+            if (knob("##knob", value, float(knobStart(k)), diameter)) controls_.setKnob(i, value);
+            // A right-click assigns it, in either mode: it can't happen by
+            // accident while playing.
+            if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) ImGui::OpenPopup("assign");
+            const std::string what = k.pressure ? "channel pressure" : "CC " + std::to_string(k.controller);
+            ImGui::SetItemTooltip("%s: %s, %d\nDrag up or down; double-click: back to %d\n"
+                                  "Right-click: choose what it sends",
+                                  knobName(k).c_str(), what.c_str(), int(std::lround(value * 127)),
+                                  int(std::lround(knobStart(k) * 127)));
+            const std::string name = knobName(k);
+            const float nameY = rowTop + diameter + ImGui::GetStyle().ItemSpacing.y;
+            ImGui::SetCursorPos({x, nameY});
+            if (prefs_.editing) {
+                // The name is a button that opens the assignment.
+                ImGui::PushStyleColor(ImGuiCol_Button, 0);
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, {0, 0});
+                if (ImGui::Button(name.c_str(), {column, 0})) ImGui::OpenPopup("assign");
+                ImGui::PopStyleVar();
+                ImGui::PopStyleColor();
+                ImGui::SetItemTooltip("Click to choose what this knob sends");
+            } else {
+                centredText(name.c_str(), column);
+            }
+            drawKnobAssignment(i);
+            ImGui::SetCursorPos({x, nameY + ImGui::GetTextLineHeightWithSpacing()});
+            centredText(std::to_string(int(std::lround(value * 127))).c_str(), column, true);
+            ImGui::PopID();
+        }
+        // Under both columns.
+        ImGui::SetCursorPos({ImGui::GetStyle().WindowPadding.x,
+                             rowTop + diameter + 2 * ImGui::GetTextLineHeightWithSpacing() +
+                                 2 * ImGui::GetStyle().ItemSpacing.y});
+        ImGui::Dummy({0, 0});
+    }
+
+    ImGui::Spacing();
+    drawArpeggiator();
+    ImGui::End();
+    return width;
+}
+
+// What knob `index` sends: a CC or channel pressure, and its label. Saved
+// with the document. Opened by a right-click on the knob, or in Edit mode a
+// click on its name.
+void KeyboardApp::drawKnobAssignment(int index) {
+    if (!ImGui::BeginPopup("assign")) return;
+    const float em = ImGui::GetFontSize();
+    KnobAssignment& k = doc_.knobs[index];
+    ImGui::PushItemWidth(12 * em);
+    static const char* const kKinds[] = {"Controller (CC)", "Channel pressure"};
+    int kind = k.pressure ? 1 : 0;
+    if (ImGui::Combo("Sends", &kind, kKinds, 2)) k.pressure = kind == 1;
+    if (!k.pressure && ImGui::InputInt("CC", &k.controller)) k.controller = std::clamp(k.controller, 0, 127);
+    char label[64];
+    std::snprintf(label, sizeof label, "%s", k.label.c_str());
+    if (ImGui::InputTextWithHint("Label", knobName({.pressure = k.pressure, .controller = k.controller}).c_str(), label,
+                                 sizeof label))
+        k.label = label;
+    ImGui::PopItemWidth();
+    if (ImGui::Button("Default")) k = defaultKnobs()[index];
+    ImGui::SetItemTooltip("Back to %s", knobName(defaultKnobs()[index]).c_str());
+    ImGui::EndPopup();
+}
+
+// The arpeggiator's settings, in Play mode too: pattern, division and tempo
+// are changed while playing (decisions.md, "Arpeggiator").
+void KeyboardApp::drawArpeggiator() {
+    static const char* const kPatterns[] = {"Up", "Down", "Up-Down", "Down-Up", "As Played", "Random"};
+    static const char* const kDivisions[] = {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32",
+                                             "1/2T", "1/4T", "1/8T", "1/16T"};
+    static const char* const kVelocities[] = {"As played", "Fixed", "Random"};
+    if (!ImGui::CollapsingHeader("Arpeggiator", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    const float em = ImGui::GetFontSize();
+    ImGui::PushItemWidth(-5.5f * em);   // room for the labels
+    ArpConfig& a = settings_.arp;
+    ImGui::Checkbox("On##arp", &a.enabled);
+    ImGui::SetItemTooltip("Step through the notes held, one at a time (also the toolbar button)");
+    ImGui::SameLine();
+    ImGui::Checkbox("Hold", &a.hold);
+    ImGui::SetItemTooltip("Released notes keep playing, and new ones add to them.\n"
+                          "All Notes Off or Escape clears them; so does turning Hold off");
+    enumCombo("Pattern", a.pattern, kPatterns, ImGui::CalcItemWidth());
+    enumCombo("Division", a.division, kDivisions, ImGui::CalcItemWidth());
+    ImGui::SetItemTooltip("A step's length; T: triplets");
+    float bpm = float(a.bpm);
+    if (ImGui::DragFloat("Tempo", &bpm, 0.5f, 1, 999, "%.1f bpm", ImGuiSliderFlags_AlwaysClamp)) a.bpm = bpm;
+    int gate = int(std::lround(a.gate * 100));
+    if (ImGui::SliderInt("Gate", &gate, 1, 100, "%d%%")) a.gate = gate / 100.0;
+    ImGui::SetItemTooltip("How much of its step each note sounds");
+    ImGui::SliderInt("Octaves", &a.octaves, 1, 4);
+    ImGui::SetItemTooltip("The pattern, then again an octave higher for each octave more");
+    enumCombo("Velocity##arp", a.velocity, kVelocities, ImGui::CalcItemWidth());
+    if (a.velocity == ArpVelocity::Fixed) {
+        ImGui::SliderInt("Fixed##velocity", &a.fixedVelocity, 1, 127);
+        ImGui::SetItemTooltip("The velocity every step plays at");
+    }
+    ImGui::PopItemWidth();
+}
+
+// The MIDI monitor, under the keyboard, from `x`. Returns its height.
+float KeyboardApp::drawMonitor(float x, float width) {
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos({vp->Pos.x + x, vp->Pos.y + vp->Size.y - kMonitorHeight});
     ImGui::SetNextWindowSize({width, kMonitorHeight});
     bool open = true;
     ImGui::Begin("MIDI Monitor", &open,

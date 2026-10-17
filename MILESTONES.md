@@ -37,10 +37,10 @@
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 
 ## M6: Performance bar
-- [ ] Left-docked bar with a show/hide toolbar button; the canvas takes the rest
-- [ ] Pitch-bend fader (spring return) and mod wheel (CC 1)
-- [ ] Four assignable knobs (CC 74, pressure, CC 71, CC 7), saved per document
-- [ ] Arpeggiator controls moved from Settings into the bar
+- [x] Left-docked bar with a show/hide toolbar button; the canvas takes the rest
+- [x] Pitch-bend fader (spring return) and mod wheel (CC 1)
+- [x] Four assignable knobs (CC 74, pressure, CC 71, CC 7), saved per document
+- [x] Arpeggiator controls moved from Settings into the bar
 
 ## M7: Later
 - [ ] Network MIDI 2.0 (netmidi2)

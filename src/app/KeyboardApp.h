@@ -15,6 +15,7 @@
 
 #include "MidiTargets.h"
 #include "kedo/Arpeggiator.h"
+#include "kedo/Controls.h"
 #include "kedo/Document.h"
 #include "kedo/Preferences.h"
 #include "kedo/KeyStyle.h"
@@ -118,11 +119,18 @@ private:
     void drawToolbar();
     void drawRoutingMenu();
     float drawPanel();                 // returns its width
-    float drawMonitor(float width);    // returns its height
+    float drawBar();                   // the performance bar; returns its width
+    void drawArpeggiator();
+    void drawKnobAssignment(int index);
+    float drawMonitor(float x, float width);   // returns its height
     void setPanes(bool panel, bool monitor);
+    void setBarOpen(bool open);
     void drawKeyboard(ImDrawList* list);
 
     bool inKeyboard(Point p) const { return viewport_.screen.contains(p); }
+    // Where a pointer's drag plays, in layout units: a Gliss drag stops at
+    // the keyboard's edges, so keys hidden under the bars don't sound.
+    Point dragPoint(Point screen) const;
     Modifiers modifiers() const;
     bool computerKey(const SDL_KeyboardEvent& key);   // true if it was used
     std::string computerKeyLabel(int code) const;
@@ -147,6 +155,7 @@ private:
     MidiTargets targets_;     // before arp_ and performer_, which play into it
     Arpeggiator arp_;         // between the Performer and the outputs
     Performer performer_;
+    PerformanceControls controls_;   // the performance bar's: channel-wide, past the arpeggiator
     // The arpeggiator steps on a thread of its own, as the frame loop waits
     // for vsync. The lock guards everything both threads touch: the
     // Performer, arpeggiator, outputs and monitor (recursive: frame() flushes).

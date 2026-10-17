@@ -17,10 +17,11 @@ struct Preferences {
     // and discovery"). Empty until made.
     std::string productInstanceId;
 
-    // The window's panes: the settings panel (open at first, to find things)
-    // and the MIDI monitor.
+    // The window's panes: the settings panel (open at first, to find things),
+    // the MIDI monitor, and the performance bar on the left (open at first).
     bool panelOpen   = true;
     bool monitorOpen = false;
+    bool barOpen     = true;
 
     // Edit mode (set up the document's layouts) or Play mode (choose among
     // them, the settings hidden): decisions.md, "Documents with several

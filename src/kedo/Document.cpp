@@ -438,6 +438,15 @@ std::optional<Document> loadBundle(const fs::path& path, std::string* error) {
     if (d.layouts.empty()) return fail("no layouts");
     d.current = std::clamp(j.value("current", 0), 0, int(d.layouts.size()) - 1);
     d.destination = j.value("midiDestinationName", std::string());
+    if (const auto it = j.find("knobs"); it != j.end() && it->is_array())
+        for (std::size_t i = 0; i < it->size() && i < d.knobs.size(); ++i) {
+            const json& k = (*it)[i];
+            if (!k.is_object()) continue;
+            KnobAssignment& knob = d.knobs[i];
+            knob.pressure = k.value("pressure", false);
+            knob.controller = std::clamp(k.value("controller", knob.controller), 0, 127);
+            knob.label = k.value("label", std::string());
+        }
     return d;
 }
 
@@ -503,6 +512,11 @@ bool saveDocument(const std::string& pathText, const Document& document, std::st
         files.push_back(file);
     }
     j["layouts"] = files;
+    json knobs = json::array();
+    for (const auto& k : document.knobs) {
+        knobs.push_back({{"pressure", k.pressure}, {"controller", k.controller}, {"label", k.label}});
+    }
+    j["knobs"] = knobs;
     if (!writeFile(tmp / "document.json", j.dump(2) + "\n", error)) return false;
 
     // The swap: the old bundle aside, the new one in, the old one gone.

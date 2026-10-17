@@ -208,6 +208,8 @@ void testBundleRoundTrip() {
     d.layouts.push_back(same);
     d.current = 1;
     d.destination = "Synth";
+    d.knobs[0] = {.controller = 20, .label = ""};
+    d.knobs[2] = {.pressure = true, .label = "Squeeze"};
 
     std::string error;
     CHECK(saveDocument(path, d, &error));
@@ -364,6 +366,7 @@ void testImportsKeyEdo() {
     CHECK(d && d->layout().name == "Kedo Test Import" && d->layout().destination.empty());
     const auto setup = parseLayoutSetup(kKeyEdoDocument);
     CHECK(d && setup && d->destination == setup->destination);
+    CHECK(d && d->knobs == defaultKnobs());   // KeyEDO had none
     std::remove(path.c_str());
 }
 

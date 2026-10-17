@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "kedo/Arpeggiator.h"
+#include "kedo/Controls.h"
 #include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 #include "kedo/Performer.h"
@@ -62,6 +63,9 @@ struct Document {
     }()};
     int current = 0;                  // the one showing
     std::string destination;          // a destination's id or name ("" for none)
+    // The performance bar's knobs: per document, so switching layouts
+    // doesn't change what they send (decisions.md, "Performance bar").
+    std::vector<KnobAssignment> knobs = defaultKnobs();
 
     LayoutSetup&       layout() { return layouts[current]; }
     const LayoutSetup& layout() const { return layouts[current]; }

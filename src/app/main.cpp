@@ -37,6 +37,7 @@ void usage() {
                  "    --click X,Y              press the mouse there, and hold it\n"
                  "    --tap [shift+]X,Y        press and release (Shift held, with shift+)\n"
                  "    --double X,Y             a double click\n"
+                 "    --right X,Y              a right-click\n"
                  "    --drag X1,Y1,X2,Y2       press, move, release\n"
                  "    --key [ctrl+][shift+]NAME  a key, by SDL's name (z, delete, right...)\n"
                  "    --press NAME             a key down, and held (e.g. z, \"left ctrl\")\n"
@@ -50,7 +51,7 @@ constexpr SDL_MouseID kStepMouse = 0x5EED;
 
 // One input --snapshot gives the app, through the same path as a real one.
 struct Step {
-    enum Kind { Click, Tap, Double, Drag, Key, Press, Release, Move } kind = Tap;
+    enum Kind { Click, Tap, Double, Right, Drag, Key, Press, Release, Move } kind = Tap;
     float x = 0, y = 0, x2 = 0, y2 = 0;
     SDL_Keymod mod = SDL_KMOD_NONE;   // held during it
     SDL_Keycode key = SDLK_UNKNOWN;
@@ -66,7 +67,7 @@ SDL_Keymod takeMods(std::string& text) {
     }
 }
 
-void pushMouse(SDL_Window* window, Uint32 type, float x, float y, Uint8 clicks = 1) {
+void pushMouse(SDL_Window* window, Uint32 type, float x, float y, Uint8 clicks = 1, Uint8 button = SDL_BUTTON_LEFT) {
     SDL_Event e{};
     e.type = type;
     if (type == SDL_EVENT_MOUSE_MOTION) {
@@ -77,7 +78,7 @@ void pushMouse(SDL_Window* window, Uint32 type, float x, float y, Uint8 clicks =
     } else {
         e.button.windowID = SDL_GetWindowID(window);
         e.button.which = kStepMouse;
-        e.button.button = SDL_BUTTON_LEFT;
+        e.button.button = button;
         e.button.down = type == SDL_EVENT_MOUSE_BUTTON_DOWN;
         e.button.clicks = clicks;
         e.button.x = x;
@@ -141,6 +142,10 @@ bool runStep(SDL_Window* window, const Step& s, int frame) {
         if (frame == 0 || frame == 2) press(s.x, s.y, Uint8(frame / 2 + 1));
         else pushMouse(window, SDL_EVENT_MOUSE_BUTTON_UP, s.x, s.y, Uint8(frame / 2 + 1));
         return done(frame == 3);
+    case Step::Right:
+        if (frame == 0) pushMouse(window, SDL_EVENT_MOUSE_BUTTON_DOWN, s.x, s.y, 1, SDL_BUTTON_RIGHT);
+        else pushMouse(window, SDL_EVENT_MOUSE_BUTTON_UP, s.x, s.y, 1, SDL_BUTTON_RIGHT);
+        return done(frame == 1);
     case Step::Drag: {
         constexpr int kMoves = 6;
         if (frame == 0) {
@@ -206,7 +211,7 @@ int main(int argc, char** argv) {
         else if (!std::strcmp(arg, "--destination")) document.destination = value;
         else if (!std::strcmp(arg, "--snapshot")) snapshot = value;
         else if (!std::strcmp(arg, "--wait")) wait = std::atof(value);
-        else if (!std::strcmp(arg, "--click") || !std::strcmp(arg, "--tap") || !std::strcmp(arg, "--double") ||
+        else if (!std::strcmp(arg, "--click") || !std::strcmp(arg, "--tap") || !std::strcmp(arg, "--double") || !std::strcmp(arg, "--right") ||
                  !std::strcmp(arg, "--drag") || !std::strcmp(arg, "--key") || !std::strcmp(arg, "--press") ||
                  !std::strcmp(arg, "--release") || !std::strcmp(arg, "--move")) {
             Step s;
@@ -222,7 +227,8 @@ int main(int argc, char** argv) {
                 if (std::sscanf(text.c_str(), "%f,%f,%f,%f", &s.x, &s.y, &s.x2, &s.y2) != 4) { usage(); return 2; }
             } else {
                 s.kind = !std::strcmp(arg, "--click") ? Step::Click : !std::strcmp(arg, "--tap") ? Step::Tap
-                       : !std::strcmp(arg, "--move") ? Step::Move : Step::Double;
+                       : !std::strcmp(arg, "--move") ? Step::Move : !std::strcmp(arg, "--right") ? Step::Right
+                       : Step::Double;
                 if (std::sscanf(text.c_str(), "%f,%f", &s.x, &s.y) != 2) { usage(); return 2; }
             }
             steps.push_back(s);

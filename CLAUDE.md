@@ -22,7 +22,7 @@ Related repos:
   ImGui.
 - Check UI changes with `keyboardedo --snapshot FILE.png [STEP...]`
   rather than asking the author to look. Steps run in order before the
-  picture: `--click`, `--tap [shift+]X,Y`, `--double`, `--drag X1,Y1,X2,Y2`,
+  picture: `--click`, `--tap [shift+]X,Y`, `--double`, `--right` (a right-click), `--drag X1,Y1,X2,Y2`,
   `--key [ctrl+][shift+]NAME`, `--press NAME` and `--release NAME` (a key
   held and let go, e.g. `z`, `"left ctrl"`), `--move X,Y` (`--help`). While
   steps run, the real mouse is ignored. A snapshot run starts from the default preferences (Edit mode,

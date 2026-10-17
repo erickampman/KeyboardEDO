@@ -754,7 +754,10 @@ wheels. Settled with the author:
 - **Default assignments:** CC 74 (Timbre), channel pressure, CC 71
   (resonance) and CC 7 (volume). The first two drive the Timbre and
   Pressure sources in IFSynth and PlainOldSynth. Each knob can be set to
-  another CC (0-127, with a label) or to channel pressure.
+  another CC (0-127, with a label) or to channel pressure. The last two
+  are named by their numbers, "CC 71" and "CC 7" (the author: resonance
+  and volume aren't what every synth does with them); the first two are
+  "Timbre" and "Pressure".
 - **Assignments are saved per document**, not per layout: switching layouts
   doesn't change what the knobs send. (The arpeggiator stays per layout, as
   before.)
@@ -766,14 +769,34 @@ wheels. Settled with the author:
   receiver as everything else is. The bend fader sends channel pitch bend
   over the output's bend range.
 
-To settle when it's built:
-- **Which group and channel** the bar sends on. Proposed: the showing
-  layout's, where its notes go.
-- **When a drag's expression and a knob drive the same message** (the
-  Performer's Horizontal or Vertical set to that CC, or to pressure).
-  Proposed: last one to move wins, as two hardware controllers on one CC
-  would behave.
-- The bar's width, and whether it scrolls when the window is short.
+Settled when it was built (2026-10-17, milestone 12):
+- **Group and channel:** the showing layout's, where its notes go. The bar
+  sends to the outputs directly, past the arpeggiator: its messages are
+  channel-wide, not notes.
+- **A drag and a knob on the same message:** the last one to move wins, as
+  two hardware controllers on one CC would. Nothing arbitrates.
+- **15 em wide**, with a title bar and close box as the Settings panel has.
+  It scrolls when the window is short. The monitor sits under the keyboard,
+  between the bar and the panel.
+- **The bend fader and mod wheel are dragged, not clicked to a place:** a
+  drag moves them by as much as the pointer moves, wherever they're
+  grabbed, so a click doesn't jump the pitch. Knobs turn by dragging up or
+  down (160 points end to end); a double click puts one back where it
+  starts. Where a knob starts (it sends nothing until moved): volume at
+  100, pressure at 0, other CCs at 64. A knob whose assignment changes goes
+  back to its start, sending nothing.
+- **Assigning a knob:** a right-click on the knob opens its assignment (CC
+  or channel pressure, a label, Default), in Play mode too: a right-click
+  can't happen by accident while playing, and the author looked for it
+  there. In Edit mode a click on the knob's name opens it as well. Saved in `document.json` as `knobs`; a
+  document without them, or a KeyEDO file, gets the defaults. The format
+  version stays 1, since older readers ignore the key.
+- **A Gliss drag stops at the keyboard's edges**, so keys scrolled under the
+  bar (or the panel or monitor) don't sound; the note stays on the edge
+  key. A Fixed drag's expression isn't limited this way.
+- The toolbar's bar button is at the far left, over the bar, as Settings'
+  is at the far right. The bar is open at first (`barOpen` in the
+  preferences).
 
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 

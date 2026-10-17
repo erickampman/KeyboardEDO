@@ -16,6 +16,7 @@ enum class Icon {
     Panic,       // stop square: All Notes Off
     Monitor,     // lines of text: the MIDI monitor
     Configure,   // sliders: the settings panel
+    Performance, // a fader and a knob: the performance bar
 };
 
 // A square button showing `icon`, `size` points across, with `tooltip` on
