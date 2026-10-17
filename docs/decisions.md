@@ -735,6 +735,46 @@ Done on the Mac 2026-10-15 (roadmap milestone 11a; uw-core `5cf9aad`):
   the setup resent on `SND_SEQ_EVENT_PORT_SUBSCRIBED` for the published
   port.
 
+## Performance bar (decided 2026-10-17, roadmap milestone 12)
+
+Controller knobs, and the arpeggiator moved out of the Settings panel, in a
+**performance bar docked on the left of the window**, like a keyboard's
+wheels. Settled with the author:
+- **Outside the canvas, the same in every layout.** A tiled grid fills the
+  view and scrolls every way, so there is no fixed spot beside the keys, and
+  anything floating over the grid would hide tiles and catch Gliss drags.
+  The canvas gets the width that's left. A toolbar button shows and hides
+  the bar.
+- **Contents, top to bottom:** a spring-return pitch-bend fader and a mod
+  wheel (CC 1) side by side; four assignable knobs in two columns; then the
+  arpeggiator, its whole section as it was in Settings. The Arp toolbar
+  button still turns it on and off, and the Settings panel loses its
+  Arpeggiator section. Shown in Play and Edit modes, as the arpeggiator's
+  controls already were.
+- **Default assignments:** CC 74 (Timbre), channel pressure, CC 71
+  (resonance) and CC 7 (volume). The first two drive the Timbre and
+  Pressure sources in IFSynth and PlainOldSynth. Each knob can be set to
+  another CC (0-127, with a label) or to channel pressure.
+- **Assignments are saved per document**, not per layout: switching layouts
+  doesn't change what the knobs send. (The arpeggiator stays per layout, as
+  before.)
+- **Positions aren't restored.** Knobs keep their place while the app runs,
+  but nothing is sent until one moves, so opening a document never changes
+  the synth.
+- **Channel-wide, never MPE** ("No MPE"): knobs send channel CCs and
+  channel pressure, MIDI 2.0 at 32 bits, or downconverted for a MIDI 1.0
+  receiver as everything else is. The bend fader sends channel pitch bend
+  over the output's bend range.
+
+To settle when it's built:
+- **Which group and channel** the bar sends on. Proposed: the showing
+  layout's, where its notes go.
+- **When a drag's expression and a knob drive the same message** (the
+  Performer's Horizontal or Vertical set to that CC, or to pressure).
+  Proposed: last one to move wins, as two hardware controllers on one CC
+  would behave.
+- The bar's width, and whether it scrolls when the window is short.
+
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's

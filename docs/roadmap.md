@@ -342,6 +342,16 @@ to do:
   and block, find it again by Product Instance ID, and take a block change
   (on CoreMIDI, a remade endpoint).
 
+## 12. Performance bar (KeyboardEDO)
+
+decisions.md, "Performance bar". A bar docked on the left of the window: a
+pitch-bend fader and mod wheel, four assignable knobs (CC 74, channel
+pressure, CC 71, CC 7 by default; assignments per document, positions not
+restored), and the arpeggiator's controls moved there from Settings. A
+toolbar button shows and hides it. Check each layout with `--snapshot`:
+the canvas keeps working at the narrower width (hit-testing, Gliss drags
+stopping at the bar's edge).
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).
