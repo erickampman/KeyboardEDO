@@ -950,8 +950,10 @@ void KeyboardApp::setPanes(bool panel, bool monitor) {
 // The toolbar: files on the left, the protocol badge in the middle, routing
 // and the keyboard's modes on the right (KeyEDO's), and the synopsis under it.
 // The Unlikelyware logo and the two-colour "KeyboardEDO" wordmark, as the
-// plugins' top strips have (IFSynth's "IFS" + "ynth"), in the logo's tan and
-// terracotta. The font is Karla, a sans with some character: the plugins'
+// plugins' top strips have (IFSynth's "IFS" + "ynth"), but in the app's
+// blues rather than the logo's tan and terracotta: the keyboards' slate
+// backgrounds and ImGui's accent are blue, so the warm colours stood apart.
+// "Keyboard" is a pale steel blue, "EDO" the accent. The font is Karla, a sans with some character: the plugins'
 // Almendra looked out of place as the only serif in the app. The logo is
 // loaded on first use, as the renderer exists by then.
 void KeyboardApp::drawBrand(float height, float rowY) {
@@ -994,8 +996,8 @@ void KeyboardApp::drawBrand(float height, float rowY) {
             x += ImGui::CalcTextSize(c, c + 1).x + tracking;
         }
     };
-    word("Keyboard", ImColor(222, 184, 135));
-    word("EDO", ImColor(200, 109, 84));
+    word("Keyboard", ImColor(159, 191, 224));
+    word("EDO", ImColor(66, 150, 250));   // ImGui's dark-style accent
     ImGui::Dummy({x - tracking - at.x, height});
     ImGui::PopFont();
     ImGui::SameLine(0, 2 * ImGui::GetStyle().ItemSpacing.x);

@@ -816,8 +816,11 @@ beyond README and `--help`. Settled with the author:
   and an `.icns` for older macOS. Linux will need flat PNGs, rounded rather
   than the Mac's margin and shadow; that's still to do.
 - **The toolbar starts with the Unlikelyware logo and a two-colour wordmark**,
-  as the plugins' top strips do: "Keyboard" in the logo's tan and "EDO" in
-  its terracotta, sized to the toolbar's icon row (asked for 2026-10-18).
+  as the plugins' top strips do, sized to the toolbar's icon row (asked for
+  2026-10-18). The two colours are blues, "Keyboard" a pale steel blue and
+  "EDO" ImGui's accent, not the plugins' tan and terracotta: the keyboards'
+  backgrounds and most controls are blue, and the warm colours stood apart
+  (the author's call). The logo keeps its own colours.
   The font is Karla, a sans with some character, not the plugins' Almendra:
   as the only serif in the app it looked out of place (the author's call).
   The logo is a 144 px copy of the plugins' PNG, loaded with SDL's own PNG
