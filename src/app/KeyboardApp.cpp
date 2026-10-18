@@ -969,19 +969,26 @@ void KeyboardApp::drawBrand(float height, float rowY) {
         ImGui::Image(ImTextureRef(ImTextureID(intptr_t(logo_))), {height * logoAspect_, height});
         ImGui::SameLine();
     }
-    // Both words drawn at one position, so they share a baseline whatever
-    // ImGui's line layout does, then the space they take reserved.
+    // Both words drawn on one baseline, a letter at a time so the spacing can
+    // be tightened (Karla's is generous and it has no narrow width), then the
+    // space they take reserved.
     ImGui::PushFont(brandFont_, ImGui::GetStyle().FontSizeBase * 1.5f);
     ImGui::SetCursorPosY(rowY);
     const float size = ImGui::GetFontSize();
+    const float tracking = -0.06f * size;
     const ImVec2 at = ImGui::GetCursorScreenPos();
     const float y = at.y + (height - size) / 2;
-    const float first = ImGui::CalcTextSize("Keyboard").x;
-    const float second = ImGui::CalcTextSize("EDO").x;
     ImDrawList* draw = ImGui::GetWindowDrawList();
-    draw->AddText(brandFont_, size, {at.x, y}, ImColor(222, 184, 135), "Keyboard");
-    draw->AddText(brandFont_, size, {at.x + first, y}, ImColor(200, 109, 84), "EDO");
-    ImGui::Dummy({first + second, height});
+    float x = at.x;
+    auto word = [&](const char* text, ImU32 colour) {
+        for (const char* c = text; *c; ++c) {
+            draw->AddText(brandFont_, size, {x, y}, colour, c, c + 1);
+            x += ImGui::CalcTextSize(c, c + 1).x + tracking;
+        }
+    };
+    word("Keyboard", ImColor(222, 184, 135));
+    word("EDO", ImColor(200, 109, 84));
+    ImGui::Dummy({x - tracking - at.x, height});
     ImGui::PopFont();
     ImGui::SameLine(0, 2 * ImGui::GetStyle().ItemSpacing.x);
     ImGui::SetCursorPosY(rowY);
