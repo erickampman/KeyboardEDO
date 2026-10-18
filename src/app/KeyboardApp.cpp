@@ -1105,8 +1105,13 @@ void KeyboardApp::drawToolbar() {
     // window sizes itself to its content, so the band ends at its bottom.
     {
         const ImGuiStyle& style = ImGui::GetStyle();
+        // A little room on both sides of the hairline, so neither the logo
+        // above nor the synopsis below sits tight against it.
+        const float room = 3.0f * style.FontScaleDpi;
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + room);
         const ImVec2 win = ImGui::GetWindowPos();
         const float top = ImGui::GetCursorScreenPos().y - style.ItemSpacing.y / 2;
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + room);
         const float bottom = ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.WindowPadding.y;
         const float right = win.x + ImGui::GetWindowWidth();
         ImDrawList* draw = ImGui::GetWindowDrawList();
