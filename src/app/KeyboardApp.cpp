@@ -1084,6 +1084,19 @@ void KeyboardApp::drawToolbar() {
             }
     }
     const std::string line = synopsis(settings_, live);
+    // Its row is set apart from the controls above by a faint band, full
+    // width, with a hairline on top (drawn first, so behind the text). The
+    // window sizes itself to its content, so the band ends at its bottom.
+    {
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const ImVec2 win = ImGui::GetWindowPos();
+        const float top = ImGui::GetCursorScreenPos().y - style.ItemSpacing.y / 2;
+        const float bottom = ImGui::GetCursorScreenPos().y + ImGui::GetTextLineHeight() + style.WindowPadding.y;
+        const float right = win.x + ImGui::GetWindowWidth();
+        ImDrawList* draw = ImGui::GetWindowDrawList();
+        draw->AddRectFilled({win.x, top}, {right, bottom}, IM_COL32(255, 255, 255, 10));
+        draw->AddLine({win.x, top}, {right, top}, IM_COL32(255, 255, 255, 40), 1.0f);
+    }
     ImGui::SetCursorPosX(std::max(0.0f, (vp->Size.x - ImGui::CalcTextSize(line.c_str()).x) / 2));
     ImGui::TextDisabled("%s", line.c_str());
     if (!status_.empty()) {
