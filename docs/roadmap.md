@@ -383,7 +383,9 @@ Toolbar branding done 2026-10-18: the Unlikelyware logo and a "Keyboard" +
 "EDO" wordmark in Karla (two blues, the app's, in the place of the plugins'
 tan and terracotta "IFS" + "ynth") at the toolbar's left, sized to its icon row, and a
 faint band setting the synopsis row apart. Clicking the logo opens
-www.unlikelyware.com in the default browser, as the plugins' logo does.
+www.unlikelyware.com in the default browser, as the plugins' logo does. Logo and
+font are embedded (`resources/README.md`); the font's OFL text ships in
+`resources/fonts/OFL.txt`. Checked with `--snapshot`.
 
 Help done 2026-10-18: `resources/help/help.md`, in Markdown Web Writer's
 dialect, which the author exports to `help.html` (CSS embedded). The build
@@ -392,8 +394,18 @@ Resources and beside the executable; a toolbar button, F1 and Cmd-? open it
 in the default browser. `SDL_GetBasePath()` finds it: the bundle's Resources
 when run as an app, `build/` through the `build/keyboardedo` link. After
 editing `help.md`, export `help.html` again: the build doesn't.
-Logo and font are embedded (`resources/README.md`); the font's OFL text ships
-in `resources/fonts/OFL.txt`. Checked with `--snapshot`.
+
+Linux icon done 2026-10-18 (on the Linux PC): flat rounded PNGs, 16 to 512 px,
+in `resources/linux/icons` (`tools/make-linux-icons.sh` makes them from the
+Mac icon's art), a `.desktop` entry, and the window icon (X11; Wayland takes
+the entry's). `cmake --install build` puts the executable in `bin`, the help
+page in `share/keyboardedo/help` (where `openHelp` looks from `bin`), and the
+entry and icons in `share/applications` and `share/icons/hicolor`. Checked:
+the X11 window's `_NET_WM_ICON` is 256×256; the toolbar's logo, wordmark and
+Help button draw under Wayland; F1 opens the help page through `xdg-open`;
+an install to a scratch prefix lays the files out as above; the build is
+free of GCC's warnings again (`KnobAssignment::label{}`). Still to check by
+hand: the GNOME dock's icon with the entry installed.
 
 ## Later
 

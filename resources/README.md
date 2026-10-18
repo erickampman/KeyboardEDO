@@ -5,6 +5,11 @@ What the app is built with besides code, and where each came from.
 - `KeyboardEDO.icon`: the app icon, an Icon Composer document (KeyEDO's design
   in the "Ember" palette). The Mac build compiles it with Xcode's `actool`
   (CMakeLists.txt). Its source is the author's artwork folder.
+- `linux/icons`: the Linux icons (16 to 512 px, the freedesktop hicolor
+  layout), made from `KeyboardEDO.icon/Assets/Image.png` by
+  `tools/make-linux-icons.sh` (ImageMagick): run it again when the art
+  changes. The 256 px one is also embedded as the window icon.
+- `linux/com.unlikelyware.keyboardedo.desktop`: the Linux desktop entry.
 - `brand/Unlikelyware-logo-144.png`: the Unlikelyware logo drawn at the left of
   the toolbar. It is `Resources/Unlikelyware-Final-Color.png` from IFSynth and
   PlainOldSynth (1000×1200), scaled to 144 px tall with ImageMagick's Lanczos

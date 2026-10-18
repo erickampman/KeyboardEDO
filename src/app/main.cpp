@@ -21,6 +21,8 @@ extern const unsigned char kMonoFont[];
 extern const unsigned int kMonoFontSize;
 extern const unsigned char kBrandFont[];   // Karla, the toolbar's wordmark
 extern const unsigned int kBrandFontSize;
+extern const unsigned char kWindowIcon[];  // the 256 px Linux icon (PNG)
+extern const unsigned int kWindowIconSize;
 
 namespace {
 
@@ -284,6 +286,14 @@ int main(int argc, char** argv) {
         std::fprintf(stderr, "SDL_CreateWindow: %s\n", SDL_GetError());
         return 1;
     }
+#ifndef __APPLE__
+    // The window's icon, for X11's title bars and taskbars; Wayland's docks
+    // take the .desktop entry's, found by the app ID. The Mac's is the bundle's.
+    if (SDL_Surface* icon = SDL_LoadPNG_IO(SDL_IOFromConstMem(kWindowIcon, kWindowIconSize), true)) {
+        SDL_SetWindowIcon(window, icon);
+        SDL_DestroySurface(icon);
+    }
+#endif
     SDL_Renderer* renderer = SDL_CreateRenderer(window, nullptr);
     if (!renderer) {
         std::fprintf(stderr, "SDL_CreateRenderer: %s\n", SDL_GetError());

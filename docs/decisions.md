@@ -813,8 +813,15 @@ beyond README and `--help`. Settled with the author:
   design instead, 2026-10-18.) Its source is `resources/KeyboardEDO.icon`, an
   Icon Composer document, which the Mac build compiles with Xcode's `actool`
   into `Assets.car` (the macOS 26 icon, with its dark and tinted variants)
-  and an `.icns` for older macOS. Linux will need flat PNGs, rounded rather
-  than the Mac's margin and shadow; that's still to do.
+  and an `.icns` for older macOS. On Linux it's flat PNGs from 16 to 512 px
+  (`resources/linux/icons`, made from the same art by
+  `tools/make-linux-icons.sh` and committed, so the build needs no
+  ImageMagick): the art in a rounded square (corners 18% of its side) with a
+  6% margin, as GNOME and KDE icons are, and no shadow. The `.desktop` entry
+  and icon are named `com.unlikelyware.keyboardedo`, the app ID SDL gives the
+  window (`SDL_SetAppMetadata`), so Wayland docks match the window to the
+  entry; on X11 the window also carries the 256 px icon itself
+  (`SDL_SetWindowIcon`).
 - **The toolbar starts with the Unlikelyware logo and a two-colour wordmark**,
   as the plugins' top strips do, sized to the toolbar's icon row (asked for
   2026-10-18). The two colours are blues, "Keyboard" a pale steel blue and

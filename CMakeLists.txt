@@ -109,6 +109,10 @@ if(KEDO_APP)
                ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp kBrandLogo)
     embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/Karla-Regular.ttf
                ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp kBrandFont)
+    # The window icon, off the Mac (where the bundle's icon is used): the
+    # 256 px Linux icon (tools/make-linux-icons.sh).
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/linux/icons/256x256/apps/com.unlikelyware.keyboardedo.png
+               ${CMAKE_CURRENT_BINARY_DIR}/WindowIcon.cpp kWindowIcon)
 
     add_executable(keyboardedo
         src/app/main.cpp
@@ -118,6 +122,7 @@ if(KEDO_APP)
         ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/WindowIcon.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
 
@@ -133,6 +138,20 @@ if(KEDO_APP)
         # Prints what a source sends: checks that notes leave the app.
         add_executable(kedo-midi-listen tools/MidiListen.cpp)
         target_link_libraries(kedo-midi-listen PRIVATE kedo::core uw::midi kedo-warnings)
+    endif()
+
+    # Linux: `cmake --install build` (to /usr/local, or --prefix) puts the
+    # executable in bin, the help page in share/keyboardedo/help (where the app
+    # looks, from bin), and the .desktop entry and icons where desktops find
+    # them. Both are named com.unlikelyware.keyboardedo, the app ID SDL gives
+    # the window, so Wayland's docks match the window to the entry's icon.
+    if(UNIX AND NOT APPLE)
+        include(GNUInstallDirs)
+        install(TARGETS keyboardedo RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(FILES ${help_files} DESTINATION ${CMAKE_INSTALL_DATADIR}/keyboardedo/help)
+        install(FILES resources/linux/com.unlikelyware.keyboardedo.desktop
+                DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+        install(DIRECTORY resources/linux/icons/ DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor)
     endif()
 
     # macOS: a KeyboardEDO.app bundle (docs/decisions.md, "Identity and help"),

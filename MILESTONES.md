@@ -44,7 +44,7 @@
 
 ## M7: Identity and help
 - [x] macOS app bundle with its icon (Icon Composer source, compiled by actool)
-- [ ] Linux icon PNGs and .desktop entry; window icon
+- [x] Linux icon PNGs and .desktop entry; window icon; `cmake --install`
 - [x] Unlikelyware logo and two-colour wordmark (Karla) at the toolbar's left, as the plugins have
 - [ ] About box: version, Unlikelyware, MIT license, Ko-fi link, Product Instance ID
 - [x] Bundled help.html, opened in the default browser (toolbar button, F1, Cmd-?); shortcuts in it

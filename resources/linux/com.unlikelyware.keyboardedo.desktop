@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=KeyboardEDO
+GenericName=Microtonal Keyboard
+Comment=Play equal divisions of the octave on an on-screen keyboard, over MIDI 2.0
+Exec=keyboardedo %f
+Icon=com.unlikelyware.keyboardedo
+Terminal=false
+Categories=AudioVideo;Audio;Music;Midi;
+Keywords=MIDI;EDO;microtonal;keyboard;
+StartupWMClass=com.unlikelyware.keyboardedo

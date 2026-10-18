@@ -41,6 +41,10 @@ from `resources/KeyboardEDO.icon` (an Icon Composer document) by Xcode's
 `open build/KeyboardEDO.app` starts it as an app, and `build/keyboardedo` is a
 link to the executable inside, for command lines.
 
+On Linux, `cmake --install build` (to `/usr/local`; `--prefix ~/.local` for
+yourself) installs `keyboardedo`, its help page, a desktop entry and the
+icons, so it appears in the desktop's app list with its icon.
+
 Run it:
 
 ```bash

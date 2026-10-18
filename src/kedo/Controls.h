@@ -16,7 +16,7 @@ namespace kedo {
 struct KnobAssignment {
     bool        pressure   = false;
     int         controller = 74;    // 0..127, unless pressure
-    std::string label;              // "" shows the CC's number
+    std::string label{};            // "" shows the CC's number
 
     bool operator==(const KnobAssignment&) const = default;
 };
