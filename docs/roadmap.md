@@ -382,7 +382,8 @@ box, help, and the `.kedo` document type.
 Toolbar branding done 2026-10-18: the Unlikelyware logo and a "Keyboard" +
 "EDO" wordmark in Karla (tan and terracotta, the logo's colours, as
 IFSynth's "IFS" + "ynth") at the toolbar's left, sized to its icon row, and a
-faint band setting the synopsis row apart.
+faint band setting the synopsis row apart. Clicking the logo opens
+www.unlikelyware.com in the default browser, as the plugins' logo does.
 Logo and font are embedded (`resources/README.md`); the font's OFL text ships
 in `resources/fonts/OFL.txt`. Checked with `--snapshot`.
 

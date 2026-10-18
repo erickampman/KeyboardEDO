@@ -967,6 +967,14 @@ void KeyboardApp::drawBrand(float height, float rowY) {
     }
     if (logo_) {
         ImGui::Image(ImTextureRef(ImTextureID(intptr_t(logo_))), {height * logoAspect_, height});
+        // A click opens the website in the default browser, as the plugins'
+        // logo does.
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            ImGui::SetTooltip("unlikelyware.com");
+        }
+        if (ImGui::IsItemClicked() && !SDL_OpenURL("https://www.unlikelyware.com"))
+            std::fprintf(stderr, "couldn't open unlikelyware.com: %s\n", SDL_GetError());
         ImGui::SameLine();
     }
     // Both words drawn on one baseline, a letter at a time so the spacing can
