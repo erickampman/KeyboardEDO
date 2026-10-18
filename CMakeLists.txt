@@ -120,6 +120,14 @@ if(KEDO_APP)
         ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
+
+    # The help page: resources/help/help.html, exported from help.md (beside it)
+    # by Markdown Web Writer, and the logo it shows, as Unlikelyware.png. Copied
+    # to build/help, beside the executable, where the app looks for it; on the
+    # Mac they also go in the bundle's Resources/help (below).
+    set(help_files ${CMAKE_CURRENT_BINARY_DIR}/help/help.html ${CMAKE_CURRENT_BINARY_DIR}/help/Unlikelyware.png)
+    configure_file(resources/help/help.html ${CMAKE_CURRENT_BINARY_DIR}/help/help.html COPYONLY)
+    configure_file(resources/brand/Unlikelyware-logo-144.png ${CMAKE_CURRENT_BINARY_DIR}/help/Unlikelyware.png COPYONLY)
     if(TARGET uw::midi)
         target_link_libraries(keyboardedo PRIVATE uw::midi)
         # Prints what a source sends: checks that notes leave the app.
@@ -139,6 +147,8 @@ if(KEDO_APP)
             MACOSX_BUNDLE TRUE
             OUTPUT_NAME KeyboardEDO
             MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
+        target_sources(keyboardedo PRIVATE ${help_files})
+        set_source_files_properties(${help_files} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/help)
 
         execute_process(COMMAND xcrun --find actool OUTPUT_VARIABLE KEDO_ACTOOL
                         OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE actool_missing)

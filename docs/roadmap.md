@@ -384,6 +384,14 @@ Toolbar branding done 2026-10-18: the Unlikelyware logo and a "Keyboard" +
 tan and terracotta "IFS" + "ynth") at the toolbar's left, sized to its icon row, and a
 faint band setting the synopsis row apart. Clicking the logo opens
 www.unlikelyware.com in the default browser, as the plugins' logo does.
+
+Help done 2026-10-18: `resources/help/help.md`, in Markdown Web Writer's
+dialect, which the author exports to `help.html` (CSS embedded). The build
+copies it and the logo (as `Unlikelyware.png`) to `help/` in the bundle's
+Resources and beside the executable; a toolbar button, F1 and Cmd-? open it
+in the default browser. `SDL_GetBasePath()` finds it: the bundle's Resources
+when run as an app, `build/` through the `build/keyboardedo` link. After
+editing `help.md`, export `help.html` again: the build doesn't.
 Logo and font are embedded (`resources/README.md`); the font's OFL text ships
 in `resources/fonts/OFL.txt`. Checked with `--snapshot`.
 

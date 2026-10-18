@@ -118,6 +118,7 @@ private:
     PlayConfig playConfig() const;
     int  tiledRowsFor(double height) const;
     void drawToolbar();
+    void openHelp();   // help/help.html beside the app, in the default browser
     void drawBrand(float height, float rowY);   // the logo and wordmark, the toolbar's start
     void drawRoutingMenu();
     float drawPanel();                 // returns its width

@@ -47,7 +47,7 @@
 - [ ] Linux icon PNGs and .desktop entry; window icon
 - [x] Unlikelyware logo and two-colour wordmark (Karla) at the toolbar's left, as the plugins have
 - [ ] About box: version, Unlikelyware, MIT license, Ko-fi link, Product Instance ID
-- [ ] Bundled help.html, opened in the default browser; a keyboard-shortcuts page
+- [x] Bundled help.html, opened in the default browser (toolbar button, F1, Cmd-?); shortcuts in it
 - [ ] .kedo documents open from the Finder (document type and SDL's open-file event)
 
 ## M8: Later

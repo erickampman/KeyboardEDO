@@ -105,6 +105,14 @@ void draw(ImDrawList* d, Icon icon, ImVec2 o, float s, ImU32 c, float w) {
         d->AddCircle(p(16.5f, 12), 4.5f * u, c, 20, w);
         d->AddLine(p(16.5f, 12), p(16.5f + 3.2f * std::cos(-2.3f), 12 + 3.2f * std::sin(-2.3f)), c, w);
         break;
+    case Icon::Help:
+        // A question mark in a circle: an arc over the top, a stem, a dot.
+        d->AddCircle(p(12, 12), 9 * u, c, 24, w);
+        d->PathArcTo(p(12, 9.5f), 3 * u, pi, 2.4f * pi, 12);
+        d->PathLineTo(p(12, 14));
+        d->PathStroke(c, 0, w);
+        d->AddCircleFilled(p(12, 17.3f), 1.3f * u, c);
+        break;
     }
 }
 

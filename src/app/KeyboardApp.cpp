@@ -4,7 +4,10 @@
 #include <cfloat>
 #include <cstdio>
 #include <chrono>
+#include <cctype>
 #include <cmath>
+#include <cstring>
+#include <filesystem>
 #include <tuple>
 
 #include "Icons.h"
@@ -373,6 +376,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         if (computerKey(e.key)) break;
         if (editingKeys() && !io.WantCaptureKeyboard && editKey(e.key)) break;
         if (e.key.key == SDLK_ESCAPE && !io.WantCaptureKeyboard) releaseAll();
+        if (e.key.key == SDLK_F1 && !e.key.repeat) openHelp();
         // Cmd (Mac) or Ctrl: O open, S save, Shift-S save as; = (or +) and -
         // zoom, and 0 back to zoom 1, about the keyboard's centre.
         const bool command = (e.key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL)) != 0;
@@ -383,6 +387,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         }
         if (command && !e.key.repeat) {
             if (e.key.key == SDLK_O) showDialog(Dialog::Open);
+            if (e.key.key == SDLK_SLASH && (e.key.mod & SDL_KMOD_SHIFT)) openHelp();   // Cmd-?
             if (e.key.key == SDLK_S) {
                 if ((e.key.mod & SDL_KMOD_SHIFT) || path_.empty()) showDialog(Dialog::SaveAs);
                 else save(path_);
@@ -949,6 +954,33 @@ void KeyboardApp::setPanes(bool panel, bool monitor) {
 
 // The toolbar: files on the left, the protocol badge in the middle, routing
 // and the keyboard's modes on the right (KeyEDO's), and the synopsis under it.
+// The help page (docs/decisions.md, "Identity and help"): help/help.html, which
+// the build puts beside the app (in the bundle's Resources on the Mac, next to
+// the executable elsewhere) with the logo it shows, opened in the default
+// browser. A missing page is said in the synopsis line.
+void KeyboardApp::openHelp() {
+    const char* base = SDL_GetBasePath();
+    const std::string dir = base ? base : "";
+    for (const std::string& path : {dir + "help/help.html", dir + "../share/keyboardedo/help/help.html"}) {
+        std::error_code error;
+        if (!std::filesystem::exists(path, error)) continue;
+        // A file URL, with anything but a path's plain characters escaped.
+        std::string url = "file://";
+        for (unsigned char c : std::filesystem::weakly_canonical(path, error).string()) {
+            if (std::isalnum(c) || std::strchr("/-._~", c)) {
+                url += char(c);
+            } else {
+                char escaped[4];
+                std::snprintf(escaped, sizeof escaped, "%%%02X", c);
+                url += escaped;
+            }
+        }
+        if (!SDL_OpenURL(url.c_str())) status_ = std::string("Couldn't open the help page: ") + SDL_GetError();
+        return;
+    }
+    status_ = "The help page isn't installed (help/help.html beside the app)";
+}
+
 // The Unlikelyware logo and the two-colour "KeyboardEDO" wordmark, as the
 // plugins' top strips have (IFSynth's "IFS" + "ynth"), but in the app's
 // blues rather than the logo's tan and terracotta: the keyboards' slate
@@ -1062,7 +1094,7 @@ void KeyboardApp::drawToolbar() {
     ImGui::SetItemTooltip(sending ? "The protocol notes are sent in" : "Choose where notes go with the antenna button");
 
     // Routing and modes, from the right.
-    const int buttons = 7;
+    const int buttons = 8;
     ImGui::SameLine(vp->Size.x - buttons * (icon + gap) - ImGui::GetStyle().WindowPadding.x + gap);
     if (iconButton("routing", Icon::Routing, icon, "Where notes go", sending)) ImGui::OpenPopup("routing");
     drawRoutingMenu();
@@ -1092,6 +1124,8 @@ void KeyboardApp::drawToolbar() {
     ImGui::SameLine();
     if (iconButton("monitor", Icon::Monitor, icon, "MIDI monitor", prefs_.monitorOpen))
         setPanes(prefs_.panelOpen, !prefs_.monitorOpen);
+    ImGui::SameLine();
+    if (iconButton("help", Icon::Help, icon, "Help, in your browser (F1, or Cmd/Ctrl-?)")) openHelp();
     ImGui::SameLine();
     if (iconButton("configure", Icon::Configure, icon, "Settings", prefs_.panelOpen))
         setPanes(!prefs_.panelOpen, prefs_.monitorOpen);

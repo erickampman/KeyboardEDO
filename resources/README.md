@@ -18,5 +18,11 @@ What the app is built with besides code, and where each came from.
   Reserved Font Name, so a modified version of the font can't be called
   that.
 
+- `help/help.md`: the help page's source, in Markdown Web Writer's dialect
+  (cards, disclosures, `(#anchor)` lines). `help/help.html` is its export,
+  with the CSS embedded, made in Markdown Web Writer by the author: export it
+  again after editing `help.md`. The build installs it with the logo beside it
+  as `Unlikelyware.png`, the name the page uses.
+
 The logo and font are embedded in the executable at build time
 (`cmake/EmbedFile.cmake`), as the monitor's font is.

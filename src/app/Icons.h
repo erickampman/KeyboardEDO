@@ -17,6 +17,7 @@ enum class Icon {
     Monitor,     // lines of text: the MIDI monitor
     Configure,   // sliders: the settings panel
     Performance, // a fader and a knob: the performance bar
+    Help,        // a question mark in a circle: the help page
 };
 
 // A square button showing `icon`, `size` points across, with `tooltip` on
