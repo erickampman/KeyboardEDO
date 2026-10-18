@@ -884,6 +884,10 @@ plugins' panels (PlainOldSynth's especially). Settled with the author:
   collapse.
 - The widgets are `src/app/Widgets.{h,cpp}` (`kedo::app::ui`), ImGui only:
   the plugins draw with NanoVG, so the design is shared, not the code.
+- **It's the house look** (the author, 2026-10-18): StageHand and Umpire
+  should have it too, wherever they can, each in its own colours. Each has
+  a todo (StageHand's `docs/TODO.md` and MILESTONES M4; Umpire's roadmap,
+  milestone 4, and MILESTONES M2).
 
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
