@@ -103,6 +103,12 @@ if(KEDO_APP)
     include(cmake/EmbedFile.cmake)
     embed_file(${CMAKE_CURRENT_SOURCE_DIR}/${IMGUI_DIR}/misc/fonts/Cousine-Regular.ttf
                ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp kMonoFont)
+    # The toolbar's Unlikelyware logo and wordmark font, as the plugins have
+    # (resources/README.md says where they come from).
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/brand/Unlikelyware-logo-144.png
+               ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp kBrandLogo)
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/Almendra-Regular.ttf
+               ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp kBrandFont)
 
     add_executable(keyboardedo
         src/app/main.cpp
@@ -110,6 +116,8 @@ if(KEDO_APP)
         src/app/MidiTargets.cpp
         src/app/Icons.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
     if(TARGET uw::midi)

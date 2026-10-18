@@ -19,6 +19,8 @@
 // embedded by CMake.
 extern const unsigned char kMonoFont[];
 extern const unsigned int kMonoFontSize;
+extern const unsigned char kBrandFont[];   // Almendra, the toolbar's wordmark
+extern const unsigned int kBrandFontSize;
 
 namespace {
 
@@ -300,6 +302,10 @@ int main(int argc, char** argv) {
     mono.FontDataOwnedByAtlas = false;
     ImFont* monoFont = io.Fonts->AddFontFromMemoryTTF(const_cast<unsigned char*>(kMonoFont),
                                                       int(kMonoFontSize), 0, &mono);
+    ImFontConfig brand;
+    brand.FontDataOwnedByAtlas = false;
+    ImFont* brandFont = io.Fonts->AddFontFromMemoryTTF(const_cast<unsigned char*>(kBrandFont),
+                                                       int(kBrandFontSize), 0, &brand);
     ImGui::StyleColorsDark();
     ImGui::GetStyle().ScaleAllSizes(scale);
     ImGui::GetStyle().FontScaleDpi = scale;
@@ -307,7 +313,7 @@ int main(int argc, char** argv) {
     ImGui_ImplSDLRenderer3_Init(renderer);
 
     start.ownPreferences = !snapshot.empty();
-    auto app = std::make_unique<kedo::app::KeyboardApp>(window, monoFont, start);
+    auto app = std::make_unique<kedo::app::KeyboardApp>(window, monoFont, brandFont, start);
 
     // Draw only when something happens: a few frames after each event (ImGui
     // settles hover and focus over two), and every frame while a key is held.

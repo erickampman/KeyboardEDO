@@ -43,8 +43,9 @@ public:
         bool        ownPreferences = false;   // --snapshot: the defaults, the person's left alone
     };
 
-    // `monoFont`: the MIDI monitor's font.
-    KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& start);
+    // `monoFont`: the MIDI monitor's font. `brandFont`: the toolbar's
+    // wordmark (Almendra, as the plugins' title).
+    KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont, const Start& start);
     ~KeyboardApp();
 
     KeyboardApp(const KeyboardApp&) = delete;
@@ -117,6 +118,7 @@ private:
     PlayConfig playConfig() const;
     int  tiledRowsFor(double height) const;
     void drawToolbar();
+    void drawBrand(float height, float rowY);   // the logo and wordmark, the toolbar's start
     void drawRoutingMenu();
     float drawPanel();                 // returns its width
     float drawBar();                   // the performance bar; returns its width
@@ -138,6 +140,10 @@ private:
 
     SDL_Window* window_;
     ImFont* monoFont_;
+    ImFont* brandFont_;
+    SDL_Texture* logo_ = nullptr;   // the Unlikelyware logo; null if it didn't load
+    bool logoTried_ = false;
+    float logoAspect_ = 1.0f;       // its width over its height
     Document doc_;            // the document; its current layout is settings_ while it shows
     Document saved_;          // as last opened or saved, for the title's "edited"
     LayoutSetup settings_;    // the layout showing, as the controls set it

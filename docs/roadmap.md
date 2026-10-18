@@ -379,6 +379,12 @@ the Finder shows the icon, `--snapshot` runs through the link, tests pass.
 Still to do: the Linux icon and `.desktop` entry, the window icon, the About
 box, help, and the `.kedo` document type.
 
+Toolbar branding done 2026-10-18: the Unlikelyware logo and a "Keyboard" +
+"EDO" wordmark in Almendra (tan and terracotta, the logo's colours, as
+IFSynth's "IFS" + "ynth") at the toolbar's left, sized to its icon row.
+Logo and font are embedded (`resources/README.md`); the font's OFL text ships
+in `resources/fonts/OFL.txt`. Checked with `--snapshot`.
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).

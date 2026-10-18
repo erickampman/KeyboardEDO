@@ -8,10 +8,14 @@
 #include <tuple>
 
 #include "Icons.h"
+#include "imgui_impl_sdlrenderer3.h"
 #include "imgui.h"
 #include "kedo/ComputerKeys.h"
 #include "kedo/CustomLayout.h"
 #include "kedo/Synopsis.h"
+
+extern const unsigned char kBrandLogo[];   // the toolbar's Unlikelyware logo (PNG)
+extern const unsigned int kBrandLogoSize;
 
 namespace kedo::app {
 
@@ -39,9 +43,10 @@ bool enumCombo(const char* label, E& value, const char* const (&names)[N], float
 
 } // namespace
 
-KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, const Start& start)
+KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont, const Start& start)
     : window_(window),
       monoFont_(monoFont),
+      brandFont_(brandFont),
       doc_(start.document),
       saved_(start.document),
       settings_(start.document.layout()),
@@ -132,6 +137,7 @@ KeyboardApp::~KeyboardApp() {
     // then sends All Notes Off.
     releaseAll();
     flush();
+    if (logo_) SDL_DestroyTexture(logo_);
 }
 
 // --- Building the keyboard --------------------------------------------------------
@@ -943,6 +949,35 @@ void KeyboardApp::setPanes(bool panel, bool monitor) {
 
 // The toolbar: files on the left, the protocol badge in the middle, routing
 // and the keyboard's modes on the right (KeyEDO's), and the synopsis under it.
+// The Unlikelyware logo and the two-colour "KeyboardEDO" wordmark, as the
+// plugins' top strips have (IFSynth's "IFS" + "ynth"): Almendra, in the logo's
+// tan and terracotta. The logo is loaded on first use, as the renderer exists
+// by then.
+void KeyboardApp::drawBrand(float height, float rowY) {
+    if (!logoTried_) {
+        logoTried_ = true;
+        if (SDL_Surface* s = SDL_LoadPNG_IO(SDL_IOFromConstMem(kBrandLogo, kBrandLogoSize), true)) {
+            logoAspect_ = float(s->w) / float(s->h);
+            logo_ = SDL_CreateTextureFromSurface(SDL_GetRenderer(window_), s);
+            if (logo_) SDL_SetTextureScaleMode(logo_, SDL_SCALEMODE_LINEAR);
+            SDL_DestroySurface(s);
+        }
+        if (!logo_) std::fprintf(stderr, "the toolbar's logo didn't load: %s\n", SDL_GetError());
+    }
+    if (logo_) {
+        ImGui::Image(ImTextureRef(ImTextureID(intptr_t(logo_))), {height * logoAspect_, height});
+        ImGui::SameLine();
+    }
+    ImGui::PushFont(brandFont_, ImGui::GetStyle().FontSizeBase * 1.45f);
+    ImGui::SetCursorPosY(rowY + (height - ImGui::GetTextLineHeight()) / 2);
+    ImGui::TextColored(ImColor(222, 184, 135), "Keyboard");
+    ImGui::SameLine(0, 0);
+    ImGui::TextColored(ImColor(200, 109, 84), "EDO");
+    ImGui::PopFont();
+    ImGui::SameLine(0, 2 * ImGui::GetStyle().ItemSpacing.x);
+    ImGui::SetCursorPosY(rowY);
+}
+
 void KeyboardApp::drawToolbar() {
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->Pos);
@@ -956,6 +991,7 @@ void KeyboardApp::drawToolbar() {
     const float gap = ImGui::GetStyle().ItemSpacing.x;
 
     const float rowY = ImGui::GetCursorPosY();
+    drawBrand(icon, rowY);
     // The performance bar's button on the left, over it, as Settings' is on
     // the right.
     if (iconButton("performance", Icon::Performance, icon, "Performance bar: bend, mod wheel, knobs, arpeggiator",
