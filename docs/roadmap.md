@@ -363,6 +363,14 @@ to do:
   Pressure), and with two fingers on a touchscreen (bend and keys at once).
 - On the Linux PC: build, and check the bar under Wayland and X11.
 
+## 13. Identity and help (KeyboardEDO)
+
+decisions.md, "Identity and help". An app icon drawn from the diamond tiles,
+a macOS `.app` bundle and a Linux `.desktop` entry, an About box, a bundled
+`help.html` opened in the browser, and `.kedo` files opening from the
+Finder. Signing and notarization wait for the release work, shared with
+StageHand and the synths.
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).

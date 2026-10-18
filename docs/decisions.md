@@ -798,6 +798,23 @@ Settled when it was built (2026-10-17, milestone 12):
   is at the far right. The bar is open at first (`barOpen` in the
   preferences).
 
+## Identity and help (decided 2026-10-18, roadmap milestone 13)
+
+KeyboardEDO has run as a bare binary with no icon, no About box and no help
+beyond README and `--help`. Settled with the author:
+- **Help is a bundled `help.html` opened in the default browser**
+  (`SDL_OpenURL`), as the synths' help pages are HTML: the same on both
+  platforms, and no WebView in an SDL/ImGui app. A keyboard-shortcuts page
+  with it; tooltips stay for quick lookups.
+- **The icon is drawn from the diamond tiles**, in the app's own colours (the
+  slate background, pastel note tiles, KeyEDO's pink for a pressed key). Its
+  SVG source is kept in the repo; the `.icns` and PNGs are made from it.
+- **An About box**: name, version, Unlikelyware (its logo, as in the synths),
+  the MIT license, a Ko-fi link, and the installation's Product Instance ID.
+- **Packaging**: a macOS `.app` bundle declaring the `.kedo` document type,
+  with SDL's open-file event handled; a `.desktop` entry and PNG icon on
+  Linux. Signing and notarization wait for the release work.
+
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's
