@@ -50,7 +50,14 @@
 - [x] Bundled help.html, opened in the default browser (toolbar button, F1, Cmd-?); shortcuts in it
 - [ ] .kedo documents open from the Finder (document type and SDL's open-file event)
 
-## M8: Later
+## M8: Look and feel
+- [x] The plugins' glowing knobs, group boxes and value boxes, in KeyboardEDO's colours
+- [x] A linear slider in that look (bend, mod, Settings' sliders)
+- [x] Arpeggiator: knobs for tempo, gate, octaves; captioned dropdowns
+- [x] DejaVu Sans in the bar and Settings
+- [ ] Checked by hand on the Mac, and typing a value
+
+## M9: Later
 - [ ] Network MIDI 2.0 (netmidi2)
 - [ ] Tuning as Property Exchange resource; arpeggiator tempo from Flex Data
 - [ ] Continuous glide between keys

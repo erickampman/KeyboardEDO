@@ -838,6 +838,53 @@ beyond README and `--help`. Settled with the author:
   with SDL's open-file event handled; a `.desktop` entry and PNG icon on
   Linux. Signing and notarization wait for the release work.
 
+## Look and feel (decided 2026-10-18, roadmap milestone 14)
+
+The performance bar and Settings were ImGui's stock controls, unlike the
+plugins' panels (PlainOldSynth's especially). Settled with the author:
+- **The plugins' shapes and shading, in KeyboardEDO's colours** (the
+  author's call: the colours are the app's own, not the plugins'). The knob
+  is PlainOldSynth's (`src/UI/Knob.hpp`): a sphere glowing in its section's
+  colour, bright at the centre and fading at the rim, a brighter core, a
+  faint rim, a soft glint at the top left, and a white dot for its place; a
+  caption above, tinted toward the colour, and the value in a dark box
+  below. Sections are the plugins' group boxes: a rounded box a shade
+  lighter than the panel, its title in the section's colour.
+- **The colours** are the app's: panels in Custom's dark slate, sections a
+  step toward the piano's slate, value boxes and slots darker still (the
+  keys' outline slate), borders in the diamonds' slate, faint. The bar's
+  wheels and knobs glow in the wordmark's pale steel blue; the arpeggiator
+  in a pressed key's pink; Settings' titles, ticks and what's on or active
+  in the accent blue of "EDO". (The arpeggiator was first to be the icon's
+  Ember orange; the pink is the app's own warm colour.)
+- **A linear slider**, which the plugins didn't have in this look
+  (IFSynth's `Slider.hpp` is a plain track and handle): a recessed slot,
+  lit in the colour from its rest to its value with a faint glow either
+  side; the rest marked across the slot when it's not at an end (bend's
+  centre); the thumb a small sphere, the knob's body, with a white dot. It
+  is vertical when taller than wide. A drag moves it as far as the pointer
+  moves, so a click never jumps it. Bend and Mod are sliders (bend still
+  springs back); Settings' Strike velocity minimum is a horizontal one.
+  Written down here so the plugins can take it up.
+- **The arpeggiator's tempo, gate and octaves are knobs**, three across,
+  like the four above them; Pattern, Division and Velocity are dropdowns
+  with their captions above, the plugins' way. A Fixed velocity is a knob
+  beside Velocity. Tempo turns evenly through ratios (1 to 999 bpm, 120 at
+  a double click); octaves stop at 1 to 4.
+- **Values**: the knobs' boxes show 0 to 127, the arpeggiator's in their
+  units, Bend's in semitones over the bend range. Clicking a box types a
+  value (Tempo especially). Ctrl or Cmd while dragging is ten times finer,
+  as in the plugins.
+- **The font is DejaVu Sans**, the plugins', in the bar and Settings
+  (their titles too); the toolbar, keys and monitor keep theirs. It's a
+  Latin subset (`resources/fonts/DejaVuSans-Latin.ttf`, 56 KB, with the
+  flat, natural and sharp signs), under DejaVu's licence
+  (`resources/fonts/DejaVu-LICENSE.txt`, which ships with it).
+- Settings' sections stay collapsible, as they were; the bar's don't
+  collapse.
+- The widgets are `src/app/Widgets.{h,cpp}` (`kedo::app::ui`), ImGui only:
+  the plugins draw with NanoVG, so the design is shared, not the code.
+
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
 
 The author: there's no need to support KeyEDO in any way. Matching KeyEDO's

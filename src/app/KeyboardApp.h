@@ -44,8 +44,9 @@ public:
     };
 
     // `monoFont`: the MIDI monitor's font. `brandFont`: the toolbar's
-    // wordmark (Karla).
-    KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont, const Start& start);
+    // wordmark (Karla). `uiFont`: the performance bar's and Settings'
+    // (DejaVu Sans, as the plugins').
+    KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont, ImFont* uiFont, const Start& start);
     ~KeyboardApp();
 
     KeyboardApp(const KeyboardApp&) = delete;
@@ -142,6 +143,7 @@ private:
     SDL_Window* window_;
     ImFont* monoFont_;
     ImFont* brandFont_;
+    ImFont* uiFont_;
     SDL_Texture* logo_ = nullptr;   // the Unlikelyware logo; null if it didn't load
     bool logoTried_ = false;
     float logoAspect_ = 1.0f;       // its width over its height

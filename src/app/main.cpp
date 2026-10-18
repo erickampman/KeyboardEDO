@@ -10,6 +10,7 @@
 #include <SDL3/SDL.h>
 
 #include "KeyboardApp.h"
+#include "Widgets.h"
 #include "kedo/Document.h"
 #include "imgui.h"
 #include "imgui_impl_sdl3.h"
@@ -21,6 +22,8 @@ extern const unsigned char kMonoFont[];
 extern const unsigned int kMonoFontSize;
 extern const unsigned char kBrandFont[];   // Karla, the toolbar's wordmark
 extern const unsigned int kBrandFontSize;
+extern const unsigned char kUiFont[];      // DejaVu Sans (Latin), the panels'
+extern const unsigned int kUiFontSize;
 extern const unsigned char kWindowIcon[];  // the 256 px Linux icon (PNG)
 extern const unsigned int kWindowIconSize;
 
@@ -316,14 +319,18 @@ int main(int argc, char** argv) {
     brand.FontDataOwnedByAtlas = false;
     ImFont* brandFont = io.Fonts->AddFontFromMemoryTTF(const_cast<unsigned char*>(kBrandFont),
                                                        int(kBrandFontSize), 0, &brand);
+    ImFontConfig ui;
+    ui.FontDataOwnedByAtlas = false;
+    ImFont* uiFont = io.Fonts->AddFontFromMemoryTTF(const_cast<unsigned char*>(kUiFont), int(kUiFontSize), 0, &ui);
     ImGui::StyleColorsDark();
+    kedo::app::ui::applyTheme(ImGui::GetStyle());
     ImGui::GetStyle().ScaleAllSizes(scale);
     ImGui::GetStyle().FontScaleDpi = scale;
     ImGui_ImplSDL3_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer3_Init(renderer);
 
     start.ownPreferences = !snapshot.empty();
-    auto app = std::make_unique<kedo::app::KeyboardApp>(window, monoFont, brandFont, start);
+    auto app = std::make_unique<kedo::app::KeyboardApp>(window, monoFont, brandFont, uiFont, start);
 
     // Draw only when something happens: a few frames after each event (ImGui
     // settles hover and focus over two), and every frame while a key is held.

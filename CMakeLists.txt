@@ -109,6 +109,9 @@ if(KEDO_APP)
                ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp kBrandLogo)
     embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/Karla-Regular.ttf
                ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp kBrandFont)
+    # The panels' font, as the plugins': DejaVu Sans, its Latin subset.
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/DejaVuSans-Latin.ttf
+               ${CMAKE_CURRENT_BINARY_DIR}/UiFont.cpp kUiFont)
     # The window icon, off the Mac (where the bundle's icon is used): the
     # 256 px Linux icon (tools/make-linux-icons.sh).
     embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/linux/icons/256x256/apps/com.unlikelyware.keyboardedo.png
@@ -119,9 +122,11 @@ if(KEDO_APP)
         src/app/KeyboardApp.cpp
         src/app/MidiTargets.cpp
         src/app/Icons.cpp
+        src/app/Widgets.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/MonoFont.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/UiFont.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/WindowIcon.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)

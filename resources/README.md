@@ -29,5 +29,11 @@ What the app is built with besides code, and where each came from.
   again after editing `help.md`. The build installs it with the logo beside it
   as `Unlikelyware.png`, the name the page uses.
 
-The logo and font are embedded in the executable at build time
+- `fonts/DejaVuSans-Latin.ttf`: the bar's and Settings' font, the plugins'
+  DejaVu Sans (2.37, Ubuntu's fonts-dejavu-core), cut to Latin, general
+  punctuation, arrows and the flat, natural and sharp signs with fontTools:
+  `python3 -m fontTools.subset DejaVuSans.ttf --unicodes="U+0020-007E,U+00A0-017F,U+2010-2027,U+2030-203A,U+2190-2193,U+2212,U+00D7,U+266D-266F,U+FFFD" --layout-features='kern,liga' --output-file=DejaVuSans-Latin.ttf`.
+  Its licence, which must ship with it, is `fonts/DejaVu-LICENSE.txt`.
+
+The logo and fonts are embedded in the executable at build time
 (`cmake/EmbedFile.cmake`), as the monitor's font is.

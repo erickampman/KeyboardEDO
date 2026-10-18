@@ -408,6 +408,22 @@ free of GCC's warnings again (`KnobAssignment::label{}`). The author checked
 by hand: with `cmake --install build --prefix ~/.local`, the help page opens
 in the browser and GNOME's dock shows the icon.
 
+## 14. Look and feel (KeyboardEDO)
+
+decisions.md, "Look and feel". The plugins' knobs, group boxes and value
+boxes in KeyboardEDO's colours, a linear slider to go with them, and DejaVu
+Sans, for the performance bar and Settings.
+
+Done on the Linux PC 2026-10-18: `src/app/Widgets.{h,cpp}` (the knob, the
+slider, value boxes, sections, the ImGui theme); the bar as three sections
+(Wheels, Knobs, Arpeggiator) and Settings' sections as boxes. Checked with
+`--snapshot`, in Edit and Play mode: bend and mod dragged (bend's fill from
+the centre), the Strike velocity slider, a Fixed velocity's knob (the bar
+still fits at the default size), the value-typing field opening, the
+custom layout's key inspector, and a section collapsing. Still to do: type
+a value by hand (`--snapshot` sends keys but no text), and look at it on
+the Mac.
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).
