@@ -44,7 +44,7 @@ public:
     };
 
     // `monoFont`: the MIDI monitor's font. `brandFont`: the toolbar's
-    // wordmark (Almendra, as the plugins' title).
+    // wordmark (Karla).
     KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont, const Start& start);
     ~KeyboardApp();
 

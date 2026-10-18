@@ -1,5 +1,5 @@
-Copyright (c) 2011-2012, Ana Sanfelippo (anasanfe@gmail.com),
-with Reserved Font Name 'Almendra'.
+Copyright (c) 2011, Jonathan Pinhorn (pinhorn.typedesign@gmail.com),
+with Reserved Font Names "Karla" and "Karla Tamil".
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

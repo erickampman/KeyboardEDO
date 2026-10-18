@@ -107,7 +107,7 @@ if(KEDO_APP)
     # (resources/README.md says where they come from).
     embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/brand/Unlikelyware-logo-144.png
                ${CMAKE_CURRENT_BINARY_DIR}/BrandLogo.cpp kBrandLogo)
-    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/Almendra-Regular.ttf
+    embed_file(${CMAKE_CURRENT_SOURCE_DIR}/resources/fonts/Karla-Regular.ttf
                ${CMAKE_CURRENT_BINARY_DIR}/BrandFont.cpp kBrandFont)
 
     add_executable(keyboardedo

@@ -950,9 +950,10 @@ void KeyboardApp::setPanes(bool panel, bool monitor) {
 // The toolbar: files on the left, the protocol badge in the middle, routing
 // and the keyboard's modes on the right (KeyEDO's), and the synopsis under it.
 // The Unlikelyware logo and the two-colour "KeyboardEDO" wordmark, as the
-// plugins' top strips have (IFSynth's "IFS" + "ynth"): Almendra, in the logo's
-// tan and terracotta. The logo is loaded on first use, as the renderer exists
-// by then.
+// plugins' top strips have (IFSynth's "IFS" + "ynth"), in the logo's tan and
+// terracotta. The font is Karla, a sans with some character: the plugins'
+// Almendra looked out of place as the only serif in the app. The logo is
+// loaded on first use, as the renderer exists by then.
 void KeyboardApp::drawBrand(float height, float rowY) {
     if (!logoTried_) {
         logoTried_ = true;
@@ -968,11 +969,19 @@ void KeyboardApp::drawBrand(float height, float rowY) {
         ImGui::Image(ImTextureRef(ImTextureID(intptr_t(logo_))), {height * logoAspect_, height});
         ImGui::SameLine();
     }
-    ImGui::PushFont(brandFont_, ImGui::GetStyle().FontSizeBase * 1.45f);
-    ImGui::SetCursorPosY(rowY + (height - ImGui::GetTextLineHeight()) / 2);
-    ImGui::TextColored(ImColor(222, 184, 135), "Keyboard");
-    ImGui::SameLine(0, 0);
-    ImGui::TextColored(ImColor(200, 109, 84), "EDO");
+    // Both words drawn at one position, so they share a baseline whatever
+    // ImGui's line layout does, then the space they take reserved.
+    ImGui::PushFont(brandFont_, ImGui::GetStyle().FontSizeBase * 1.5f);
+    ImGui::SetCursorPosY(rowY);
+    const float size = ImGui::GetFontSize();
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    const float y = at.y + (height - size) / 2;
+    const float first = ImGui::CalcTextSize("Keyboard").x;
+    const float second = ImGui::CalcTextSize("EDO").x;
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    draw->AddText(brandFont_, size, {at.x, y}, ImColor(222, 184, 135), "Keyboard");
+    draw->AddText(brandFont_, size, {at.x + first, y}, ImColor(200, 109, 84), "EDO");
+    ImGui::Dummy({first + second, height});
     ImGui::PopFont();
     ImGui::SameLine(0, 2 * ImGui::GetStyle().ItemSpacing.x);
     ImGui::SetCursorPosY(rowY);

@@ -817,9 +817,11 @@ beyond README and `--help`. Settled with the author:
   than the Mac's margin and shadow; that's still to do.
 - **The toolbar starts with the Unlikelyware logo and a two-colour wordmark**,
   as the plugins' top strips do: "Keyboard" in the logo's tan and "EDO" in
-  its terracotta, in Almendra, sized to the toolbar's icon row (asked for
-  2026-10-18). The logo is a 144 px copy of the plugins' PNG, loaded with
-  SDL's own PNG loader; the font ships with its OFL text.
+  its terracotta, sized to the toolbar's icon row (asked for 2026-10-18).
+  The font is Karla, a sans with some character, not the plugins' Almendra:
+  as the only serif in the app it looked out of place (the author's call).
+  The logo is a 144 px copy of the plugins' PNG, loaded with SDL's own PNG
+  loader; the font ships with its OFL text.
 - **An About box**: name, version, Unlikelyware (its logo, as in the synths),
   the MIT license, a Ko-fi link, and the installation's Product Instance ID.
 - **Packaging**: a macOS `.app` bundle declaring the `.kedo` document type,

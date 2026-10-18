@@ -19,7 +19,7 @@
 // embedded by CMake.
 extern const unsigned char kMonoFont[];
 extern const unsigned int kMonoFontSize;
-extern const unsigned char kBrandFont[];   // Almendra, the toolbar's wordmark
+extern const unsigned char kBrandFont[];   // Karla, the toolbar's wordmark
 extern const unsigned int kBrandFontSize;
 
 namespace {
