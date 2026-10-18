@@ -404,8 +404,9 @@ entry and icons in `share/applications` and `share/icons/hicolor`. Checked:
 the X11 window's `_NET_WM_ICON` is 256×256; the toolbar's logo, wordmark and
 Help button draw under Wayland; F1 opens the help page through `xdg-open`;
 an install to a scratch prefix lays the files out as above; the build is
-free of GCC's warnings again (`KnobAssignment::label{}`). Still to check by
-hand: the GNOME dock's icon with the entry installed.
+free of GCC's warnings again (`KnobAssignment::label{}`). The author checked
+by hand: with `cmake --install build --prefix ~/.local`, the help page opens
+in the browser and GNOME's dock shows the icon.
 
 ## Later
 
