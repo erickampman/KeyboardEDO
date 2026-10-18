@@ -371,6 +371,14 @@ a macOS `.app` bundle and a Linux `.desktop` entry, an About box, a bundled
 Finder. Signing and notarization wait for the release work, shared with
 StageHand and the synths.
 
+Mac bundle and icon done 2026-10-18: the build makes `KeyboardEDO.app`
+(Info.plist from `cmake/Info.plist.in`, ad-hoc signed), its icon compiled from
+`resources/KeyboardEDO.icon` by `actool` into `Assets.car` (macOS 26) and an
+`.icns` (older macOS); `build/keyboardedo` links to the executable. Checked:
+the Finder shows the icon, `--snapshot` runs through the link, tests pass.
+Still to do: the Linux icon and `.desktop` entry, the window icon, the About
+box, help, and the `.kedo` document type.
+
 ## Later
 
 - Network MIDI 2.0 through netmidi2 (C, `~/Dev-MIDI/netmidi2`).

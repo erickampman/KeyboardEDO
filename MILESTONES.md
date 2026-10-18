@@ -43,7 +43,8 @@
 - [x] Arpeggiator controls moved from Settings into the bar
 
 ## M7: Identity and help
-- [ ] App icon (SVG source; .icns in a macOS .app bundle; PNG and .desktop on Linux; window icon)
+- [x] macOS app bundle with its icon (Icon Composer source, compiled by actool)
+- [ ] Linux icon PNGs and .desktop entry; window icon
 - [ ] About box: version, Unlikelyware, MIT license, Ko-fi link, Product Instance ID
 - [ ] Bundled help.html, opened in the default browser; a keyboard-shortcuts page
 - [ ] .kedo documents open from the Finder (document type and SDL's open-file event)

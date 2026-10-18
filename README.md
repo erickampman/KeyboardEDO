@@ -35,6 +35,12 @@ git -C external/json fetch --depth 1 origin +refs/tags/v3.12.0:refs/remotes/orig
 
 If the json pin ever moves to another tag, use that tag in the second line.
 
+On the Mac the build makes `build/KeyboardEDO.app`, with its icon compiled
+from `resources/KeyboardEDO.icon` (an Icon Composer document) by Xcode's
+`actool`; with only the Command Line Tools it builds without the icon.
+`open build/KeyboardEDO.app` starts it as an app, and `build/keyboardedo` is a
+link to the executable inside, for command lines.
+
 Run it:
 
 ```bash

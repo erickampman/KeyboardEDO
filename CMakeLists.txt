@@ -118,4 +118,52 @@ if(KEDO_APP)
         add_executable(kedo-midi-listen tools/MidiListen.cpp)
         target_link_libraries(kedo-midi-listen PRIVATE kedo::core uw::midi kedo-warnings)
     endif()
+
+    # macOS: a KeyboardEDO.app bundle (docs/decisions.md, "Identity and help"),
+    # whose icon is compiled from resources/KeyboardEDO.icon, an Icon Composer
+    # document, by Xcode's actool. Without Xcode (only the Command Line Tools)
+    # the bundle has no icon. build/keyboardedo is a link to the executable
+    # inside, so command lines (--snapshot and the rest) stay as they were.
+    if(APPLE)
+        set(KEDO_MACOS_MINIMUM 11.0)
+        configure_file(cmake/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
+        set_target_properties(keyboardedo PROPERTIES
+            MACOSX_BUNDLE TRUE
+            OUTPUT_NAME KeyboardEDO
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_BINARY_DIR}/Info.plist)
+
+        execute_process(COMMAND xcrun --find actool OUTPUT_VARIABLE KEDO_ACTOOL
+                        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE actool_missing)
+        if(actool_missing)
+            message(WARNING "Xcode's actool not found: KeyboardEDO.app will have no icon "
+                            "(install Xcode, not just the Command Line Tools)")
+        else()
+            set(icon ${CMAKE_CURRENT_SOURCE_DIR}/resources/KeyboardEDO.icon)
+            set(icon_out ${CMAKE_CURRENT_BINARY_DIR}/icon)
+            file(GLOB_RECURSE icon_inputs CONFIGURE_DEPENDS ${icon}/*)
+            add_custom_command(
+                OUTPUT ${icon_out}/Assets.car ${icon_out}/KeyboardEDO.icns
+                COMMAND ${CMAKE_COMMAND} -E make_directory ${icon_out}
+                COMMAND ${KEDO_ACTOOL} ${icon} --compile ${icon_out} --app-icon KeyboardEDO
+                        --platform macosx --target-device mac
+                        --minimum-deployment-target ${KEDO_MACOS_MINIMUM}
+                        --output-partial-info-plist ${icon_out}/partial.plist
+                        --errors --warnings --output-format human-readable-text
+                DEPENDS ${icon_inputs}
+                COMMENT "Compiling the app icon"
+                VERBATIM)
+            set(icon_files ${icon_out}/Assets.car ${icon_out}/KeyboardEDO.icns)
+            target_sources(keyboardedo PRIVATE ${icon_files})
+            set_source_files_properties(${icon_files} PROPERTIES
+                GENERATED TRUE MACOSX_PACKAGE_LOCATION Resources)
+        endif()
+
+        # Ad-hoc signed once whole (the linker signs only the executable), and
+        # the link for the command line.
+        add_custom_command(TARGET keyboardedo POST_BUILD
+            COMMAND codesign --force --sign - $<TARGET_BUNDLE_DIR:keyboardedo>
+            COMMAND ${CMAKE_COMMAND} -E rm -f ${CMAKE_BINARY_DIR}/keyboardedo
+            COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:keyboardedo> ${CMAKE_BINARY_DIR}/keyboardedo
+            VERBATIM)
+    endif()
 endif()

@@ -806,9 +806,15 @@ beyond README and `--help`. Settled with the author:
   (`SDL_OpenURL`), as the synths' help pages are HTML: the same on both
   platforms, and no WebView in an SDL/ImGui app. A keyboard-shortcuts page
   with it; tooltips stay for quick lookups.
-- **The icon is drawn from the diamond tiles**, in the app's own colours (the
-  slate background, pastel note tiles, KeyEDO's pink for a pressed key). Its
-  SVG source is kept in the repo; the `.icns` and PNGs are made from it.
+- **The icon is KeyEDO's** (three diamond keys and a wave) **in an "Ember"
+  palette**: pink, orange and yellow keys on a plum background, chosen to sit
+  with Unlikelyware's warm colours and to tell it apart from KeyEDO's blues.
+  (First decided as a drawing of the diamond tiles; the author chose KeyEDO's
+  design instead, 2026-10-18.) Its source is `resources/KeyboardEDO.icon`, an
+  Icon Composer document, which the Mac build compiles with Xcode's `actool`
+  into `Assets.car` (the macOS 26 icon, with its dark and tinted variants)
+  and an `.icns` for older macOS. Linux will need flat PNGs, rounded rather
+  than the Mac's margin and shadow; that's still to do.
 - **An About box**: name, version, Unlikelyware (its logo, as in the synths),
   the MIT license, a Ko-fi link, and the installation's Product Instance ID.
 - **Packaging**: a macOS `.app` bundle declaring the `.kedo` document type,
