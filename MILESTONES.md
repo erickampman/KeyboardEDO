@@ -31,7 +31,7 @@
 
 ## M5: MIDI identity and discovery
 - [x] UMP endpoint and function blocks (CoreMIDI Objective-C API on Mac), discovery answered
-- [ ] UMP endpoint and function blocks on Linux (ALSA sequencer)
+- [x] UMP endpoint and function blocks on Linux (ALSA sequencer)
 - [x] Product Instance ID per installation
 - [ ] Stream Configuration (protocol negotiation)
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)

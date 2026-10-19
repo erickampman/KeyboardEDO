@@ -335,9 +335,12 @@ document's groups, keeping "KBED"; it answers discovery itself, and sends
 the bend-range setup again to a peer that asks. Checked with
 kedo-midi-listen, a MIDI 1.0 receiver and a discovery sent by hand. Still
 to do:
-- On the Linux PC: `AlsaSeqOutput::openEndpoint` and `setFunctionBlocks`
-  (ALSA's UMP endpoint and block), discovery answered, and the setup
-  resent when a receiver subscribes.
+- On the Linux PC, done 2026-10-19 (uw-core `5325edd`; decisions.md,
+  "Identity and discovery"): `AlsaSeqOutput::openEndpoint` and
+  `setFunctionBlocks`, discovery answered, and the setup resent when a
+  receiver subscribes. Checked with `aconnect -l`, `/proc/asound/seq/clients`
+  and `aseqdump -u 2` on Group 1, which got the bend-range setup on
+  subscribing. A group change by hand is still to try.
 - With real hosts (Logic, Umpire, StageHand): that they show the endpoint
   and block, find it again by Product Instance ID, and take a block change
   (on CoreMIDI, a remade endpoint).

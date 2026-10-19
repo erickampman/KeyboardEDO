@@ -720,20 +720,28 @@ Done on the Mac 2026-10-15 (roadmap milestone 11a; uw-core `5cf9aad`):
   when the count moves: a UMP-aware peer that asks gets it. A receiver that
   only connects (REAPER, kedo-midi-listen) still misses it: CoreMIDI has no
   notification of a connection to a source. 11b's Stream Configuration
-  doesn't change that; on Linux the sequencer announces subscriptions, so
-  there it can be fixed.
+  doesn't change that; on Linux the sequencer announces subscriptions, and
+  there it's fixed (below).
 - **A process started after the endpoint may not list it.** A fresh
   process's `MIDIUMPEndpointManager` showed no endpoints at all (none of the
   Network MIDI 2.0 session's either) within 3 seconds, while one already
   running got "added" at once. To look at with a real host (Logic,
   Umpire), and whether hosts take the remade endpoint well.
-- **Linux isn't done.** `AlsaSeqOutput` has no `openEndpoint` yet, so there
-  it's `openVirtual` as before and the identity goes nowhere. It needs the
-  Linux PC: `snd_seq_create_ump_endpoint` / `snd_seq_create_ump_block` on
-  the MIDI 2.0 client (port 0 is the endpoint's, so before any other port
-  there), answering discovery with the same `ump::answerDiscovery`, and
-  the setup resent on `SND_SEQ_EVENT_PORT_SUBSCRIBED` for the published
-  port.
+- **On Linux (2026-10-19, uw-core `5325edd`), the gap is closed.**
+  `AlsaSeqOutput::openEndpoint` makes the endpoint a sequencer client of
+  its own (`AlsaSeqEndpoint`): the kernel keeps one endpoint per client, on
+  port 0, and the output's two clients have ports already. So `aconnect -l`
+  shows a third "KeyboardEDO" client, type UMP-MIDI2, with "MIDI 2.0"
+  (port 0) and "Group 1 (Keyboard)"; the other groups' ports are there but
+  can't be connected. The kernel holds the endpoint and block info, which
+  `/proc/asound/seq/clients` shows. uw-core counts each receiver
+  subscribing in `inquiries()`, so `MidiTargets::poll` sends the setup
+  again with no ALSA code here: `aseqdump -u 2` subscribed to Group 1 got
+  the bend-range RPN at once, before any note. A block change is made in
+  place (uw-core sets the kernel's info itself; alsa-lib's helpers can't
+  change a block), so receivers stay subscribed, unlike CoreMIDI; uw-core's
+  test checks that, not yet by hand. It needs alsa-lib 1.2.13 (Ubuntu
+  24.04 has 1.2.11: there it's `openVirtual` as before).
 
 ## Performance bar (decided 2026-10-17, roadmap milestone 12)
 
