@@ -30,3 +30,5 @@ CMakeUserPresets.json
 !docs/**/*.svg
 !resources/**/*.png
 !resources/**/*.svg
+# Local notes for Claude Code sessions; not part of the public repo
+CLAUDE.md
