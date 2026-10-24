@@ -77,7 +77,13 @@ private:
     struct Tee final : NoteSink {
         MidiTargets& t;
         explicit Tee(MidiTargets& targets) : t(targets) {}
-        template <typename F> void each(F f);
+        // Here, not in the .cpp: the overrides below are inline, and an
+        // optimized build that inlines them elsewhere needs each() there.
+        template <typename F> void each(F f) {
+            if (t.destinationOpen()) f(t.dest_);
+            if (t.publishing()) f(t.pub_);
+            if (!t.destinationOpen() && !t.publishing()) f(t.preview_);
+        }
         void noteOn(const Note& n, std::uint16_t v) override { each([&](UmpOutput& o) { o.noteOn(n, v); }); }
         void noteOff(int id) override { each([&](UmpOutput& o) { o.noteOff(id); }); }
         void glide(int id, double p) override { each([&](UmpOutput& o) { o.glide(id, p); }); }

@@ -34,13 +34,6 @@ OutputConfig MidiTargets::withProtocol(uw::MidiProtocol p) const {
     return c;
 }
 
-template <typename F>
-void MidiTargets::Tee::each(F f) {
-    if (t.destinationOpen()) f(t.dest_);
-    if (t.publishing()) f(t.pub_);
-    if (!t.destinationOpen() && !t.publishing()) f(t.preview_);
-}
-
 const std::vector<uw::MidiDestinationInfo>& MidiTargets::destinations() {
     if (midi_ && midi_->changes() != listedAt_) {
         listedAt_ = midi_->changes();
