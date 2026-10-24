@@ -6,7 +6,7 @@ roadmap is [roadmap.md](roadmap.md).
 ## What it is
 
 A cross-platform MIDI keyboard controller for equal divisions of the octave,
-after KeyEDO (`~/Dev-MIDI/KeyEDO`, Swift/SwiftUI, macOS and iPadOS). UMP is
+after KeyEDO (Unlikelyware's earlier app, Swift/SwiftUI, macOS and iPadOS; not public). UMP is
 its only internal format, and MIDI 2.0 its primary protocol: it uses MIDI
 2.0-only features where they help, and makes MIDI 1.0 from them for MIDI 1.0
 destinations. KeyEDO's `docs/controller-roadmap.md` lists those features;
@@ -19,7 +19,7 @@ play, what the settings are. Its code is not ported line by line.
 
 - **C++20 and CMake**, as StageHand, Umpire and uw-core, so code can move
   between them.
-- **uw-core** (`~/Dev-Common/uw-core`) is a git submodule at
+- **[uw-core](https://github.com/erickampman/uw-core)** is a git submodule at
   `external/uw-core`, pinned to a commit, as Umpire's decisions.md describes.
   The core uses only `uw::ump` (built with `UW_CORE_UMP_ONLY`): `MidiMessage`,
   the status and attribute enums, `scaleUp`, and `downconvert` for the MIDI
@@ -404,7 +404,7 @@ So `OutputConfig::midi1Expression` (the panel's "Expression as MIDI 1.0"):
 
 ## What the synths do with it (2026-10-12)
 
-The author's CLAP synths (PlainOldSynth, StruckSynth, IFSynth, in `~/Dev-Audio`) were brought up to
+The author's CLAP synths (PlainOldSynth, StruckSynth, IFSynth) were brought up to
 date with what `UmpOutput` sends, so they are the receivers to test against:
 - Pitch 7.9 notes; notes matched on note number, channel and group.
 - Registered controllers 0 and 7 set the channel and per-note bend ranges, per channel, and survive a
@@ -894,7 +894,7 @@ plugins' panels (PlainOldSynth's especially). Settled with the author:
   the plugins draw with NanoVG, so the design is shared, not the code.
 - **It's the house look** (the author, 2026-10-18): StageHand and Umpire
   should have it too, wherever they can, each in its own colours. Each has
-  a todo (StageHand's `docs/TODO.md` and MILESTONES M4; Umpire's roadmap,
+  a todo (StageHand's MILESTONES M4; Umpire's roadmap,
   milestone 4, and MILESTONES M2).
 
 ## KeyEDO compatibility is not a goal (decided 2026-10-13)
@@ -976,7 +976,7 @@ starts by reading this file and the roadmap. Tests are silent. The author
 commits to `main`; ask before pushing, and push uw-core before a pin that
 points at it (`git push --recurse-submodules=check`).
 
-**uw-core changes are made in `~/Dev-Common/uw-core`, never in
+**uw-core changes are made in a clone of uw-core itself, never in
 `external/uw-core`** (decided 2026-10-09). Each clone is its own repository,
 so a commit made in the submodule doesn't show in the other clone until it
 goes through GitHub; one working clone avoids that. Commit, test and push

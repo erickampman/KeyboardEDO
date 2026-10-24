@@ -1,7 +1,7 @@
 # KeyboardEDO
 
 A cross-platform MIDI keyboard controller for equal divisions of the octave,
-after KeyEDO (`~/Dev-MIDI/KeyEDO`). UMP throughout, MIDI 2.0 first: Pitch 7.9
+after KeyEDO, Unlikelyware's earlier macOS and iPadOS app. UMP throughout, MIDI 2.0 first: Pitch 7.9
 notes, per-note pitch bend and controllers, Pitch 7.25 glides, with a MIDI 1.0
 fallback. Three keyboards, as KeyEDO's: a standard piano at 12-EDO, the
 diamond piano at other EDOs, and an isomorphic tiled layout at any EDO.

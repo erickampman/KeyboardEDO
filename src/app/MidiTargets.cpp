@@ -11,9 +11,10 @@ MidiTargets::MidiTargets(const OutputConfig& config)
     midi_ = uw::PlatformMidiOutput::create("KeyboardEDO");
 #endif
     // No SysEx manufacturer ID of our own: device identity zero but for the
-    // version (0.1.0 as 0, 1, 0, 0). Sends MIDI 2.0 only, as published.
+    // version (CMake's project version, 0.9.0 as 0, 9, 0, 0). Sends MIDI 2.0
+    // only, as published.
     identity_.name     = kPublishedName;
-    identity_.revision = {0, 1, 0, 0};
+    identity_.revision = {KEDO_VERSION_MAJOR, KEDO_VERSION_MINOR, KEDO_VERSION_PATCH, 0};
     identity_.midi1    = false;
     identity_.midi2    = true;
     identity_.blocks   = {{"Keyboard", 0, 1, uw::ump::FunctionBlock::Direction::Output, true}};

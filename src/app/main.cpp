@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
     if (const char* gdk = std::getenv("GDK_BACKEND"); gdk && !std::strstr(gdk, "wayland"))
         unsetenv("GDK_BACKEND");
 #endif
-    SDL_SetAppMetadata("KeyboardEDO", "0.1.0", "com.unlikelyware.keyboardedo");
+    SDL_SetAppMetadata("KeyboardEDO", KEDO_VERSION, "com.unlikelyware.keyboardedo");
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL_Init: %s\n", SDL_GetError());
         return 1;

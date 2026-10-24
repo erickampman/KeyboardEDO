@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(KeyboardEDO VERSION 0.1.0 LANGUAGES CXX)
+# macOS: 26 or later, Apple Silicon only. Set before project();
+# ignored on other platforms. Both are cache variables, so -D overrides them.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "macOS 26 or later")
+set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "Apple Silicon only")
+project(KeyboardEDO VERSION 0.9.0 LANGUAGES CXX)
 
 # KeyboardEDO: a cross-platform, UMP-first EDO keyboard controller, after KeyEDO
-# (~/Dev-MIDI/KeyEDO). docs/decisions.md says why it's built this way and
+# (Unlikelyware's earlier app). docs/decisions.md says why it's built this way and
 # docs/roadmap.md what comes next.
 #
 #   kedo::core   tuning, layouts, the playing logic and UMP output; no toolkit
@@ -130,6 +134,9 @@ if(KEDO_APP)
         ${CMAKE_CURRENT_BINARY_DIR}/WindowIcon.cpp
     )
     target_link_libraries(keyboardedo PRIVATE kedo::core kedo-imgui kedo-warnings)
+    target_compile_definitions(keyboardedo PRIVATE KEDO_VERSION="${PROJECT_VERSION}"
+        KEDO_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} KEDO_VERSION_MINOR=${PROJECT_VERSION_MINOR}
+        KEDO_VERSION_PATCH=${PROJECT_VERSION_PATCH})
 
     # The help page: resources/help/help.html, exported from help.md (beside it)
     # by Markdown Web Writer, and the logo it shows, as Unlikelyware.png. Copied
