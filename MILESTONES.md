@@ -33,8 +33,6 @@
 - [x] UMP endpoint and function blocks (CoreMIDI Objective-C API on Mac), discovery answered
 - [x] UMP endpoint and function blocks on Linux (ALSA sequencer)
 - [x] Product Instance ID per installation
-- [ ] Stream Configuration (protocol negotiation)
-- [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 
 ## M6: Performance bar
 - [x] Left-docked bar with a show/hide toolbar button; the canvas takes the rest
@@ -57,7 +55,11 @@
 - [x] DejaVu Sans in the bar and Settings
 - [ ] Checked by hand on the Mac, and typing a value
 
-## M9: Later
+## M9: Before 1.0 (after the 0.9 previews; left from M5)
+- [ ] Stream Configuration (protocol negotiation)
+- [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
+
+## M10: Later
 - [ ] Network MIDI 2.0 (netmidi2)
 - [ ] Tuning as Property Exchange resource; arpeggiator tempo from Flex Data
 - [ ] Continuous glide between keys
