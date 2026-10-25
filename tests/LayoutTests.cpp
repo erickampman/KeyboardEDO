@@ -112,6 +112,25 @@ void testDiamondGaps() {
     CHECK(near(fX - eX, 2 * kHalfDiag));
 }
 
+void testDiamondNearest() {
+    Tuning t;
+    t.edo = 19;
+    t.originPitchClass = 0;   // from C
+    // 19-EDO's D (step 3, 189 cents): C#'s column below, D's nearest.
+    CHECK(DiamondLayout(t).keyForStep(3)->col == 1);
+    const DiamondLayout d(t, DiamondColumns::Nearest);
+    const auto dKey = d.keyForStep(3);
+    CHECK(dKey->col == 2 && dKey->row == 0 && dKey->shade == KeyShade::White);
+    // 24-EDO's quarter tones, halfway between, stay in the lower column.
+    t.edo = 24;
+    CHECK(DiamondLayout(t, DiamondColumns::Nearest).keyForStep(1)->col == 0);
+    // Through makeLayout, from the layout's setting.
+    LayoutConfig c;
+    c.diamondColumns = DiamondColumns::Nearest;
+    t.edo = 19;
+    CHECK(makeLayout(c, t)->keyForStep(3)->col == 2);
+}
+
 void testDiamondAllEdos() {
     for (int edo = Tuning::kMinEdo; edo <= Tuning::kMaxEdo; ++edo) {
         if (edo == 12) continue;
@@ -119,12 +138,14 @@ void testDiamondAllEdos() {
             Tuning t;
             t.edo = edo;
             t.originPitchClass = origin;
-            DiamondLayout d(t);
-            checkConsistent(d);
-            const auto keys = d.keysIn(d.bounds());
-            CHECK(int(keys.size()) == t.lastStep() - t.firstStep() + 1);
-            for (size_t i = 0; i < keys.size(); ++i)
-                for (size_t j = i + 1; j < keys.size(); ++j) CHECK(!overlap(keys[i], keys[j]));
+            for (DiamondColumns placing : {DiamondColumns::Below, DiamondColumns::Nearest}) {
+                DiamondLayout d(t, placing);
+                checkConsistent(d);
+                const auto keys = d.keysIn(d.bounds());
+                CHECK(int(keys.size()) == t.lastStep() - t.firstStep() + 1);
+                for (size_t i = 0; i < keys.size(); ++i)
+                    for (size_t j = i + 1; j < keys.size(); ++j) CHECK(!overlap(keys[i], keys[j]));
+            }
         }
     }
 }
@@ -590,6 +611,7 @@ int main() {
     testPiano();
     testDiamondSeventeen();
     testDiamondGaps();
+    testDiamondNearest();
     testDiamondAllEdos();
     testTiledIsomorphic();
     testTiledRange();

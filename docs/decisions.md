@@ -989,3 +989,42 @@ git commit
 ```
 
 The submodule is only ever a checkout of a pushed commit.
+
+## Scale highlight (decided 2026-10-25)
+
+An optional scale tints the keys it holds, chosen from a **Scale section at
+the bottom of the performance bar**: a scale ("None" for no highlight) and how
+it maps into the EDO. Settled with the author:
+- **Its key is the origin note**, not a menu of its own: the menu reads
+  "A Dorian" for an A origin.
+- **NoteGran Chords' scales and mapping** (its core/Scales), so a scale looks
+  the same in both: familiar scales stored spelled on the chain of fifths,
+  mapped By fifths (the EDO's own fifth) or Nearest (the step nearest each
+  12-EDO note). At 12-EDO both give every scale its familiar notes, so Map is
+  disabled there.
+- **Nearest is the default** (and what a saved scale without a map reads as):
+  a highlight is mostly for finding a familiar scale on an unfamiliar
+  keyboard, and with Nearest semitone columns every scale note lands in its
+  own named column. By fifths is there for the EDO's own version of the
+  scale. NoteGran Chords should default to Nearest too, so the two agree; it
+  is still By fifths there (noted in its docs/design.md, "Map").
+- **The Piano layout only, for now**: the 12-EDO piano and the diamond piano.
+  On Tiled and Custom the section is disabled.
+- **A fill**: teal, pale on white keys and deep on black, stronger on the key
+  note; pressed and latched still show over it. (A border was tried and the
+  fill read better.)
+- **Per document**, as the knobs, saved in document.json by the scale's name,
+  so adding a scale to the menu moves no saved choice.
+
+## Diamond piano columns (decided 2026-10-25)
+
+Which 12-EDO semitone's column a diamond piano step goes in is a setting of
+the layout, **Columns, in the Tuning section** (the diamond piano's only):
+- **Semitone below** (the default, KeyEDO's): the semitone at or below the
+  step, so 19-EDO's D (189 cents) sits in C#'s column.
+- **Nearest semitone**: the nearest, so that D sits in D's column and a scale
+  highlight lands on the keys a pianist expects. A step exactly halfway
+  (24-EDO's quarter tones) goes in the lower column, as with Semitone below.
+
+Saved in the layout file as `diamondColumns` ("below" or "nearest"), a key
+KeyEDO doesn't read and ignores.

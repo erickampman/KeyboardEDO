@@ -181,6 +181,8 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     read(j, "selectedPresetIndex", d.layout.generatorIndex);
     read(j, "pianoLowest", d.layout.pianoLowest);
     read(j, "pianoHighest", d.layout.pianoHighest);
+    // Ours, not KeyEDO's (which ignores it): the diamond piano's columns.
+    if (j.value("diamondColumns", std::string()) == "nearest") d.layout.diamondColumns = DiamondColumns::Nearest;
     std::string tileColor = kTileColors[int(d.tileColor)];
     read(j, "tileColorMode", tileColor);
     for (int i = 0; i < 3; ++i)
@@ -250,7 +252,7 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     // Everything else, kept as it was.
     static const std::set<std::string> known = {
         "name", "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
-        "pianoLowest", "pianoHighest", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
+        "pianoLowest", "pianoHighest", "diamondColumns", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
         "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
         "perNoteBendRange", "midiDestinationName", "midi1Expression", "customKeys",
@@ -286,6 +288,7 @@ std::string writeLayoutSetup(const LayoutSetup& d) {
     j["selectedPresetIndex"] = d.layout.generatorIndex;
     j["pianoLowest"] = d.layout.pianoLowest;
     j["pianoHighest"] = d.layout.pianoHighest;
+    j["diamondColumns"] = d.layout.diamondColumns == DiamondColumns::Nearest ? "nearest" : "below";
     j["tileColorMode"] = kTileColors[int(d.tileColor)];
     j["locked"] = d.locked;
 
@@ -447,6 +450,11 @@ std::optional<Document> loadBundle(const fs::path& path, std::string* error) {
             knob.controller = std::clamp(k.value("controller", knob.controller), 0, 127);
             knob.label = k.value("label", std::string());
         }
+    if (const auto it = j.find("scale"); it != j.end() && it->is_object()) {
+        // By name, so a scale added to the menu later moves no saved one.
+        d.scale.scale = it->value("name", std::string());
+        d.scale.map = it->value("map", std::string()) == "fifths" ? ScaleMap::Fifths : ScaleMap::Nearest;
+    }
     return d;
 }
 
@@ -517,6 +525,9 @@ bool saveDocument(const std::string& pathText, const Document& document, std::st
         knobs.push_back({{"pressure", k.pressure}, {"controller", k.controller}, {"label", k.label}});
     }
     j["knobs"] = knobs;
+    if (!document.scale.scale.empty())
+        j["scale"] = {{"name", document.scale.scale},
+                      {"map", document.scale.map == ScaleMap::Nearest ? "nearest" : "fifths"}};
     if (!writeFile(tmp / "document.json", j.dump(2) + "\n", error)) return false;
 
     // The swap: the old bundle aside, the new one in, the old one gone.

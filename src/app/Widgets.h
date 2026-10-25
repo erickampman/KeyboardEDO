@@ -20,6 +20,7 @@ inline const ImVec4 kSlate{102 / 255.f, 125 / 255.f, 140 / 255.f, 1};   // the d
 inline const ImVec4 kSteel{159 / 255.f, 191 / 255.f, 224 / 255.f, 1};   // "Keyboard"
 inline const ImVec4 kAccent{66 / 255.f, 150 / 255.f, 250 / 255.f, 1};   // "EDO", ImGui's dark accent
 inline const ImVec4 kPink{1.0f, 0.42f, 0.62f, 1};                         // a pressed key
+inline const ImVec4 kTeal{0.25f, 0.75f, 0.85f, 1};                         // a scale's key note
 } // namespace colour
 
 // The panels' ImGui style: the slates for backgrounds and frames, the accent

@@ -113,14 +113,16 @@ std::optional<Key> PianoLayout::keyForStep(int step) const {
 
 // --- DiamondLayout ----------------------------------------------------------------
 
-DiamondLayout::DiamondLayout(const Tuning& tuning) {
+DiamondLayout::DiamondLayout(const Tuning& tuning, DiamondColumns placing) {
     const double h = kKeySize * kSqrt2 / 2;   // half-diagonal
 
-    // Each step goes in the column of the 12-EDO semitone it falls in. A step
-    // exactly on a semitone (24-EDO's even steps) starts that semitone's column.
+    // Each step goes in the column of the 12-EDO semitone it falls in, or the
+    // nearest. A step exactly on a semitone (24-EDO's even steps) starts that
+    // semitone's column; one halfway between goes in the lower.
     std::map<int, std::vector<int>> columns;   // semitone above the origin -> steps
     for (int step = tuning.firstStep(); step <= tuning.lastStep(); ++step) {
-        const int semitone = int(std::floor(12.0 * step / tuning.edo + 1e-9));
+        const double at = 12.0 * step / tuning.edo;
+        const int semitone = int(placing == DiamondColumns::Nearest ? std::ceil(at - 0.5 - 1e-9) : std::floor(at + 1e-9));
         columns[semitone].push_back(step);
     }
     if (columns.empty()) return;
@@ -343,7 +345,7 @@ std::unique_ptr<Layout> makeLayout(const LayoutConfig& config, const Tuning& tun
     }
     if (tuning.edo == 12)
         return std::make_unique<PianoLayout>(tuning, config.pianoLowest, config.pianoHighest);
-    return std::make_unique<DiamondLayout>(tuning);
+    return std::make_unique<DiamondLayout>(tuning, config.diamondColumns);
 }
 
 } // namespace kedo

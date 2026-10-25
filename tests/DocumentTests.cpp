@@ -89,6 +89,7 @@ void testRoundTrip() {
     d.tuning.originPitchClass = 2;
     d.layout.kind = LayoutKind::Tiled;
     d.layout.generatorIndex = 2;
+    d.layout.diamondColumns = DiamondColumns::Nearest;
     d.tileColor = TileColor::Octave;
     d.play.drag = DragBehavior::Fixed;
     d.play.vertical = VerticalControl::Controller;
@@ -210,6 +211,7 @@ void testBundleRoundTrip() {
     d.destination = "Synth";
     d.knobs[0] = {.controller = 20, .label = ""};
     d.knobs[2] = {.pressure = true, .label = "Squeeze"};
+    d.scale = {.scale = "Dorian", .map = ScaleMap::Nearest};
 
     std::string error;
     CHECK(saveDocument(path, d, &error));

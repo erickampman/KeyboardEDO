@@ -3,6 +3,7 @@
 #include <string>
 
 #include "kedo/Layout.h"
+#include "kedo/Scales.h"
 
 // How a key looks: colours and labels, as KeyEDO's views. Plain values, so the
 // drawing layer only converts them to its own types.
@@ -26,9 +27,11 @@ struct KeyLook {
 };
 
 // The look of `key` from `kind`'s layout (Piano covers both the piano and the
-// diamonds; the key's shape tells them apart).
+// diamonds; the key's shape tells them apart). `scale`: its place in the
+// performance bar's scale, tinting the piano's keys (only those, for now:
+// decisions.md, "Scale highlight").
 KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor tileColor,
-                bool sounding, bool latched);
+                bool sounding, bool latched, ScaleMark scale = ScaleMark::Off);
 
 // The background behind each keyboard: slate blue for the diamonds and the
 // tiles (between black and white keys), a darker slate for the piano, darker

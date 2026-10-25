@@ -118,15 +118,20 @@ private:
     Rect bounds_;
 };
 
+// Which 12-EDO semitone's column a diamond piano step goes in: the one at or
+// below it (KeyEDO's), or the nearest, so 19-EDO's D (189 cents) is in D's
+// column, not C#'s. A step halfway between goes in the lower one.
+enum class DiamondColumns { Below, Nearest };
+
 // KeyEDO's diamond hybrid, for any EDO but 12: one column per 12-EDO semitone,
-// holding the steps that fall in it, stacked upward. Black-key columns sit half
+// holding the steps that fall in it (`columns` says which), stacked upward. Black-key columns sit half
 // a diamond higher, so the columns interlock as a piano's keys do, and an extra
 // half-diamond gap separates E from F and B from C.
 class DiamondLayout final : public Layout {
 public:
     static constexpr double kKeySize = 60;     // the square's side
 
-    explicit DiamondLayout(const Tuning& tuning);
+    explicit DiamondLayout(const Tuning& tuning, DiamondColumns columns = DiamondColumns::Below);
 
     Rect bounds() const override { return bounds_; }
     std::vector<Key> keysIn(const Rect& area) const override;
@@ -248,6 +253,7 @@ struct LayoutConfig {
     int  tiledRows        = 8;
     int  pianoLowest      = 24;    // C1
     int  pianoHighest     = 108;   // C8
+    DiamondColumns diamondColumns = DiamondColumns::Below;
     std::vector<CustomKey> customKeys;   // LayoutKind::Custom's
 
     bool operator==(const LayoutConfig&) const = default;

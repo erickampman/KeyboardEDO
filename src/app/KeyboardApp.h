@@ -125,6 +125,7 @@ private:
     float drawPanel();                 // returns its width
     float drawBar();                   // the performance bar; returns its width
     void drawArpeggiator();
+    void drawScale();
     void drawKnobAssignment(int index);
     float drawMonitor(float x, float width);   // returns its height
     void setPanes(bool panel, bool monitor);

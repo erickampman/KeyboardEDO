@@ -1,7 +1,10 @@
 // Viewport, KeyStyle and UmpText: what the UI uses from the core.
 
+#include <algorithm>
+
 #include "Check.h"
 #include "kedo/KeyStyle.h"
+#include "kedo/Scales.h"
 #include "kedo/Synopsis.h"
 #include "kedo/UmpOutput.h"
 #include "kedo/UmpText.h"
@@ -90,6 +93,60 @@ void testKeyLook() {
     CHECK(keyboardBackground(LayoutKind::Piano, twelve).r < 0.5f);
 }
 
+void testScaleMarks() {
+    using enum ScaleMark;
+    // The key is the origin note. 12-EDO from A: A major, A (step 0) the tonic.
+    Tuning t;
+    ScaleChoice c{.scale = "Major (Ionian)", .map = ScaleMap::Fifths};
+    CHECK(ScaleChoice{}.map == ScaleMap::Nearest);   // the default
+    auto marks = scaleMarks(c, t);
+    CHECK((marks == std::vector<ScaleMark>{Tonic, Off, Degree, Off, Degree, Degree, Off, Degree, Off, Degree, Off,
+                                          Degree}));
+    // Every scale is its familiar self at 12-EDO, whichever the map.
+    for (const FamiliarScale& s : familiarScales()) {
+        const ScaleChoice fifths{.scale = s.name, .map = ScaleMap::Fifths}, nearest{.scale = s.name};
+        const auto m = scaleMarks(fifths, t);
+        CHECK(m == scaleMarks(nearest, t));
+        CHECK(std::count(m.begin(), m.end(), Off) == 12 - s.count);
+    }
+
+    // 19-EDO by fifths (the fifth is 11 steps): the major scale's steps are
+    // 0 3 6 8 11 14 17.
+    t.edo = 19;
+    marks = scaleMarks(c, t);
+    CHECK(marks.size() == 19);
+    for (int step : {0, 3, 6, 8, 11, 14, 17}) CHECK(marks[std::size_t(step)] != Off);
+    CHECK(std::count(marks.begin(), marks.end(), Off) == 12);
+
+    // Nearest: 22-EDO's major third by fifths is 8 steps, by nearest 7.
+    t.edo = 22;
+    CHECK(scaleMarks(c, t)[8] == Degree);
+    c.map = ScaleMap::Nearest;
+    CHECK(scaleMarks(c, t)[7] == Degree && scaleMarks(c, t)[8] == Off);
+
+    // None, or a name not in the menu: no marks.
+    CHECK(scaleMarks({}, t).empty());
+    CHECK(scaleMarks({.scale = "Bebop"}, t).empty());
+
+    // The piano's keys, rectangles and diamonds, white and black, are tinted,
+    // the tonic differently; pressed still shows; the tiles aren't.
+    Key k;
+    k.playable = true;
+    for (KeyShape shape : {KeyShape::Rectangle, KeyShape::Diamond})
+        for (KeyShade shade : {KeyShade::White, KeyShade::Black}) {
+            k.shape = shape;
+            k.shade = shade;
+            const Rgb plain = keyLook(k, t, LayoutKind::Piano, TileColor::Off, false, false).fill;
+            const Rgb degree = keyLook(k, t, LayoutKind::Piano, TileColor::Off, false, false, Degree).fill;
+            const Rgb tonic = keyLook(k, t, LayoutKind::Piano, TileColor::Off, false, false, Tonic).fill;
+            const Rgb pressed = keyLook(k, t, LayoutKind::Piano, TileColor::Off, true, false, Tonic).fill;
+            CHECK(!(plain == degree) && !(degree == tonic) && !(plain == tonic));
+            CHECK(!(pressed == tonic));
+        }
+    CHECK(keyLook(k, t, LayoutKind::Tiled, TileColor::Off, false, false, Tonic).fill ==
+          keyLook(k, t, LayoutKind::Tiled, TileColor::Off, false, false).fill);
+}
+
 void testUmpText() {
     Tuning t;
     t.originOctave = 1;   // A1: these numbers assume it
@@ -159,6 +216,7 @@ void testSynopsis() {
 int main() {
     testViewport();
     testKeyLook();
+    testScaleMarks();
     testUmpText();
     testSynopsis();
     return kedo::test::finish("View");

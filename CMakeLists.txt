@@ -50,6 +50,7 @@ add_library(kedo-core STATIC
     src/kedo/Controls.cpp
     src/kedo/Viewport.cpp
     src/kedo/KeyStyle.cpp
+    src/kedo/Scales.cpp
     src/kedo/UmpText.cpp
     src/kedo/Document.cpp
     src/kedo/Preferences.cpp

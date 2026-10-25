@@ -10,6 +10,7 @@
 #include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 #include "kedo/Performer.h"
+#include "kedo/Scales.h"
 #include "kedo/UmpOutput.h"
 
 // Documents (decisions.md, "Documents with several layouts"): a .kedo bundle
@@ -66,6 +67,9 @@ struct Document {
     // The performance bar's knobs: per document, so switching layouts
     // doesn't change what they send (decisions.md, "Performance bar").
     std::vector<KnobAssignment> knobs = defaultKnobs();
+    // The performance bar's scale, shown on the diamond piano's keys: per
+    // document too (decisions.md, "Scale highlight").
+    ScaleChoice scale;
 
     LayoutSetup&       layout() { return layouts[current]; }
     const LayoutSetup& layout() const { return layouts[current]; }

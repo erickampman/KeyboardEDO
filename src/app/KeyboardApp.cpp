@@ -884,14 +884,18 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     const float zoom = float(viewport_.zoom);
     // Editing keys, the selected ones on top, so what's being moved shows.
     std::vector<Key> keys = layout_->keysIn(viewport_.visible());
+    const std::vector<ScaleMark> marks = scaleMarks(doc_.scale, settings_.tuning);
     if (editingKeys())
         std::stable_partition(keys.begin(), keys.end(), [&](const Key& k) { return !selected_.count(k.row); });
     for (const Key& k : keys) {
         // The arpeggiator's step sounds; what its Hold keeps shows latched.
         const bool held = arp_.heldByHold(k.note.id);
+        const ScaleMark mark = marks.empty() ? ScaleMark::Off
+                                             : marks[std::size_t(((k.step % int(marks.size())) + int(marks.size())) %
+                                                                 int(marks.size()))];
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
                                      performer_.isSounding(k.note.id) || arp_.sounding(k.note.id) || held,
-                                     performer_.isLatched(k.note.id) || held);
+                                     performer_.isLatched(k.note.id) || held, mark);
         const ImVec2 c = vec(viewport_.toScreen(k.center));
         const float hw = float(k.halfWidth) * zoom, hh = float(k.halfHeight) * zoom;
 
@@ -1592,6 +1596,17 @@ float KeyboardApp::drawPanel() {
         ImGui::Combo("Origin note", &t.originPitchClass, kNotes, 12);
         if (ImGui::InputInt("Origin octave", &t.originOctave)) t.originOctave = std::clamp(t.originOctave, -1, 7);
         ImGui::TextDisabled("Origin: %s%d, %.2f Hz", kNotes[t.originPitchClass], t.originOctave, t.originFrequency());
+        // Which piano column a step goes in: the diamond piano's only.
+        static const char* const kColumns[] = {"Semitone below", "Nearest semitone"};
+        ImGui::BeginDisabled(l.kind != LayoutKind::Piano || t.edo == 12);
+        enumCombo("Columns", l.diamondColumns, kColumns, ImGui::CalcItemWidth());
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", l.kind != LayoutKind::Piano || t.edo == 12
+                                        ? "The diamond piano's only (Piano, any EDO but 12)"
+                                        : "Which piano key's column each step goes in:\n"
+                                          "Semitone below: the 12-EDO note at or below it (KeyEDO's)\n"
+                                          "Nearest semitone: the 12-EDO note nearest it");
     }
     if (prefs_.editing) endSection();
 
@@ -1931,6 +1946,7 @@ float KeyboardApp::drawBar() {
     ui::endSection();
 
     drawArpeggiator();
+    drawScale();
     ImGui::End();
     ImGui::PopFont();
     return width;
@@ -2076,6 +2092,53 @@ float KeyboardApp::drawMonitor(float x, float width) {
     ImGui::EndChild();
     ImGui::End();
     return kMonitorHeight;
+}
+
+// The scale shown on the keys (decisions.md, "Scale highlight"): a scale
+// ("None": no highlight) on the origin note, and how it maps into the EDO, as
+// NoteGran Chords'. Only the piano (rectangles or diamonds) shows it, for now;
+// elsewhere it's disabled.
+void KeyboardApp::drawScale() {
+    static const char* const kMaps[] = {"By fifths", "Nearest"};
+    const ImVec4& teal = ui::colour::kTeal;
+    const float gap = ImGui::GetStyle().ItemSpacing.x;
+    ScaleChoice& c = doc_.scale;
+    const bool shown = settings_.layout.kind == LayoutKind::Piano;
+    ui::beginSection("Scale", teal, false);
+    const float left = ImGui::GetCursorPosX();
+    const float whole = ImGui::GetContentRegionAvail().x;
+    const float half = (whole - gap) / 2;
+    ImGui::BeginDisabled(!shown);
+
+    ImGui::SetNextItemWidth(whole);
+    // Named with its key, the origin note: "A Dorian".
+    const char* key = pitchClassName(settings_.tuning.originPitchClass);
+    const std::string named = c.scale.empty() ? "None" : std::string(key) + " " + c.scale;
+    if (ImGui::BeginCombo("##scale", named.c_str(), ImGuiComboFlags_HeightLarge)) {
+        if (ImGui::Selectable("None", c.scale.empty())) c.scale.clear();
+        for (const FamiliarScale& s : familiarScales()) {
+            const bool chosen = c.scale == s.name;
+            if (ImGui::Selectable(s.name, chosen)) c.scale = s.name;
+            if (chosen) ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("%s", shown ? ("Tint the keys in this scale, its key (the origin note, " + std::string(key) +
+                                         ") stronger").c_str()
+                                      : "Shown on the Piano layout only");
+
+    // At 12-EDO both maps give the familiar scale.
+    ImGui::BeginDisabled(settings_.tuning.edo == 12);
+    captionedCombo("Map", "##scaleMap", c.map, kMaps, left, half, teal);
+    ImGui::EndDisabled();
+    if (shown && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip | ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip(settings_.tuning.edo == 12 ? "At 12-EDO both maps give the familiar scale"
+                                                     : "How the scale's notes find steps of the EDO:\n"
+                                                       "By fifths: stacked fifths of the EDO's own fifth\n"
+                                                       "Nearest: the step nearest each 12-EDO note");
+    ImGui::EndDisabled();
+    ui::endSection();
 }
 
 } // namespace kedo::app

@@ -13,6 +13,10 @@ Rgb grey(float v) { return {v, v, v}; }
 // Pressed is KeyEDO's pink; latched is orange, so the two can be told apart.
 const Rgb kPressed{1.0f, 0.42f, 0.62f};
 const Rgb kLatched{1.0f, 0.68f, 0.28f};
+// A scale's keys, in teal (neither pressed nor latched): pale on white keys,
+// deep on black, stronger on the key note.
+const Rgb kScaleWhite{0.62f, 0.88f, 0.92f}, kTonicWhite{0.25f, 0.75f, 0.85f};
+const Rgb kScaleBlack{0.0f, 0.33f, 0.40f}, kTonicBlack{0.0f, 0.55f, 0.66f};
 // How opaque a key with no note is.
 const float kNoNote = 0.45f;
 
@@ -63,7 +67,7 @@ Rgb hsb(double h, double s, double b) {
 }
 
 KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor tileColor,
-                bool sounding, bool latched) {
+                bool sounding, bool latched, ScaleMark scale) {
     KeyLook look;
     const StepLabel label = tuning.label(key.step);
     const bool black = key.shade == KeyShade::Black;
@@ -114,6 +118,9 @@ KeyLook keyLook(const Key& key, const Tuning& tuning, LayoutKind kind, TileColor
         if (!black && label.pitchClass == 0) look.title = noteName(label, true);
     }
 
+    if (kind == LayoutKind::Piano && scale != ScaleMark::Off)
+        look.fill = scale == ScaleMark::Tonic ? (black ? kTonicBlack : kTonicWhite)
+                                              : (black ? kScaleBlack : kScaleWhite);
     if (latched) look.fill = kLatched;
     else if (sounding) look.fill = kPressed;
     return look;
