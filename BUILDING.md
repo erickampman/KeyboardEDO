@@ -77,6 +77,10 @@ On Linux, `cmake --install build` (to `/usr/local`; `--prefix ~/.local` for your
 with its icon.
 
 ```bash
+cmake --install build --prefix ~/.local
+```
+
+```bash
 ./build/keyboardedo
 ./build/keyboardedo --edo 17 --layout tiled --publish
 ./build/keyboardedo ~/Documents/"My set.kedo"
@@ -100,3 +104,39 @@ VS Code's and VSCodium's snaps leak their GTK environment into their terminals (
 their own GSettings schemas), which leaves a window that can't be moved or resized, or aborts in
 GLib. The app restores the originals the snap saves as `NAME_VSCODE_SNAP_ORIG`, and unsets a
 `GDK_BACKEND` that excludes Wayland.
+
+## Options
+
+Pass these to the first command (`cmake -B build ... -DNAME=VALUE`).
+
+| Option | Default | Effect |
+|---|---|---|
+| `KEDO_APP` | `ON` | `OFF` builds only the core library and the tests, without SDL. |
+| `KEDO_TESTS` | `ON` when built on its own | Build the tests. |
+| `KEDO_SYSTEM_SDL` | `OFF` | Use an installed SDL3 instead of `external/SDL`. |
+| `KEDO_UW_CORE_DIR` | `external/uw-core` | Build against another uw-core clone (below). |
+
+## Building against a local uw-core
+
+To try a uw-core change that isn't pushed and pinned yet, point the build at another clone:
+
+```bash
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DKEDO_UW_CORE_DIR=$HOME/Dev-Common/uw-core
+```
+
+When the change is ready, push uw-core first, then move KeyboardEDO's submodule pin
+(uw-core's README, "Pushing: uw-core first").
+
+## How this differs from the other projects
+
+Every Unlikelyware project builds the same way: `git clone`, `tools/fetch_deps.sh`, the three
+commands under "Build and test", and for a plugin `cmake --build build --target install-clap`. The
+same package list, the same `build/` folder, the same option names (`<PROJECT>_BUILD_VST3`,
+`<PROJECT>_UW_CORE_DIR` and so on). What's different here, and why:
+
+- The UI is SDL3 and Dear ImGui, not DPF, so it has SDL as a submodule (large: most of a clone's size) and `KEDO_SYSTEM_SDL` to use an installed SDL3 instead.
+- An app, not a plugin: no `install-clap`. On Linux it installs with `cmake --install` (as StageHand does); on macOS it's `build/KeyboardEDO.app`, copied to Applications to keep.
+- The option prefix is `KEDO_`, the short name its code uses throughout.
+- The app icon on macOS needs full Xcode 26 (as StageHand's); without it the app builds with no icon.
+- No `_WERROR` option: the five synths have one and their CI turns it on; this project's build still has a few warnings in its own sources, so it comes once they're fixed.
+- No CI yet (ReleaseUMP R1-3, from November 2026).

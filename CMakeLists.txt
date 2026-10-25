@@ -33,7 +33,10 @@ if(KEDO_APP)
 else()
     set(UW_CORE_UMP_ONLY ON CACHE BOOL "" FORCE)
 endif()
-add_subdirectory(external/uw-core)
+# KEDO_UW_CORE_DIR points at another uw-core clone (e.g. ../uw-core) to build
+# against a change that isn't pushed and pinned yet.
+set(KEDO_UW_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/uw-core" CACHE PATH "uw-core source")
+add_subdirectory(${KEDO_UW_CORE_DIR} uw-core)
 
 add_library(kedo-warnings INTERFACE)
 target_compile_options(kedo-warnings INTERFACE -Wall -Wextra -Wpedantic)
