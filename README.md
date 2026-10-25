@@ -14,99 +14,19 @@ KeyEDO's documents import as a document of one layout.
 [docs/decisions.md](docs/decisions.md) says why it's built this way, and
 [docs/roadmap.md](docs/roadmap.md) what comes next.
 
-## Building and testing
+## Building from source
 
 ```bash
-git submodule update --init --recursive
-cmake -S . -B build -G Ninja
-ninja -C build
-ctest --test-dir build --output-on-failure
+git clone https://github.com/erickampman/KeyboardEDO.git
+cd KeyboardEDO
+tools/fetch_deps.sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
 ```
 
-Once per clone, so `git push --recurse-submodules=check` (the house rule)
-accepts the json submodule: it's a shallow clone at upstream's `v3.12.0` tag,
-which no fetched branch contains, so the check can't otherwise see it's on
-GitHub.
+[BUILDING.md](BUILDING.md) has what to install first on Linux and macOS, the tests, and how to run
+it and its tools.
 
-```bash
-git config push.recurseSubmodules check
-git -C external/json fetch --depth 1 origin +refs/tags/v3.12.0:refs/remotes/origin/v3.12.0
-```
+## License
 
-If the json pin ever moves to another tag, use that tag in the second line.
-
-On the Mac the build makes `build/KeyboardEDO.app`, with its icon compiled
-from `resources/KeyboardEDO.icon` (an Icon Composer document) by Xcode's
-`actool`; with only the Command Line Tools it builds without the icon.
-`open build/KeyboardEDO.app` starts it as an app, and `build/keyboardedo` is a
-link to the executable inside, for command lines.
-
-On Linux, `cmake --install build` (to `/usr/local`; `--prefix ~/.local` for
-yourself) installs `keyboardedo`, its help page, a desktop entry and the
-icons, so it appears in the desktop's app list with its icon.
-
-Run it:
-
-```bash
-./build/keyboardedo
-./build/keyboardedo --edo 17 --layout tiled --publish
-./build/keyboardedo ~/Documents/"My set.kedo"
-./build/keyboardedo ~/"Library/Mobile Documents/com~apple~CloudDocs/KeyEDO/Untitled.json"   # imported
-```
-
-`keyboardedo --help` lists the options. To see what it sends without a DAW,
-run this alongside it with Publish on:
-
-```bash
-./build/kedo-midi-listen KeyboardEDO 60
-```
-
-Linux needs SDL3's build dependencies (`external/SDL/docs/README-linux.md`),
-and alsa-lib 1.2.10 or later with a 6.5 or later kernel for MIDI (UMP in the
-ALSA sequencer); uw-core's backends also need JACK's headers. On Ubuntu, for
-X11 with touch and Wayland:
-
-```bash
-sudo apt install ninja-build pkg-config libasound2-dev libjack-jackd2-dev libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libgles2-mesa-dev libdrm-dev libgbm-dev libdecor-0-dev libudev-dev libdbus-1-dev libibus-1.0-dev
-```
-
-Under GNOME on Wayland the window's title bar and borders come from libdecor's
-GTK plugin (`libdecor-0-plugin-1-gtk`). VS Code's and VSCodium's snaps leak
-their GTK environment into their terminals (`GDK_BACKEND=x11`, their own
-GSettings schemas), which leaves a window that can't be moved or resized, or
-aborts in GLib. The app restores the originals the snap saves as
-`NAME_VSCODE_SNAP_ORIG`, and unsets a `GDK_BACKEND` that excludes Wayland.
-
-To build only the core and its tests, configure with `-DKEDO_APP=OFF`; that
-needs none of these.
-
-To see the layouts without a UI:
-
-```bash
-./build/kedo-layout-svg build/svg
-```
-
-## Layout
-
-| Path | What |
-|---|---|
-| `src/kedo/Note.h` | what a key plays: id, note number, group and channel, pitch |
-| `src/kedo/Tuning.*` | EDO, origin, frequencies, note numbers, Pitch 7.9 / 7.25 |
-| `src/kedo/Generators.*` | Tiled generator presets |
-| `src/kedo/CustomLayout.*` | custom layouts: keys placed one by one, converting any layout |
-| `src/kedo/ComputerKeys.*` | computer keys: their codes, and the generated layouts' default mappings |
-| `src/kedo/Layout.*` | `PianoLayout`, `DiamondLayout`, `TiledLayout`: geometry and hit-testing |
-| `src/kedo/Performer.*` | pointers and keys in, notes and expression out |
-| `src/kedo/NoteSink.h` | what is played, before it's MIDI |
-| `src/kedo/UmpOutput.*` | NoteSink calls to UMP, MIDI 2.0 or 1.0 |
-| `src/kedo/Viewport.*`, `KeyStyle.*`, `UmpText.*` | the view transform, key colours and labels, UMP as text |
-| `src/kedo/Document.*` | `.kedo` documents of several layouts; each layout a KeyEDO-compatible JSON file |
-| `src/kedo/Synopsis.*`, `Preferences.*` | the one-line synopsis; app preferences |
-| `src/app/` | the app: SDL and ImGui (`KeyboardApp`, `Icons`), MIDI targets (`MidiTargets`) |
-| `external/uw-core` | shared UMP code (submodule) |
-| `external/SDL`, `external/imgui` | SDL 3.4 and Dear ImGui 1.92 (submodules) |
-| `tools/LayoutSvg.cpp` | draws layouts to SVG |
-| `tools/MidiListen.cpp` | `kedo-midi-listen`: prints what a source sends |
-| `external/json` | nlohmann/json 3.12.0 (shallow submodule) |
-
-MIT licence, as uw-core.
+MIT, as uw-core. See [LICENSE](LICENSE).

@@ -48,3 +48,39 @@ KeyboardEDO sends MIDI 2.0 first, with a minimal MIDI 1.0 fallback, and never se
 isn't on GitHub yet.
 
 The README explains how to set up the json submodule so that check accepts it.
+
+## The json submodule and the push check
+
+Once per clone, so `git push --recurse-submodules=check` (the house rule) accepts the json
+submodule: it's a shallow clone at upstream's `v3.12.0` tag, which no fetched branch contains, so
+the check can't otherwise see it's on GitHub.
+
+```bash
+git config push.recurseSubmodules check
+git -C external/json fetch --depth 1 origin +refs/tags/v3.12.0:refs/remotes/origin/v3.12.0
+```
+
+If the json pin ever moves to another tag, use that tag in the second line.
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/kedo/Note.h` | what a key plays: id, note number, group and channel, pitch |
+| `src/kedo/Tuning.*` | EDO, origin, frequencies, note numbers, Pitch 7.9 / 7.25 |
+| `src/kedo/Generators.*` | Tiled generator presets |
+| `src/kedo/CustomLayout.*` | custom layouts: keys placed one by one, converting any layout |
+| `src/kedo/ComputerKeys.*` | computer keys: their codes, and the generated layouts' default mappings |
+| `src/kedo/Layout.*` | `PianoLayout`, `DiamondLayout`, `TiledLayout`: geometry and hit-testing |
+| `src/kedo/Performer.*` | pointers and keys in, notes and expression out |
+| `src/kedo/NoteSink.h` | what is played, before it's MIDI |
+| `src/kedo/UmpOutput.*` | NoteSink calls to UMP, MIDI 2.0 or 1.0 |
+| `src/kedo/Viewport.*`, `KeyStyle.*`, `UmpText.*` | the view transform, key colours and labels, UMP as text |
+| `src/kedo/Document.*` | `.kedo` documents of several layouts; each layout a KeyEDO-compatible JSON file |
+| `src/kedo/Synopsis.*`, `Preferences.*` | the one-line synopsis; app preferences |
+| `src/app/` | the app: SDL and ImGui (`KeyboardApp`, `Icons`), MIDI targets (`MidiTargets`) |
+| `external/uw-core` | shared UMP code (submodule) |
+| `external/SDL`, `external/imgui` | SDL 3.4 and Dear ImGui 1.92 (submodules) |
+| `tools/LayoutSvg.cpp` | draws layouts to SVG |
+| `tools/MidiListen.cpp` | `kedo-midi-listen`: prints what a source sends |
+| `external/json` | nlohmann/json 3.12.0 (shallow submodule) |
