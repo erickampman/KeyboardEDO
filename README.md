@@ -14,6 +14,24 @@ KeyEDO's documents import as a document of one layout.
 [docs/decisions.md](docs/decisions.md) says why it's built this way, and
 [docs/roadmap.md](docs/roadmap.md) what comes next.
 
+## Installing
+
+**macOS:** drag `KeyboardEDO.app` into Applications. The 0.9 previews aren't notarized, so the first
+time macOS refuses to open it: open System Settings ▸ Privacy & Security and click Open Anyway. Or
+clear the quarantine flag yourself:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/KeyboardEDO.app
+```
+
+**Linux:** unpack the download anywhere you'll keep it, such as `~/.local/lib/keyboardedo`, and keep
+`keyboardedo` and its `help` folder together (Help looks for `help/` beside the executable). To run
+it as plain `keyboardedo`, link it into a directory on your `PATH`:
+
+```bash
+ln -sf ~/.local/lib/keyboardedo/keyboardedo ~/.local/bin/keyboardedo
+```
+
 ## Building from source
 
 ```bash

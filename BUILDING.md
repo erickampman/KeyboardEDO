@@ -63,7 +63,14 @@ The same three commands on both platforms. Everything goes in `build/` (ignored 
 ## Running it
 
 On the Mac the build makes `build/KeyboardEDO.app`. `open build/KeyboardEDO.app` starts it as an
-app, and `build/keyboardedo` is a link to the executable inside, for command lines.
+app, and `build/keyboardedo` is a link to the executable inside, for command lines. To keep it in
+Applications (and after deleting the clone), copy the app there; an app you built yourself has no
+quarantine flag, so it opens without the steps a downloaded one needs:
+
+```bash
+rm -rf /Applications/KeyboardEDO.app
+cp -R build/KeyboardEDO.app /Applications/
+```
 
 On Linux, `cmake --install build` (to `/usr/local`; `--prefix ~/.local` for yourself) installs
 `keyboardedo`, its help page, a desktop entry and the icons, so it appears in the desktop's app list
