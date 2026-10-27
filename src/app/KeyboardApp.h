@@ -25,6 +25,7 @@
 
 struct ImDrawList;
 struct ImFont;
+struct ImVec4;
 
 // The app's one window: a settings bar, the keyboard, and a MIDI monitor.
 // This file and its .cpp are the only code that knows SDL and ImGui; the
@@ -124,6 +125,9 @@ private:
     void drawRoutingMenu();
     float drawPanel();                 // returns its width
     float drawBar();                   // the performance bar; returns its width
+    // A section of the performance bar, opened and closed by its title, and
+    // remembered in the preferences.
+    bool barSection(const char* title, const ImVec4& accent, bool& open);
     void drawArpeggiator();
     void drawScale();
     void drawKnobAssignment(int index);

@@ -251,7 +251,7 @@ bool valueBox(const char* id, const std::string& text, float width) {
     return clicked;
 }
 
-bool beginSection(const char* title, const ImVec4& accent, bool collapsible) {
+bool beginSection(const char* title, const ImVec4& accent, bool collapsible, bool* open) {
     const float em = ImGui::GetFontSize();
     ImGui::PushStyleColor(ImGuiCol_ChildBg, colour::kSection);
     ImGui::PushStyleColor(ImGuiCol_Border, alpha(colour::kSlate, 0.30f));
@@ -261,20 +261,23 @@ bool beginSection(const char* title, const ImVec4& accent, bool collapsible) {
                       ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding);
     ImGui::PopStyleVar(2);
     ImGui::PopStyleColor(2);
-    bool open = true;
-    if (collapsible) {
+    bool shown = true;
+    if (collapsible || open) {
         ImGui::PushStyleColor(ImGuiCol_Text, accent);
         ImGui::PushStyleColor(ImGuiCol_Header, ImVec4{0, 0, 0, 0});
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, alpha(accent, 0.12f));
         ImGui::PushStyleColor(ImGuiCol_HeaderActive, alpha(accent, 0.22f));
         ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-        open = ImGui::CollapsingHeader(title, ImGuiTreeNodeFlags_DefaultOpen);
+        if (open) ImGui::SetNextItemOpen(*open);
+        shown = ImGui::CollapsingHeader(title, ImGuiTreeNodeFlags_DefaultOpen);
+        // Only a click changes it: a header scrolled out of sight reads closed.
+        if (open && ImGui::IsItemToggledOpen()) *open = shown;
         ImGui::PopStyleVar();
         ImGui::PopStyleColor(4);
     } else {
         ImGui::TextColored(accent, "%s", title);
     }
-    return open;
+    return shown;
 }
 
 void endSection() {

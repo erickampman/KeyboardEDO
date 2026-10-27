@@ -1865,9 +1865,10 @@ bool captionedCombo(const char* caption, const char* id, E& value, const char* c
 } // namespace
 
 // The performance bar down the left (decisions.md, "Performance bar"): the
-// bend and mod wheels, four knobs in two columns, and the arpeggiator, each a
-// section in the plugins' look ("Look and feel"). The same in every layout
-// and in both modes; knobs are assigned in Edit mode. Returns its width.
+// bend and mod wheels, four knobs in two columns, the arpeggiator and the
+// scale, each a section in the plugins' look ("Look and feel") that its title
+// opens and closes. The same in every layout and in both modes; knobs are
+// assigned in Edit mode. Returns its width.
 float KeyboardApp::drawBar() {
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     const float em = ImGui::GetFontSize();
@@ -1885,8 +1886,7 @@ float KeyboardApp::drawBar() {
 
     // Bend and mod wheel side by side, each centred in its half: caption,
     // slider, value.
-    ui::beginSection("Wheels", steel, false);
-    {
+    if (barSection("Wheels", steel, prefs_.wheelsOpen)) {
         const float left = ImGui::GetCursorPosX();
         const float column = (ImGui::GetContentRegionAvail().x - gap) / 2;
         const ImVec2 size{1.9f * em, 7.5f * em};
@@ -1918,8 +1918,7 @@ float KeyboardApp::drawBar() {
     ui::endSection();
 
     // The knobs, two by two: a click on a name assigns it, in Edit mode.
-    ui::beginSection("Knobs", steel, false);
-    {
+    if (barSection("Knobs", steel, prefs_.knobsOpen)) {
         const float left = ImGui::GetCursorPosX();
         const float column = (ImGui::GetContentRegionAvail().x - gap) / 2;
         const float diameter = std::min(column, 3.5f * em);
@@ -1975,6 +1974,13 @@ float KeyboardApp::drawBar() {
     return width;
 }
 
+bool KeyboardApp::barSection(const char* title, const ImVec4& accent, bool& open) {
+    const bool was = open;
+    ui::beginSection(title, accent, true, &open);
+    if (open != was && !prefsPath_.empty()) savePreferences(prefsPath_, prefs_);
+    return open;
+}
+
 // What knob `index` sends: a CC or channel pressure, and its label. Saved
 // with the document. Opened by a right-click on the knob, or in Edit mode a
 // click on its name.
@@ -2001,7 +2007,7 @@ void KeyboardApp::drawKnobAssignment(int index) {
 // The arpeggiator's settings, in Play mode too: pattern, division and tempo
 // are changed while playing (decisions.md, "Arpeggiator"). A section in a
 // pressed key's pink: on and hold, two dropdowns, knobs for tempo, gate and
-// octaves, and the velocity.
+// octaves, swing and slop, and the velocity.
 void KeyboardApp::drawArpeggiator() {
     static const char* const kPatterns[] = {"Up", "Down", "Up-Down", "Down-Up", "As Played", "Random"};
     static const char* const kDivisions[] = {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32",
@@ -2011,7 +2017,7 @@ void KeyboardApp::drawArpeggiator() {
     const float em = ImGui::GetFontSize();
     const float gap = ImGui::GetStyle().ItemSpacing.x;
     ArpConfig& a = settings_.arp;
-    ui::beginSection("Arpeggiator", pink, false);
+    if (!barSection("Arpeggiator", pink, prefs_.arpOpen)) return ui::endSection();
     ImGui::PushStyleColor(ImGuiCol_CheckMark, pink);
     const float left = ImGui::GetCursorPosX();
     const float half = (ImGui::GetContentRegionAvail().x - gap) / 2;
@@ -2066,6 +2072,33 @@ void KeyboardApp::drawArpeggiator() {
         cell.atValue();
         double octaves = a.octaves;
         if (typedValue("octaves", std::to_string(a.octaves), third, octaves, 1, 4)) a.octaves = int(octaves);
+        ImGui::SetCursorPos({left, cell.bottom()});
+    }
+
+    // Swing and slop, the same size, two across.
+    const float feelTop = ImGui::GetCursorPosY();
+    {
+        const KnobCell cell{left, feelTop, half, diameter, pink};
+        cell.caption("Swing");
+        float w = float((a.swing - 0.5) / 0.25);
+        if (cell.knob("##swing", w, 0, 26)) a.swing = 0.5 + 0.25 * double(w);
+        ImGui::SetItemTooltip("Every second step late: how much of a pair the first takes.\n"
+                              "50%%: straight; 67%%: a triplet feel; double-click: 50%%");
+        cell.atValue();
+        double percent = std::lround(a.swing * 100);
+        std::snprintf(text, sizeof text, "%d%%", int(percent));
+        if (typedValue("swing", text, half, percent, 50, 75)) a.swing = percent / 100;
+    }
+    {
+        const KnobCell cell{left + half + gap, feelTop, half, diameter, pink};
+        cell.caption("Slop");
+        float t = float(a.slop / 50);
+        if (cell.knob("##slop", t, 0, 51)) a.slop = std::round(50 * double(t));
+        ImGui::SetItemTooltip("Each step early or late at random, by up to this much\n"
+                              "(never more than a quarter of a step); double-click: none");
+        cell.atValue();
+        std::snprintf(text, sizeof text, "%g ms", a.slop);
+        typedValue("slop", text, half, a.slop, 0, 50);
         ImGui::SetCursorPos({left, cell.bottom()});
     }
 
@@ -2127,7 +2160,7 @@ void KeyboardApp::drawScale() {
     const float gap = ImGui::GetStyle().ItemSpacing.x;
     ScaleChoice& c = doc_.scale;
     const bool shown = settings_.layout.kind == LayoutKind::Piano;
-    ui::beginSection("Scale", teal, false);
+    if (!barSection("Scale", teal, prefs_.scaleOpen)) return ui::endSection();
     const float left = ImGui::GetCursorPosX();
     const float whole = ImGui::GetContentRegionAvail().x;
     const float half = (whole - gap) / 2;

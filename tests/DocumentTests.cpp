@@ -77,10 +77,11 @@ void testMidiFields() {
 
     // Arpeggiator values out of range are clamped, unknown names ignored.
     const auto a = parseLayoutSetup(R"({"arpBpm": 5000, "arpGate": 0, "arpOctaveSpan": 9,
-        "arpPattern": "Sideways", "arpDivision": "1/4T", "arpFixedVelocity": 0})");
+        "arpPattern": "Sideways", "arpDivision": "1/4T", "arpFixedVelocity": 0, "arpSwing": 0.9, "arpSlop": -3})");
     CHECK(a && a->arp.bpm == 999 && a->arp.gate == 0.01 && a->arp.octaves == 4);
     CHECK(a->arp.pattern == ArpPattern::Up && a->arp.division == ArpDivision::QuarterTriplet);
     CHECK(a->arp.fixedVelocity == 1);
+    CHECK(a->arp.swing == 0.75 && a->arp.slop == 0);
 }
 
 void testRoundTrip() {
@@ -105,7 +106,7 @@ void testRoundTrip() {
     d.locked = true;
     d.arp = {.enabled = true, .pattern = ArpPattern::Random, .division = ArpDivision::EighthTriplet,
              .bpm = 96.5, .gate = 0.8, .octaves = 3, .velocity = ArpVelocity::Fixed, .fixedVelocity = 90,
-             .hold = true};
+             .hold = true, .swing = 0.6, .slop = 12};
     d.extras["hoverExpressionEnabled"] = "true";
     const auto back = parseLayoutSetup(writeLayoutSetup(d));
     CHECK(back.has_value());
@@ -172,9 +173,12 @@ void testPreferences() {
     CHECK(loadPreferences(path).productInstanceId.empty());
     const std::string id = makeProductInstanceId();
     CHECK(id.size() == 16 && id != makeProductInstanceId());
-    CHECK(savePreferences(path, {.publish = true, .productInstanceId = id, .panelOpen = false, .monitorOpen = true}));
+    CHECK(loadPreferences(path).wheelsOpen && loadPreferences(path).arpOpen);
+    CHECK(savePreferences(path, {.publish = true, .productInstanceId = id, .panelOpen = false, .monitorOpen = true,
+                                 .knobsOpen = false, .scaleOpen = false}));
     const Preferences back = loadPreferences(path);
     CHECK(back.publish && !back.panelOpen && back.monitorOpen);
+    CHECK(back.wheelsOpen && !back.knobsOpen && back.arpOpen && !back.scaleOpen);
     CHECK(back.productInstanceId == id);
     std::remove(path.c_str());
 }

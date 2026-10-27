@@ -27,6 +27,10 @@ Preferences loadPreferences(const std::string& path) {
         flag("panelOpen", p.panelOpen);
         flag("monitorOpen", p.monitorOpen);
         flag("barOpen", p.barOpen);
+        flag("wheelsOpen", p.wheelsOpen);
+        flag("knobsOpen", p.knobsOpen);
+        flag("arpOpen", p.arpOpen);
+        flag("scaleOpen", p.scaleOpen);
         flag("editing", p.editing);
         flag("showComputerKeys", p.showComputerKeys);
         if (j.contains("productInstanceId") && j["productInstanceId"].is_string())
@@ -39,7 +43,8 @@ Preferences loadPreferences(const std::string& path) {
 bool savePreferences(const std::string& path, const Preferences& p) {
     const nlohmann::json j = {
         {"publish", p.publish}, {"productInstanceId", p.productInstanceId}, {"panelOpen", p.panelOpen}, {"monitorOpen", p.monitorOpen},
-        {"barOpen", p.barOpen}, {"editing", p.editing}, {"showComputerKeys", p.showComputerKeys}};
+        {"barOpen", p.barOpen}, {"wheelsOpen", p.wheelsOpen}, {"knobsOpen", p.knobsOpen}, {"arpOpen", p.arpOpen},
+        {"scaleOpen", p.scaleOpen}, {"editing", p.editing}, {"showComputerKeys", p.showComputerKeys}};
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (out) out << j.dump(2) << "\n";
     return bool(out);

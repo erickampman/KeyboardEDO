@@ -55,8 +55,9 @@ bool valueBox(const char* id, const std::string& text, float width);
 // A section of a panel, as the plugins' group boxes: a rounded box a shade
 // lighter than the panel, its title in `accent`. Collapsible when
 // `collapsible` (Settings), and then returns whether it's open; call
-// endSection() whatever it returns.
-bool beginSection(const char* title, const ImVec4& accent, bool collapsible);
+// endSection() whatever it returns. With `open`, collapsible and open as it
+// says, and a click on the title changes it.
+bool beginSection(const char* title, const ImVec4& accent, bool collapsible, bool* open = nullptr);
 void endSection();
 
 } // namespace kedo::app::ui

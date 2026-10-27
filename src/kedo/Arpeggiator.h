@@ -50,6 +50,13 @@ struct ArpConfig {
     ArpVelocity velocity = ArpVelocity::AsPlayed;
     int         fixedVelocity = 64; // 7-bit, for ArpVelocity::Fixed (KeyEDO's 0x7F00)
     bool        hold     = false;   // released notes stay in the pool
+    // Our own, not KeyEDO's. Swing: how much of a pair of steps the first
+    // takes, as a drum machine's (0.5 straight, 2/3 a triplet feel, 0.75 the
+    // most), so every second step comes late. Slop: each step after the first
+    // early or late by up to this many milliseconds, at random (0..50), never
+    // more than a quarter of a step.
+    double      swing    = 0.5;     // 0.5..0.75
+    double      slop     = 0;       // ms, 0..50
 
     // Seconds between steps.
     double stepLength() const;
@@ -126,7 +133,8 @@ private:
     bool on() const { return config_.enabled; }
     Slot* slot(int id);
     void rebuild();
-    void fire(double at);
+    void fire(double at, double grid);
+    void schedule();
     void silence();
     void idle();
     std::uint16_t velocityFor(const Slot& s);
@@ -143,7 +151,11 @@ private:
     std::size_t index_ = 0;         // the next step
     std::optional<Step> played_;    // the last one
     bool running_ = false;
-    double last_ = 0;               // when the last step began
+    // The steps' grid, straight, and where swing and slop move them from it.
+    double last_ = 0;               // where the last step was on the grid
+    double grid_ = 0;               // where the next one is
+    long   count_ = 0;              // steps played since the first: odd ones swing
+    double jitter_ = 0;             // the next one's slop, seconds
     double next_ = 0;               // when the next one begins
     std::optional<Active> active_;  // the note the arpeggiator is sounding
     double offAt_ = 0;              // when its gate ends

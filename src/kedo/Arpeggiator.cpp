@@ -40,6 +40,8 @@ void Arpeggiator::setConfig(const ArpConfig& c) {
     config_.gate = std::clamp(c.gate, 0.01, 1.0);
     config_.octaves = std::clamp(c.octaves, 1, 4);
     config_.fixedVelocity = std::clamp(c.fixedVelocity, 1, 127);
+    config_.swing = std::clamp(c.swing, 0.5, 0.75);
+    config_.slop = std::clamp(c.slop, 0.0, 50.0);
     if (config_.enabled != old.enabled) {
         stop();
         return;
@@ -56,8 +58,11 @@ void Arpeggiator::setConfig(const ArpConfig& c) {
     }
     if (config_.pattern != old.pattern || config_.octaves != old.octaves) rebuild();
     // A new tempo: the next step a new step's length after the last, so the
-    // change is heard at once without a jump.
-    if (running_ && config_.stepLength() != old.stepLength()) next_ = last_ + config_.stepLength();
+    // change is heard at once without a jump. A new swing moves it too.
+    if (running_ && (config_.stepLength() != old.stepLength() || config_.swing != old.swing)) {
+        grid_ = last_ + config_.stepLength();
+        schedule();
+    }
 }
 
 Arpeggiator::Slot* Arpeggiator::slot(int id) {
@@ -147,6 +152,8 @@ void Arpeggiator::silence() {
 void Arpeggiator::idle() {
     silence();
     running_ = false;
+    count_ = 0;
+    jitter_ = 0;
     index_ = 0;
     played_.reset();
     sequence_.clear();
@@ -157,9 +164,19 @@ void Arpeggiator::stop() {
     idle();
 }
 
-// The step beginning at `at`: the last note ends (a hard gate, as KeyEDO, so
-// two never overlap), the next starts.
-void Arpeggiator::fire(double at) {
+// When the next step begins: its place on the grid, an odd step later by the
+// swing, and its slop. Swing moves a step at most half a step and slop a
+// quarter, so the steps never change places.
+void Arpeggiator::schedule() {
+    const double length = config_.stepLength();
+    const double swing = count_ % 2 ? (2 * config_.swing - 1) * length : 0;
+    next_ = grid_ + swing + std::clamp(jitter_, -length / 4, length / 4);
+}
+
+// The step beginning at `at`, `grid` its place on the grid: the last note
+// ends (a hard gate, as KeyEDO, so two never overlap), the next starts. Its
+// gate is a share of the time until the step after it.
+void Arpeggiator::fire(double at, double grid) {
     silence();
     if (sequence_.empty()) {
         idle();
@@ -179,10 +196,12 @@ void Arpeggiator::fire(double at) {
     out_.noteOn(out, velocityFor(s));
     reapply(s, out.id);
     active_ = Active{step.id, step.octave, out};
-    const double length = config_.stepLength();
-    offAt_ = at + config_.gate * length;
-    last_ = at;
-    next_ = at + length;
+    last_ = grid;
+    grid_ = grid + config_.stepLength();
+    ++count_;
+    jitter_ = config_.slop > 0 ? std::uniform_real_distribution<double>(-1, 1)(random_) * config_.slop / 1000 : 0;
+    schedule();
+    offAt_ = at + config_.gate * (next_ - at);
 }
 
 void Arpeggiator::advance() {
@@ -195,7 +214,8 @@ void Arpeggiator::advance() {
         } else if (running_ && next_ <= now) {
             // Late by more than a step (the computer stalled): carry on from
             // now rather than play the missed steps at once.
-            fire(now - next_ >= config_.stepLength() ? now : next_);
+            if (now - next_ >= config_.stepLength()) fire(now, now);
+            else fire(next_, grid_);
         } else {
             break;
         }
@@ -224,7 +244,9 @@ void Arpeggiator::noteOn(const Note& note, std::uint16_t velocity) {
         // The first note plays at once, and the steps count from it.
         running_ = true;
         index_ = 0;
-        next_ = clock_();
+        count_ = 0;
+        jitter_ = 0;
+        grid_ = next_ = clock_();
         advance();
     }
 }

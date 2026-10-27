@@ -125,6 +125,72 @@ void fullGate() {
     CHECK(near(r.out.calls[1].at, r.out.calls[2].at));
 }
 
+// The note-ons' times, from 100.
+std::vector<double> onsets(const Rig& r) {
+    std::vector<double> on;
+    for (const auto& c : r.out.calls)
+        if (c.what == "on") on.push_back(c.at - 100);
+    return on;
+}
+
+// Swing: every second step late, the first of a pair taking the swing's share
+// of it; each gate a share of the time until the next step.
+void swing() {
+    Rig r({.enabled = true, .gate = 0.5, .swing = 0.75});
+    r.arp.noteOn(note(1, 60), 1000);
+    r.run(0.49);
+    const std::vector<double> on = onsets(r);
+    CHECK(on.size() == 4 && near(on[0], 0) && near(on[1], 0.1875) && near(on[2], 0.25) && near(on[3], 0.4375));
+    std::vector<double> offs;
+    for (const auto& c : r.out.calls)
+        if (c.what == "off") offs.push_back(c.at - 100);
+    CHECK(offs.size() >= 2 && near(offs[0], 0.09375) && near(offs[1], 0.1875 + 0.03125));
+
+    // Out of range: clamped. A change applies from the next step.
+    Rig c({.enabled = true, .swing = 2});
+    CHECK(c.arp.config().swing == 0.75);
+    c.arp.setConfig({.enabled = true, .swing = 0});
+    CHECK(c.arp.config().swing == 0.5);
+    c.arp.noteOn(note(1, 60), 1000);
+    c.run(0.01);
+    c.arp.setConfig({.enabled = true, .swing = 2.0 / 3});
+    c.run(0.3);
+    const std::vector<double> later = onsets(c);
+    CHECK(later.size() == 3 && near(later[1], 0.25 * 2 / 3) && near(later[2], 0.25));
+}
+
+// Slop: each step after the first early or late at random, by no more than
+// the slop or a quarter of a step; the steps keep their order.
+void slop() {
+    Rig r({.enabled = true, .slop = 20});
+    r.arp.seed(3);
+    r.arp.noteOn(note(1, 60), 1000);
+    r.run(2.0);
+    const std::vector<double> on = onsets(r);
+    CHECK(on.size() == 16 && on[0] == 0);
+    bool moved = false;
+    for (size_t i = 0; i < on.size(); ++i) {
+        CHECK(std::abs(on[i] - 0.125 * i) <= 0.020 + 1e-9);
+        moved = moved || std::abs(on[i] - 0.125 * i) > 1e-6;
+    }
+    CHECK(moved);
+
+    // Fast, swung and sloppy: never more than a quarter step, never out of order.
+    Rig f({.enabled = true, .division = ArpDivision::ThirtySecond, .bpm = 999, .swing = 0.75, .slop = 50});
+    f.arp.seed(5);
+    f.arp.noteOn(note(1, 60), 1000);
+    f.run(0.5);
+    const std::vector<double> fast = onsets(f);
+    const double step = f.arp.config().stepLength();
+    CHECK(fast.size() > 50);
+    for (size_t i = 0; i < fast.size(); ++i) {
+        const double grid = step * i + (i % 2 ? step / 2 : 0);
+        CHECK(std::abs(fast[i] - grid) <= step / 4 + 1e-9);
+        if (i) CHECK(fast[i] >= fast[i - 1]);
+    }
+    CHECK(f.out.count("on") - f.out.count("off") <= 1);
+}
+
 std::vector<int> pattern(ArpPattern p, int octaves = 1, int steps = 0) {
     Rig r({.enabled = true, .pattern = p, .octaves = octaves});
     r.arp.seed(7);
@@ -376,6 +442,8 @@ int main() {
     off();
     timing();
     fullGate();
+    swing();
+    slop();
     patterns();
     octaves();
     release();

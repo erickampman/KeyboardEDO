@@ -23,6 +23,13 @@ struct Preferences {
     bool monitorOpen = false;
     bool barOpen     = true;
 
+    // The performance bar's sections, each open or closed by its title, so a
+    // short window has room for the ones played with. All open at first.
+    bool wheelsOpen = true;
+    bool knobsOpen  = true;
+    bool arpOpen    = true;
+    bool scaleOpen  = true;
+
     // Edit mode (set up the document's layouts) or Play mode (choose among
     // them, the settings hidden): decisions.md, "Documents with several
     // layouts". Edit at first, to find things.

@@ -228,7 +228,7 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     read(j, "midiDestinationName", d.destination);
 
     // Arpeggiator: KeyEDO's fields and names ("Up-Down", "1/8T"), and our
-    // fixed velocity.
+    // fixed velocity, swing and slop.
     read(j, "arpIsEnabled", d.arp.enabled);
     read(j, "arpBpm", d.arp.bpm);
     d.arp.bpm = std::clamp(d.arp.bpm, 1.0, 999.0);
@@ -239,6 +239,10 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     read(j, "arpHold", d.arp.hold);
     read(j, "arpFixedVelocity", d.arp.fixedVelocity);
     d.arp.fixedVelocity = std::clamp(d.arp.fixedVelocity, 1, 127);
+    read(j, "arpSwing", d.arp.swing);
+    d.arp.swing = std::clamp(d.arp.swing, 0.5, 0.75);
+    read(j, "arpSlop", d.arp.slop);
+    d.arp.slop = std::clamp(d.arp.slop, 0.0, 50.0);
     auto named = [&](const char* key, auto& value, int count, auto nameOf) {
         std::string text;
         read(j, key, text);
@@ -257,7 +261,7 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
         "perNoteBendRange", "midiDestinationName", "midi1Expression", "customKeys",
         "arpIsEnabled", "arpBpm", "arpGate", "arpOctaveSpan", "arpHold", "arpFixedVelocity", "arpPattern",
-        "arpDivision", "arpVelocitySource",
+        "arpDivision", "arpVelocitySource", "arpSwing", "arpSlop",
     };
     for (const auto& [key, value] : j.items())
         if (!known.count(key)) d.extras[key] = value.dump();
@@ -319,6 +323,8 @@ std::string writeLayoutSetup(const LayoutSetup& d) {
     j["arpPattern"] = arpPatternName(d.arp.pattern);
     j["arpVelocitySource"] = arpVelocityName(d.arp.velocity);
     j["arpFixedVelocity"] = d.arp.fixedVelocity;
+    j["arpSwing"] = d.arp.swing;
+    j["arpSlop"] = d.arp.slop;
 
     if (d.destination.empty()) j.erase("midiDestinationName");
     else j["midiDestinationName"] = d.destination;

@@ -642,6 +642,16 @@ As built (2026-10-15):
   every key so it shows on latched (yellow) and black keys too; notes only
   Hold keeps show latched (2026-10-27; at first only octave copies had the
   dot, and a played note under Hold, already latched, showed nothing).
+- **Swing and slop (2026-10-27, our own):** swing as a drum machine's, the
+  share of a pair of steps the first takes (50% straight to 75%; 67% a
+  triplet feel), so every second step, counted from the first note, comes
+  late. Slop moves each step after the first early or late at random, by up
+  to 0-50 ms, held to a quarter of a step so fast tempos keep the steps in
+  order; timing only, not velocity (Random velocity covers that). Both work
+  from a straight grid, so a tempo change still keeps the phase, and a gate
+  is a share of the time until the next step, so a swung step's shorter
+  gap shortens its note. Saved per layout as `arpSwing` (0.5-0.75) and
+  `arpSlop` (ms); KeyEDO ignores them.
 - **Timing: a thread of its own.** The frame loop waits for vsync, so
   stepping from it would put up to a frame (~16 ms) of jitter in every step.
   The arpeggiator has no timer: it's given a clock and says when it next has
@@ -789,6 +799,11 @@ Settled when it was built (2026-10-17, milestone 12):
 - **15 em wide**, with a title bar and close box as the Settings panel has.
   It scrolls when the window is short. The monitor sits under the keyboard,
   between the bar and the panel.
+- **Sections open and close by their titles** (2026-10-27), as Settings'
+  do, so a short window has room for the ones played with (the
+  arpeggiator's swing and slop made the bar taller). Which are open is a
+  preference, not part of the document: it's about the screen, not the
+  music.
 - **The bend fader and mod wheel are dragged, not clicked to a place:** a
   drag moves them by as much as the pointer moves, wherever they're
   grabbed, so a click doesn't jump the pitch. Knobs turn by dragging up or
