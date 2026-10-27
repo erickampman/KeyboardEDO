@@ -638,7 +638,9 @@ As built (2026-10-15):
 - Auditioning in the custom layout editor goes straight to the outputs, not
   through the arpeggiator.
 - **Drawing:** the key the step is playing shows as sounding, and notes only
-  Hold keeps show latched.
+  Hold keeps show latched. An octave copy (Octaves above 1) instead puts a
+  pink dot, edged dark, on its key over the key's own colour, drawn after
+  every key so it shows on latched and black keys too (2026-10-27).
 - **Timing: a thread of its own.** The frame loop waits for vsync, so
   stepping from it would put up to a frame (~16 ms) of jitter in every step.
   The arpeggiator has no timer: it's given a clock and says when it next has

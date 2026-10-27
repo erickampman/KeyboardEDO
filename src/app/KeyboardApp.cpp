@@ -887,17 +887,35 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     const std::vector<ScaleMark> marks = scaleMarks(doc_.scale, settings_.tuning);
     if (editingKeys())
         std::stable_partition(keys.begin(), keys.end(), [&](const Key& k) { return !selected_.count(k.row); });
+    // The arpeggiator's octave copy marks its key with a dot, drawn after
+    // every key so a later one (a black key over a white) doesn't cover it.
+    struct Dot {
+        ImVec2 at;
+        float radius;
+    };
+    std::vector<Dot> dots;
     for (const Key& k : keys) {
-        // The arpeggiator's step sounds; what its Hold keeps shows latched.
+        // The arpeggiator's step sounds, an octave copy as a dot over the
+        // key's own colour; what its Hold keeps shows latched.
         const bool held = arp_.heldByHold(k.note.id);
+        const bool above = arp_.soundingAbove(k.note.id);
         const ScaleMark mark = marks.empty() ? ScaleMark::Off
                                              : marks[std::size_t(((k.step % int(marks.size())) + int(marks.size())) %
                                                                  int(marks.size()))];
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
-                                     performer_.isSounding(k.note.id) || arp_.sounding(k.note.id) || held,
+                                     performer_.isSounding(k.note.id) || (arp_.sounding(k.note.id) && !above) || held,
                                      performer_.isLatched(k.note.id) || held, mark);
         const ImVec2 c = vec(viewport_.toScreen(k.center));
         const float hw = float(k.halfWidth) * zoom, hh = float(k.halfHeight) * zoom;
+        if (above) {
+            // In the key's middle; on a white piano key, low, below the black
+            // keys and above the C's name.
+            const bool whiteRect = k.shape != KeyShape::Diamond && k.shade != KeyShade::Black &&
+                                   settings_.layout.kind == LayoutKind::Piano;
+            const float radius = std::max(2.5f, std::min({hw * (k.shape == KeyShape::Diamond ? 0.4f : 0.7f),
+                                                          hh * 0.4f, 9 * zoom}));
+            dots.push_back({{c.x, whiteRect ? c.y + hh * 0.45f : c.y}, radius});
+        }
 
         float titleY;
         float titleSize = 13 * zoom, detailSize = 10 * zoom;
@@ -943,6 +961,11 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
             list->AddText(font, size, at, color(Rgb{ink.r * 0.6f + 0.2f, ink.g * 0.6f + 0.2f, ink.b * 0.6f + 0.2f}),
                           name.c_str());
         }
+    }
+    // Pink, edged dark so it shows on pink, orange and white keys alike.
+    for (const Dot& d : dots) {
+        list->AddCircleFilled(d.at, d.radius, ImGui::ColorConvertFloat4ToU32(ui::colour::kPink));
+        list->AddCircle(d.at, d.radius, IM_COL32(60, 20, 40, 255), 0, std::max(1.0f, d.radius * 0.18f));
     }
     list->PopClipRect();
 }

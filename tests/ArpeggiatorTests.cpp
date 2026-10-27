@@ -201,6 +201,7 @@ void octaves() {
     CHECK(e.out.ons() == (std::vector<int>{10, 41, 72}));
     CHECK(e.out.calls[2].note.number == 41 && near(e.out.calls[2].note.pitch, 69));
     CHECK(e.arp.sounding(72) && !e.arp.sounding(10));
+    CHECK(e.arp.soundingAbove(72) && !e.arp.soundingAbove(10));   // drawn as a dot
 }
 
 // Releasing: a note leaves the pool; the last one up silences at once.
