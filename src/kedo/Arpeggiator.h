@@ -94,8 +94,6 @@ public:
     bool inPool(int id) const;
     bool heldByHold(int id) const;
     bool sounding(int id) const { return active_ && active_->out.id == id; }
-    // ... and that note is an octave copy (Octaves above 1), not a pool note.
-    bool soundingAbove(int id) const { return sounding(id) && active_->octave > 0; }
 
     // NoteSink
     void noteOn(const Note& note, std::uint16_t velocity) override;

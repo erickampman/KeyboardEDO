@@ -887,27 +887,27 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
     const std::vector<ScaleMark> marks = scaleMarks(doc_.scale, settings_.tuning);
     if (editingKeys())
         std::stable_partition(keys.begin(), keys.end(), [&](const Key& k) { return !selected_.count(k.row); });
-    // The arpeggiator's octave copy marks its key with a dot, drawn after
-    // every key so a later one (a black key over a white) doesn't cover it.
+    // The arpeggiator's step marks its key with a dot, drawn after every
+    // key so a later one (a black key over a white) doesn't cover it.
     struct Dot {
         ImVec2 at;
         float radius;
     };
     std::vector<Dot> dots;
     for (const Key& k : keys) {
-        // The arpeggiator's step sounds, an octave copy as a dot over the
+        // The arpeggiator's step, played or an octave copy, is a dot over the
         // key's own colour; what its Hold keeps shows latched.
         const bool held = arp_.heldByHold(k.note.id);
-        const bool above = arp_.soundingAbove(k.note.id);
+        const bool stepping = arp_.sounding(k.note.id);
         const ScaleMark mark = marks.empty() ? ScaleMark::Off
                                              : marks[std::size_t(((k.step % int(marks.size())) + int(marks.size())) %
                                                                  int(marks.size()))];
         const KeyLook look = keyLook(k, settings_.tuning, settings_.layout.kind, settings_.tileColor,
-                                     performer_.isSounding(k.note.id) || (arp_.sounding(k.note.id) && !above) || held,
+                                     performer_.isSounding(k.note.id) || held,
                                      performer_.isLatched(k.note.id) || held, mark);
         const ImVec2 c = vec(viewport_.toScreen(k.center));
         const float hw = float(k.halfWidth) * zoom, hh = float(k.halfHeight) * zoom;
-        if (above) {
+        if (stepping) {
             // In the key's middle; on a white piano key, low, below the black
             // keys and above the C's name.
             const bool whiteRect = k.shape != KeyShape::Diamond && k.shade != KeyShade::Black &&
