@@ -348,6 +348,11 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
     KEDO_PLAYING;
     const ImGuiIO& io = ImGui::GetIO();
     switch (e.type) {
+    // A document opened from the Finder (or dropped on the window): a .kedo,
+    // or a KeyEDO file, imported.
+    case SDL_EVENT_DROP_FILE:
+        if (e.drop.data) open(e.drop.data);
+        break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
         if (e.button.button != SDL_BUTTON_LEFT) break;
         const Point p{e.button.x, e.button.y};
@@ -924,10 +929,17 @@ void KeyboardApp::showDialog(Dialog dialog) {
         std::lock_guard<std::mutex> g(r->app->dialogLock_);
         r->app->dialogResults_.emplace_back(r->dialog, files[0]);
     };
-    // A bundle is a folder (on the Mac, once the app declares .kedo a
-    // package, the file dialog will show it as one file).
+    // A bundle is a folder. On the Mac, Info.plist declares .kedo a
+    // package, so it's chosen as one file; elsewhere it's a folder. No
+    // filter on the Mac: SDL makes "kedo" a type of plain files, which a
+    // package isn't, so it would show greyed out. (A folder that isn't a
+    // package still opens to browse, not to choose.)
     if (dialog == Dialog::Open)
+#ifdef __APPLE__
+        SDL_ShowOpenFileDialog(callback, request, window_, nullptr, 0, nullptr, false);
+#else
         SDL_ShowOpenFolderDialog(callback, request, window_, nullptr, false);
+#endif
     else if (dialog == Dialog::Import)
         SDL_ShowOpenFileDialog(callback, request, window_, kKeyEdo, 1, nullptr, false);
     else

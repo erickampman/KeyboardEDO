@@ -30,6 +30,47 @@
 	<string>@KEDO_MACOS_MINIMUM@</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<!-- A .kedo document is a folder (document.json, layouts/); declared a
+	     package, Finder and the file dialogs show it as one file, and
+	     opening one opens it here. -->
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.unlikelyware.keyboardedo.document</string>
+			<key>UTTypeDescription</key>
+			<string>KeyboardEDO Document</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>com.apple.package</string>
+				<string>public.composite-content</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>kedo</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>KeyboardEDO Document</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSTypeIsPackage</key>
+			<true/>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.unlikelyware.keyboardedo.document</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSHumanReadableCopyright</key>
 	<string>Unlikelyware. MIT license.</string>
 </dict>
