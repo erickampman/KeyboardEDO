@@ -203,12 +203,16 @@ int main(int argc, char** argv) {
         first = 2;
     }
     kedo::LayoutSetup& doc = document.layout();
+    // Only --publish leaves the last session to be restored: a document, or
+    // settings for one, start from those instead.
+    start.restore = first == 1;
     for (int i = first; i < argc; ++i) {
         const char* arg = argv[i];
         if (!std::strcmp(arg, "--publish")) {
             start.publish = true;
             continue;
         }
+        start.restore = false;
         const char* value = i + 1 < argc ? argv[++i] : nullptr;
         if (!value) { usage(); return 2; }
         if (!std::strcmp(arg, "--edo")) doc.tuning.edo = std::atoi(value);

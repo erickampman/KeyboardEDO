@@ -70,6 +70,18 @@ struct Document {
     // The performance bar's scale, shown on the diamond piano's keys: per
     // document too (decisions.md, "Scale highlight").
     ScaleChoice scale;
+    // The showing layout's notes held when the app quit, in the order
+    // played (the arpeggiator's As Played follows it), by Note::id with their
+    // velocities: latched (Shift, or the toolbar's Latch), or else kept by
+    // the arpeggiator's Hold. Saved with the document (and the app's
+    // session), so opening it plays on where it stopped.
+    struct HeldNote {
+        int id = 0;
+        std::uint16_t velocity = 0;
+        bool latched = false;
+        bool operator==(const HeldNote&) const = default;
+    };
+    std::vector<HeldNote> held;
 
     LayoutSetup&       layout() { return layouts[current]; }
     const LayoutSetup& layout() const { return layouts[current]; }

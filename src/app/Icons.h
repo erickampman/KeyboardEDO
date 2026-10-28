@@ -6,6 +6,7 @@
 namespace kedo::app {
 
 enum class Icon {
+    New,         // a page with a folded corner, and a plus
     Open,        // folder
     Save,        // tray with a down arrow
     Routing,     // antenna: where the notes go

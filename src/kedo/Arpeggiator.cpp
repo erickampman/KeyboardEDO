@@ -42,20 +42,22 @@ void Arpeggiator::setConfig(const ArpConfig& c) {
     config_.fixedVelocity = std::clamp(c.fixedVelocity, 1, 127);
     config_.swing = std::clamp(c.swing, 0.5, 0.75);
     config_.slop = std::clamp(c.slop, 0.0, 50.0);
+    // Hold off: the notes it kept go, as a sustain pedal's would, on or off.
+    if (old.hold && !config_.hold) std::erase_if(pool_, [](const Slot& s) { return !s.pressed; });
+    // Off, it falls silent but keeps what Hold kept (the caller released what
+    // was pressed); on again, it plays them, and Clear (stop()) empties it.
     if (config_.enabled != old.enabled) {
-        stop();
+        idle();
+        std::erase_if(pool_, [](const Slot& s) { return s.pressed; });
+        if (on() && !pool_.empty()) start();
         return;
     }
     if (!on()) return;
-    // Hold off: the notes it kept go, as a sustain pedal's would.
-    if (old.hold && !config_.hold) {
-        std::erase_if(pool_, [](const Slot& s) { return !s.pressed; });
-        if (pool_.empty()) {
-            idle();
-            return;
-        }
-        rebuild();
+    if (pool_.empty()) {
+        idle();
+        return;
     }
+    if (old.hold && !config_.hold) rebuild();
     if (config_.pattern != old.pattern || config_.octaves != old.octaves) rebuild();
     // A new tempo: the next step a new step's length after the last, so the
     // change is heard at once without a jump. A new swing moves it too.
@@ -77,6 +79,19 @@ bool Arpeggiator::inPool(int id) const {
 
 bool Arpeggiator::heldByHold(int id) const {
     return std::any_of(pool_.begin(), pool_.end(), [&](const Slot& s) { return s.note.id == id && !s.pressed; });
+}
+
+std::vector<Arpeggiator::PoolNote> Arpeggiator::pool() const {
+    std::vector<PoolNote> notes;
+    for (const Slot& s : pool_) notes.push_back({s.note, s.velocity, !s.pressed});
+    return notes;
+}
+
+std::vector<std::pair<Note, std::uint16_t>> Arpeggiator::heldNotes() const {
+    std::vector<std::pair<Note, std::uint16_t>> held;
+    for (const Slot& s : pool_)
+        if (!s.pressed) held.emplace_back(s.note, s.velocity);
+    return held;
 }
 
 // --- The sequence -------------------------------------------------------------------
@@ -235,20 +250,31 @@ std::optional<double> Arpeggiator::nextEvent() const {
 void Arpeggiator::noteOn(const Note& note, std::uint16_t velocity) {
     if (!on()) return out_.noteOn(note, velocity);
     if (Slot* s = slot(note.id)) {
-        s->pressed = true;   // struck again while Hold kept it
+        // Struck again while Hold kept it: let go, as a latched note is.
+        if (!s->pressed) remove(note.id);
         return;
     }
     pool_.push_back(Slot{.note = note, .velocity = velocity});
     rebuild();
-    if (!running_) {
-        // The first note plays at once, and the steps count from it.
-        running_ = true;
-        index_ = 0;
-        count_ = 0;
-        jitter_ = 0;
-        grid_ = next_ = clock_();
-        advance();
-    }
+    if (!running_) start();
+}
+
+// The first note plays at once, and the steps count from it.
+void Arpeggiator::start() {
+    rebuild();
+    running_ = true;
+    index_ = 0;
+    count_ = 0;
+    jitter_ = 0;
+    grid_ = next_ = clock_();
+    advance();
+}
+
+void Arpeggiator::keep(const Note& note, std::uint16_t velocity) {
+    if (slot(note.id)) return;
+    pool_.push_back(Slot{.note = note, .velocity = velocity, .pressed = false});
+    rebuild();
+    if (on() && !running_) start();
 }
 
 void Arpeggiator::noteOff(int id) {
@@ -259,6 +285,15 @@ void Arpeggiator::noteOff(int id) {
         s->pressed = false;
         return;
     }
+    remove(id);
+}
+
+void Arpeggiator::letGo(int id) {
+    if (!on()) return out_.noteOff(id);
+    if (slot(id)) remove(id);
+}
+
+void Arpeggiator::remove(int id) {
     std::erase_if(pool_, [&](const Slot& x) { return x.note.id == id; });
     if (pool_.empty()) idle();   // the last key up: silence at once
     else rebuild();

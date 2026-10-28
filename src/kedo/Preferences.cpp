@@ -33,8 +33,11 @@ Preferences loadPreferences(const std::string& path) {
         flag("scaleOpen", p.scaleOpen);
         flag("editing", p.editing);
         flag("showComputerKeys", p.showComputerKeys);
-        if (j.contains("productInstanceId") && j["productInstanceId"].is_string())
-            p.productInstanceId = j["productInstanceId"].get<std::string>();
+        auto text = [&](const char* key, std::string& value) {
+            if (j.contains(key) && j[key].is_string()) value = j[key].get<std::string>();
+        };
+        text("productInstanceId", p.productInstanceId);
+        text("documentPath", p.documentPath);
     } catch (const nlohmann::json::exception&) {
     }
     return p;
@@ -44,7 +47,8 @@ bool savePreferences(const std::string& path, const Preferences& p) {
     const nlohmann::json j = {
         {"publish", p.publish}, {"productInstanceId", p.productInstanceId}, {"panelOpen", p.panelOpen}, {"monitorOpen", p.monitorOpen},
         {"barOpen", p.barOpen}, {"wheelsOpen", p.wheelsOpen}, {"knobsOpen", p.knobsOpen}, {"arpOpen", p.arpOpen},
-        {"scaleOpen", p.scaleOpen}, {"editing", p.editing}, {"showComputerKeys", p.showComputerKeys}};
+        {"scaleOpen", p.scaleOpen}, {"editing", p.editing}, {"showComputerKeys", p.showComputerKeys},
+        {"documentPath", p.documentPath}};
     std::ofstream out(path, std::ios::binary | std::ios::trunc);
     if (out) out << j.dump(2) << "\n";
     return bool(out);

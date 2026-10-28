@@ -290,7 +290,7 @@ h1.card, h2.card, h3.card {
 <ul>
 <li><strong>Unlikelyware logo</strong>: opens unlikelyware.com.</li>
 <li><strong>Performance bar</strong>: shows or hides the bar on the left (bend, mod wheel, knobs, arpeggiator).</li>
-<li><strong>Open</strong> and <strong>Save</strong>: documents (Cmd-O, Cmd-S; Shift-Cmd-S saves as).</li>
+<li><strong>New</strong>, <strong>Open</strong> and <strong>Save</strong>: documents (Cmd-N, Cmd-O, Cmd-S; Shift-Cmd-S saves as).</li>
 <li><strong>Layout menu</strong>: the document's layouts. Switching releases any notes held.</li>
 <li><strong>Edit / Play</strong>: the mode (see <a href="#modes">Edit and Play</a>).</li>
 <li><strong>Badge</strong>: the protocol notes are sent in.</li>
@@ -319,11 +319,12 @@ h1.card, h2.card, h3.card {
 <div class="callout callout-note card">
 <div class="callout-content">
 <h2 id="documents">Documents</h2>
-<p>A KeyboardEDO document (<code>.kedo</code>) holds <strong>several layouts</strong>, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go and the performance bar's knob assignments.</p>
+<p>A KeyboardEDO document (<code>.kedo</code>) holds <strong>several layouts</strong>, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go, the performance bar's knob assignments, and the notes held when it was saved (latched, or kept by the arpeggiator's Hold), in the order played.</p>
 <ul>
 <li><strong>Layouts</strong> in Settings: <strong>Add</strong> a new layout after the current one, <strong>Duplicate</strong> it, <strong>Remove</strong> it, rename it, or move it <strong>earlier</strong> or <strong>later</strong> in the list.</li>
 <li><strong>Open</strong> reads a <code>.kedo</code> document, or a KeyEDO document (<code>.json</code>), which comes in as a new document of one layout.</li>
 <li>The window's title shows the document's name, and <strong>edited</strong> when it has unsaved changes.</li>
+<li>KeyboardEDO starts where it left off: the document you had when you quit, saved or not, with the notes you were holding. <strong>New</strong> starts an untitled one.</li>
 </ul>
 </div>
 </div>
@@ -460,7 +461,7 @@ h1.card, h2.card, h3.card {
 <li><strong>Gate</strong>: how much of its step each note sounds.</li>
 <li><strong>Octaves</strong>: plays the pattern, then again an octave higher for each octave more (1 to 4).</li>
 <li><strong>Velocity</strong>: as played, a fixed velocity you set, or random.</li>
-<li><strong>Hold</strong>: released notes keep playing, and new ones add to them. Turning Hold off drops the notes only Hold was keeping.</li>
+<li><strong>Hold</strong>: released notes keep playing, and new ones add to them; click one again to let it go. Turning the arpeggiator off keeps them, silent, to play again when it&rsquo;s back on, and they&rsquo;re still there the next time KeyboardEDO starts. <strong>Clear</strong> lets go of them, and of notes latched with Shift or Latch; so do All Notes Off, Escape, and turning Hold off.</li>
 </ul>
 <p>A pink dot marks the key the arpeggiator is playing, including the higher octaves' keys.</p>
 <p>Each layout has its own arpeggiator settings.</p>
@@ -495,7 +496,7 @@ h1.card, h2.card, h3.card {
 <div class="callout callout-note card">
 <div class="callout-content">
 <h2 id="shortcuts">Shortcuts</h2>
-<p>| Key | Action | |---|---| | Cmd-O | Open a document | | Cmd-S | Save (Shift-Cmd-S: Save As) | | Cmd-= and Cmd-- | Zoom in and out | | Cmd-0 | Zoom back to 100% | | Escape | Release every note | | Shift (while playing) | Latch the notes played | | Ctrl (with the mouse) | Expression for notes held by computer keys |</p>
+<p>| Key | Action | |---|---| | Cmd-N | New document | | Cmd-O | Open a document | | Cmd-S | Save (Shift-Cmd-S: Save As) | | Cmd-= and Cmd-- | Zoom in and out | | Cmd-0 | Zoom back to 100% | | Escape | Release every note | | Shift (while playing) | Latch the notes played | | Ctrl (with the mouse) | Expression for notes held by computer keys |</p>
 <p><strong>Editing a custom layout:</strong></p>
 <p>| Key | Action | |---|---| | Cmd-A | Select all keys | | Cmd-D | Duplicate the selected keys | | Delete or Backspace | Delete the selected keys | | Arrow keys | Move the selected keys (Shift: four times as far) | | Cmd-Z | Undo | | Shift-Cmd-Z or Cmd-Y | Redo | | Escape | Clear the selection |</p>
 </div>

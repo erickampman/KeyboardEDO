@@ -42,6 +42,7 @@ public:
         std::string path;
         bool        publish = false;   // --publish: on for this run, whatever the preference
         bool        ownPreferences = false;   // --snapshot: the defaults, the person's left alone
+        bool        restore = false;   // no document or settings given: the last session, as the app quit
     };
 
     // `monoFont`: the MIDI monitor's font. `brandFont`: the toolbar's
@@ -112,7 +113,13 @@ private:
     void audition(int index);
     void drawKeyInspector();
     void open(const std::string& path);
+    void newDocument();
     bool save(const std::string& path);
+    // The last session: saved on quit, opened again on a plain launch.
+    void saveSession();
+    void restoreSession();
+    void restoreHeldNotes();
+    std::vector<Document::HeldNote> heldNow() const;
     void showDialog(Dialog dialog);
     void takeDialogResults();
     void updateTitle();
@@ -161,6 +168,8 @@ private:
     std::string path_;        // the document's .kedo bundle; empty until saved
     Preferences prefs_;       // app-level, remembered (publishing)
     std::string prefsPath_;   // in SDL's per-user preferences folder; empty if none
+    std::string sessionPath_; // the document as the app last quit, beside prefsPath_
+    std::vector<Document::HeldNote> restoreHeld_;   // the session's, until the keys are built
 
     std::unique_ptr<Layout> layout_;
     std::map<int, Key> computerKeys_;   // the layout's, by computer key

@@ -38,6 +38,10 @@ struct Preferences {
     // Each note key shows its computer key (decisions.md, "Computer keyboard").
     bool showComputerKeys = true;
 
+    // The .kedo bundle open when the app last quit ("" if untitled): with the
+    // session (sessionPath), what a launch with no document opens again.
+    std::string documentPath;
+
     bool operator==(const Preferences&) const = default;
 };
 

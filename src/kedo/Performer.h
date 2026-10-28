@@ -4,6 +4,8 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <utility>
+#include <vector>
 
 #include "kedo/Layout.h"
 #include "kedo/NoteSink.h"
@@ -105,6 +107,13 @@ public:
     // glided to shows as sounding, not the one struck.
     bool isSounding(int id) const;
     bool isLatched(int id) const;
+    bool hasLatched() const { return !latched_.empty(); }
+
+    // The latched notes in the order latched, by the Note::id struck, with
+    // their velocities: the
+    // app's session saves them, and latch()es them again when it's restored.
+    std::vector<std::pair<int, std::uint16_t>> latchedNotes() const;
+    void latch(const Note& note, std::uint16_t velocity);
 
 private:
     struct Touch {
@@ -127,7 +136,7 @@ private:
     std::uint16_t velocityFor(const Key& key, Point p) const;
 
     void acquire(const Note& note, std::uint16_t velocity);
-    void release(int id);
+    void release(int id, bool letGo = false);   // letGo: NoteSink::letGo
 
     NoteSink& sink_;
     const Layout* layout_ = nullptr;
@@ -138,6 +147,8 @@ private:
     std::map<int, Touch> keys_;          // by computer key
     std::map<int, int> latched_;         // Note::id -> the id it sounds as
     std::map<int, int> holds_;           // Note::id -> touches, keys and latches holding it
+    std::vector<int> latchOrder_;        // latched_'s keys, in the order latched
+    std::map<int, std::uint16_t> velocities_;   // Note::id -> what it was struck with, while held
     std::optional<int> expressionOwner_; // channel-scope expression: the pointer driving it
     std::optional<Point> hoverStart_;    // where the mouse was when hover expression began
 };

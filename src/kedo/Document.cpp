@@ -456,6 +456,12 @@ std::optional<Document> loadBundle(const fs::path& path, std::string* error) {
             knob.controller = std::clamp(k.value("controller", knob.controller), 0, 127);
             knob.label = k.value("label", std::string());
         }
+    // [id, velocity] kept by Hold, [id, velocity, true] latched.
+    if (const auto it = j.find("held"); it != j.end() && it->is_array())
+        for (const auto& h : *it)
+            if (h.is_array() && h.size() >= 2 && h[0].is_number_integer() && h[1].is_number_integer())
+                d.held.push_back({h[0].get<int>(), std::uint16_t(std::clamp(h[1].get<int>(), 0, 0xFFFF)),
+                                  h.size() > 2 && h[2].is_boolean() && h[2].get<bool>()});
     if (const auto it = j.find("scale"); it != j.end() && it->is_object()) {
         // By name, so a scale added to the menu later moves no saved one.
         d.scale.scale = it->value("name", std::string());
@@ -534,6 +540,15 @@ bool saveDocument(const std::string& pathText, const Document& document, std::st
     if (!document.scale.scale.empty())
         j["scale"] = {{"name", document.scale.scale},
                       {"map", document.scale.map == ScaleMap::Nearest ? "nearest" : "fifths"}};
+    if (!document.held.empty()) {
+        json held = json::array();
+        for (const auto& h : document.held) {
+            json note = {h.id, h.velocity};
+            if (h.latched) note.push_back(true);
+            held.push_back(note);
+        }
+        j["held"] = held;
+    }
     if (!writeFile(tmp / "document.json", j.dump(2) + "\n", error)) return false;
 
     // The swap: the old bundle aside, the new one in, the old one gone.

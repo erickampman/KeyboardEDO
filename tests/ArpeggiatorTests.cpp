@@ -301,16 +301,50 @@ void hold() {
     r.arp.noteOff(2);
     r.run(0.51);
     CHECK((r.out.ons() == std::vector<int>{1, 2, 1, 2, 1}));
-    // Struck again, it's played rather than held.
+    // What Hold keeps, for the session: in the order played.
+    const auto held = r.arp.heldNotes();
+    CHECK(held.size() == 2 && held[0].first.id == 1 && held[1].first.id == 2 && held[0].second == 1000);
+    // Struck again, it's let go, as a latched note is; its key's release
+    // then does nothing.
     r.arp.noteOn(note(1, 60), 1000);
-    CHECK(!r.arp.heldByHold(1));
+    CHECK(!r.arp.inPool(1) && r.arp.running());
+    r.arp.noteOff(1);
+    CHECK(!r.arp.inPool(1));
+    CHECK(r.arp.heldNotes().size() == 1 && r.arp.heldNotes()[0].first.id == 2);
+    // letGo (a latched note struck again) ends a pressed note, Hold or not.
+    r.arp.noteOn(note(1, 60), 1000);
+    r.arp.letGo(1);
+    CHECK(!r.arp.inPool(1));
     // Hold off: what only Hold kept goes.
+    r.arp.noteOn(note(1, 60), 1000);
     r.arp.setConfig({.enabled = true, .hold = false});
     CHECK(r.arp.inPool(1) && !r.arp.inPool(2) && r.arp.running());
     r.arp.setConfig({.enabled = true, .hold = true});
     r.arp.stop();
     CHECK(!r.arp.inPool(1) && !r.arp.running());
     CHECK(r.out.count("on") == r.out.count("off"));
+}
+
+// Off, it keeps what Hold kept, silent, and plays it when on again; keep()
+// fills it as a session restores it, on or off.
+void holdKeptWhileOff() {
+    Rig r({.enabled = true, .hold = true});
+    r.arp.noteOn(note(1, 60), 1000);
+    r.arp.noteOff(1);
+    r.arp.setConfig({.enabled = false, .hold = true});
+    CHECK(r.arp.heldByHold(1) && !r.arp.running() && !r.arp.nextEvent());
+    CHECK(r.out.count("on") == r.out.count("off"));
+    r.arp.keep(note(2, 64), 900);
+    CHECK(r.arp.heldNotes().size() == 2 && !r.arp.running());
+    const auto before = r.out.count("on");
+    r.arp.setConfig({.enabled = true, .hold = true});
+    CHECK(r.arp.running() && r.out.count("on") == before + 1 && r.out.calls.back().id == 1);
+    r.run(0.13);   // a 1/16 step at 120
+    CHECK(r.out.ons().back() == 2);
+    // Hold off while off: they go.
+    r.arp.setConfig({.enabled = false, .hold = true});
+    r.arp.setConfig({.enabled = false, .hold = false});
+    CHECK(r.arp.heldNotes().empty());
 }
 
 void velocity() {
@@ -448,6 +482,7 @@ int main() {
     octaves();
     release();
     hold();
+    holdKeptWhileOff();
     velocity();
     tempo();
     toggling();

@@ -175,11 +175,12 @@ void testPreferences() {
     CHECK(id.size() == 16 && id != makeProductInstanceId());
     CHECK(loadPreferences(path).wheelsOpen && loadPreferences(path).arpOpen);
     CHECK(savePreferences(path, {.publish = true, .productInstanceId = id, .panelOpen = false, .monitorOpen = true,
-                                 .knobsOpen = false, .scaleOpen = false}));
+                                 .knobsOpen = false, .scaleOpen = false, .documentPath = "/tmp/a b.kedo"}));
     const Preferences back = loadPreferences(path);
     CHECK(back.publish && !back.panelOpen && back.monitorOpen);
     CHECK(back.wheelsOpen && !back.knobsOpen && back.arpOpen && !back.scaleOpen);
     CHECK(back.productInstanceId == id);
+    CHECK(back.documentPath == "/tmp/a b.kedo");
     std::remove(path.c_str());
 }
 
@@ -216,6 +217,8 @@ void testBundleRoundTrip() {
     d.knobs[0] = {.controller = 20, .label = ""};
     d.knobs[2] = {.pressure = true, .label = "Squeeze"};
     d.scale = {.scale = "Dorian", .map = ScaleMap::Nearest};
+    d.held = {{.id = 7, .velocity = 0xFFFF}, {.id = 12, .velocity = 500, .latched = true},
+              {.id = -3, .velocity = 1000}};   // the session's
 
     std::string error;
     CHECK(saveDocument(path, d, &error));

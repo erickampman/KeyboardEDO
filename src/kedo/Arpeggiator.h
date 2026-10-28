@@ -75,9 +75,9 @@ public:
 
     Arpeggiator(NoteSink& out, Clock clock);
 
-    // Turning it on or off empties the pool and silences its note; the
-    // caller releases what's held first. Other changes apply from the next
-    // step, the tempo keeping its phase.
+    // Turning it off silences its note but keeps what Hold kept, to play
+    // again when it's turned on; the caller releases what's pressed first.
+    // Other changes apply from the next step, the tempo keeping its phase.
     void setConfig(const ArpConfig& config);
     const ArpConfig& config() const { return config_; }
 
@@ -92,8 +92,8 @@ public:
     std::optional<double> nextEvent() const;
     bool running() const { return running_ || active_.has_value(); }
 
-    // Silences its note and empties the pool, Hold or not (All Notes Off,
-    // Escape, a new layout).
+    // Silences its note and empties the pool, Hold or not (the Clear button,
+    // All Notes Off, Escape, a new layout).
     void stop();
 
     // For drawing, by Note::id: in the pool (played or held), held only by
@@ -102,9 +102,25 @@ public:
     bool heldByHold(int id) const;
     bool sounding(int id) const { return active_ && active_->out.id == id; }
 
+    // The notes Hold keeps (not those still pressed), in the order played,
+    // with their velocities: the app's session saves them, and keep()s them
+    // when it's restored.
+    std::vector<std::pair<Note, std::uint16_t>> heldNotes() const;
+    // The whole pool, in the order played: `kept` if only Hold keeps it.
+    struct PoolNote {
+        Note          note;
+        std::uint16_t velocity;
+        bool          kept;
+    };
+    std::vector<PoolNote> pool() const;
+    // A note into the pool as Hold keeps it, without its being played: on or
+    // off, as it was when the session was saved.
+    void keep(const Note& note, std::uint16_t velocity);
+
     // NoteSink
     void noteOn(const Note& note, std::uint16_t velocity) override;
     void noteOff(int id) override;
+    void letGo(int id) override;   // out of the pool, Hold or not
     void glide(int id, double pitch) override;
     void pitchBend(std::optional<int> id, double value) override;
     void controller(std::optional<int> id, int number, double value) override;
@@ -133,6 +149,8 @@ private:
     bool on() const { return config_.enabled; }
     Slot* slot(int id);
     void rebuild();
+    void start();
+    void remove(int id);
     void fire(double at, double grid);
     void schedule();
     void silence();

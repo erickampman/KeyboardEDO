@@ -26,15 +26,20 @@ void Performer::setLatchMode(bool on) {
 // from the first hold, and stops when the last hold goes.
 
 void Performer::acquire(const Note& note, std::uint16_t velocity) {
-    if (holds_[note.id]++ == 0) sink_.noteOn(note, velocity);
+    if (holds_[note.id]++ == 0) {
+        velocities_[note.id] = velocity;
+        sink_.noteOn(note, velocity);
+    }
 }
 
-void Performer::release(int id) {
+void Performer::release(int id, bool letGo) {
     const auto it = holds_.find(id);
     if (it == holds_.end()) return;
     if (--it->second == 0) {
         holds_.erase(it);
-        sink_.noteOff(id);
+        velocities_.erase(id);
+        if (letGo) sink_.letGo(id);
+        else sink_.noteOff(id);
     }
 }
 
@@ -54,7 +59,8 @@ void Performer::strike(Touch& t, const Note& note, std::uint16_t velocity) {
     if (const auto it = latched_.find(note.id); it != latched_.end()) {
         // Striking a latched note releases it; the pointer then plays nothing.
         latched_.erase(it);
-        release(note.id);
+        std::erase(latchOrder_, note.id);
+        release(note.id, true);
         t.note.reset();
         return;
     }
@@ -73,6 +79,7 @@ void Performer::finish(Touch& t, bool latch) {
     const int id = t.note->id;
     if (latch && !latched_.count(id)) {
         latched_[id] = t.shows;   // the latch takes over this hold
+        latchOrder_.push_back(id);
     } else {
         release(id);
     }
@@ -245,11 +252,24 @@ void Performer::keyUp(int key, Modifiers mods) {
 // --- Releasing ---------------------------------------------------------------------
 
 void Performer::releaseAllLatched() {
-    while (!latched_.empty()) {
-        const int id = latched_.begin()->first;
-        latched_.erase(latched_.begin());
-        release(id);
+    latched_.clear();
+    for (const int id : std::exchange(latchOrder_, {})) release(id);
+}
+
+std::vector<std::pair<int, std::uint16_t>> Performer::latchedNotes() const {
+    std::vector<std::pair<int, std::uint16_t>> notes;
+    for (const int held : latchOrder_) {
+        const auto v = velocities_.find(held);
+        notes.emplace_back(held, v != velocities_.end() ? v->second : config_.velocity);
     }
+    return notes;
+}
+
+void Performer::latch(const Note& note, std::uint16_t velocity) {
+    if (latched_.count(note.id)) return;
+    acquire(note, velocity);
+    latched_[note.id] = note.id;
+    latchOrder_.push_back(note.id);
 }
 
 void Performer::releaseAll() {

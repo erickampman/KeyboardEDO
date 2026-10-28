@@ -18,6 +18,16 @@ void draw(ImDrawList* d, Icon icon, ImVec2 o, float s, ImU32 c, float w) {
     const float pi = 3.14159265f;
 
     switch (icon) {
+    case Icon::New: {
+        // Page, its top right corner folded, a plus on it.
+        const ImVec2 page[] = {p(5, 3), p(5, 21), p(19, 21), p(19, 8), p(14, 3)};
+        d->AddPolyline(page, 5, c, ImDrawFlags_Closed, w);
+        const ImVec2 fold[] = {p(14, 3), p(14, 8), p(19, 8)};
+        d->AddPolyline(fold, 3, c, 0, w);
+        d->AddLine(p(12, 10.5f), p(12, 17.5f), c, w);
+        d->AddLine(p(8.5f, 14), p(15.5f, 14), c, w);
+        break;
+    }
     case Icon::Open: {
         // Folder: tab on the top left, body below.
         const ImVec2 pts[] = {p(3, 7), p(3, 19), p(21, 19), p(21, 9), p(12, 9), p(10, 6), p(4, 6)};

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Check.h"
+#include "kedo/Arpeggiator.h"
 #include "kedo/Performer.h"
 
 using namespace kedo;
@@ -89,6 +90,49 @@ void testMultitouchAndSharedSteps() {
     CHECK((r.sink.take() == Log{"on 30"}));
     r.performer.pointerUp(2);
     CHECK((r.sink.take() == Log{"off 30"}));
+}
+
+// Through the arpeggiator with Hold: a latched note struck again is let go
+// (NoteSink::letGo), not kept by Hold as a release would be.
+void testLatchThroughHold() {
+    Rig r;
+    double now = 0;
+    Arpeggiator arp(r.sink, [&] { return now; });
+    arp.setConfig({.enabled = true, .hold = true});
+    Performer performer(arp);
+    performer.setLayout(r.layout.get());
+    performer.pointerDown(1, r.at(0, 0));
+    performer.pointerUp(1, {.latch = true});
+    performer.pointerDown(1, r.at(1, 0));
+    performer.pointerUp(1);
+    CHECK(arp.inPool(0) && arp.heldByHold(3));
+    performer.pointerDown(1, r.at(0, 0));   // the latched one: let go
+    performer.pointerUp(1);
+    CHECK(!arp.inPool(0) && !performer.isLatched(0));
+    performer.pointerDown(1, r.at(1, 0));   // the one Hold keeps: let go
+    performer.pointerUp(1);
+    CHECK(!arp.inPool(3) && !arp.running());
+}
+
+// What a session saves, and latching again as it restores.
+void testLatchedNotes() {
+    Rig r;
+    r.performer.setConfig({.velocity = 1234});
+    r.performer.pointerDown(1, r.at(1, 0));
+    r.performer.pointerUp(1, {.latch = true});
+    r.performer.pointerDown(1, r.at(0, 0));
+    r.performer.pointerUp(1, {.latch = true});
+    // In the order latched, not by id.
+    CHECK((r.performer.latchedNotes() == std::vector<std::pair<int, std::uint16_t>>{{3, 1234}, {0, 1234}}));
+    r.sink.take();
+    Rig back;
+    back.performer.latch(r.layout->keyAtLattice(1, 0).note, 1234);
+    back.performer.latch(r.layout->keyAtLattice(0, 0).note, 1234);
+    CHECK(back.performer.isLatched(3) && back.performer.latchedNotes() == r.performer.latchedNotes());
+    CHECK((back.sink.take() == Log{"on 3", "on 0"}));
+    back.performer.pointerDown(1, back.at(1, 0));   // struck: let go
+    CHECK((back.sink.take() == Log{"off 3"}));
+    CHECK((back.performer.latchedNotes() == std::vector<std::pair<int, std::uint16_t>>{{0, 1234}}));
 }
 
 void testLatch() {
@@ -333,6 +377,8 @@ int main() {
     testTapAndGliss();
     testMultitouchAndSharedSteps();
     testLatch();
+    testLatchThroughHold();
+    testLatchedNotes();
     testGlide();
     testFixedPerNote();
     testFixedChannel();

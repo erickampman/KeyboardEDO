@@ -42,7 +42,7 @@ The line under the toolbar sums up what's playing: the EDO, the origin note, the
 **The toolbar, left to right:**
 - **Unlikelyware logo**: opens unlikelyware.com.
 - **Performance bar**: shows or hides the bar on the left (bend, mod wheel, knobs, arpeggiator).
-- **Open** and **Save**: documents (Cmd-O, Cmd-S; Shift-Cmd-S saves as).
+- **New**, **Open** and **Save**: documents (Cmd-N, Cmd-O, Cmd-S; Shift-Cmd-S saves as).
 - **Layout menu**: the document's layouts. Switching releases any notes held.
 - **Edit / Play**: the mode (see [Edit and Play](#modes)).
 - **Badge**: the protocol notes are sent in.
@@ -68,10 +68,11 @@ In both modes you choose which layout is showing from the toolbar's layout menu.
 ~~~note [card]
 (#documents)
 ## Documents
-A KeyboardEDO document (`.kedo`) holds **several layouts**, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go and the performance bar's knob assignments.
+A KeyboardEDO document (`.kedo`) holds **several layouts**, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go, the performance bar's knob assignments, and the notes held when it was saved (latched, or kept by the arpeggiator's Hold), in the order played.
 - **Layouts** in Settings: **Add** a new layout after the current one, **Duplicate** it, **Remove** it, rename it, or move it **earlier** or **later** in the list.
 - **Open** reads a `.kedo` document, or a KeyEDO document (`.json`), which comes in as a new document of one layout.
 - The window's title shows the document's name, and **edited** when it has unsaved changes.
+- KeyboardEDO starts where it left off: the document you had when you quit, saved or not, with the notes you were holding. **New** starts an untitled one.
 ~~~
 ~~~note [card]
 (#tuning)
@@ -184,7 +185,7 @@ The arpeggiator steps through the notes you hold, one at a time. Its controls ar
 - **Gate**: how much of its step each note sounds.
 - **Octaves**: plays the pattern, then again an octave higher for each octave more (1 to 4).
 - **Velocity**: as played, a fixed velocity you set, or random.
-- **Hold**: released notes keep playing, and new ones add to them. Turning Hold off drops the notes only Hold was keeping.
+- **Hold**: released notes keep playing, and new ones add to them; click one again to let it go. Turning the arpeggiator off keeps them, silent, to play again when it's back on, and they're still there the next time KeyboardEDO starts. **Clear** lets go of them, and of notes latched with Shift or Latch; so do All Notes Off, Escape, and turning Hold off.
 
 Each layout has its own arpeggiator settings.
 ~~~
@@ -215,6 +216,7 @@ KeyboardEDO doesn't send **MPE**. MPE is a MIDI 1.0 workaround for per-note expr
 
 | Key | Action |
 |---|---|
+| Cmd-N | New document |
 | Cmd-O | Open a document |
 | Cmd-S | Save (Shift-Cmd-S: Save As) |
 | Cmd-= and Cmd-- | Zoom in and out |

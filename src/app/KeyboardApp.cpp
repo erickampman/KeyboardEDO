@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <tuple>
+#include <utility>
 
 #include "Icons.h"
 #include "Widgets.h"
@@ -69,9 +70,14 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
         // KeyboardEDO the author may be playing meanwhile.
     } else if (char* folder = SDL_GetPrefPath("unlikelyware", "KeyboardEDO")) {
         prefsPath_ = std::string(folder) + "preferences.json";
-        SDL_free(folder);
         prefs_ = loadPreferences(prefsPath_);
+        sessionPath_ = std::string(folder) + "session.kedo";
+        SDL_free(folder);
+        if (start.restore) restoreSession();
     }
+    // What the document holds is played in once the keys are built; while it
+    // shows, what's held lives in the Performer and arpeggiator.
+    restoreHeld_ = std::exchange(doc_.held, {});
     if (prefs_.productInstanceId.empty()) {
         // Made once per installation (a check run's is its own, unsaved).
         prefs_.productInstanceId = makeProductInstanceId();
@@ -86,6 +92,7 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
     targets_.setPublish(prefs_.publish || start.publish);
     arp_.setConfig(settings_.arp);
     controls_.setKnobs(doc_.knobs);
+    restoreHeldNotes();
     updateTitle();
     arpThread_ = std::thread([this] { arpLoop(); });
 }
@@ -139,11 +146,80 @@ KeyboardApp::~KeyboardApp() {
     }
     arpWake_.notify_one();
     arpThread_.join();
+    saveSession();   // before releasing: what Hold keeps is saved with it
     // Release what's held while the outputs still exist; their destructor
     // then sends All Notes Off.
     releaseAll();
     flush();
     if (logo_) SDL_DestroyTexture(logo_);
+}
+
+// The document as the app quit, saved or not, so the next launch picks up
+// where this one left off: the working copy in the preferences folder, and
+// which bundle (if any) it is a copy of. The bundle itself isn't touched;
+// its unsaved edits stay unsaved, and show as edited.
+void KeyboardApp::saveSession() {
+    if (sessionPath_.empty()) return;
+    std::string error;
+    if (!saveDocument(sessionPath_, documentNow(), &error)) return;
+    prefs_.documentPath = path_;
+    savePreferences(prefsPath_, prefs_);
+}
+
+// What's held now, for the document, in the order played: the
+// arpeggiator's pool has it, latched notes and Hold's together; latched
+// notes that bypass it (it's off) after.
+std::vector<Document::HeldNote> KeyboardApp::heldNow() const {
+    std::vector<Document::HeldNote> held;
+    std::map<int, std::uint16_t> latched;
+    for (const auto& [id, velocity] : performer_.latchedNotes()) latched[id] = velocity;
+    for (const auto& p : arp_.pool()) {
+        if (p.kept) {
+            held.push_back({p.note.id, p.velocity, false});
+        } else if (const auto it = latched.find(p.note.id); it != latched.end()) {
+            held.push_back({it->first, it->second, true});
+            latched.erase(it);
+        }
+    }
+    for (const auto& [id, velocity] : performer_.latchedNotes())
+        if (latched.count(id)) held.push_back({id, velocity, true});
+    return held;
+}
+
+// A document's held notes (opened, or the session's): back in the
+// arpeggiator as Hold kept them (only with Hold), and latched again, so it
+// plays on where it stopped (or keeps them, off, as it was). A note whose
+// key is gone is skipped.
+void KeyboardApp::restoreHeldNotes() {
+    const auto held = std::exchange(restoreHeld_, {});
+    if (held.empty()) return;
+    std::map<int, Note> notes;
+    const Rect b = layout_->bounds();
+    for (const Key& k : layout_->keysIn({b.x - 1, b.y - 1, b.w + 2, b.h + 2}))
+        if (k.playable) notes.emplace(k.note.id, k.note);
+    for (const auto& h : held) {
+        const auto it = notes.find(h.id);
+        if (it == notes.end()) continue;
+        if (h.latched) performer_.latch(it->second, h.velocity);
+        else if (settings_.arp.hold) arp_.keep(it->second, h.velocity);
+    }
+}
+
+void KeyboardApp::restoreSession() {
+    const auto session = loadDocument(sessionPath_);
+    if (!session) return;
+    doc_ = *session;
+    settings_ = applied_ = doc_.layout();
+    appliedDestination_ = doc_.destination;
+    // Compared with the bundle as saved, for the title's "edited"; one that
+    // has gone (moved, deleted) leaves the session untitled.
+    path_.clear();
+    saved_ = Document{};
+    if (!prefs_.documentPath.empty())
+        if (const auto bundle = loadDocument(prefs_.documentPath)) {
+            path_ = prefs_.documentPath;
+            saved_ = *bundle;
+        }
 }
 
 // --- Building the keyboard --------------------------------------------------------
@@ -389,6 +465,7 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
             if (e.key.key == SDLK_0 || e.key.key == SDLK_KP_0) zoomBy(1 / viewport_.zoom);
         }
         if (command && !e.key.repeat) {
+            if (e.key.key == SDLK_N) newDocument();
             if (e.key.key == SDLK_O) showDialog(Dialog::Open);
             if (e.key.key == SDLK_SLASH && (e.key.mod & SDL_KMOD_SHIFT)) openHelp();   // Cmd-?
             if (e.key.key == SDLK_S) {
@@ -493,10 +570,11 @@ void KeyboardApp::applySettings() {
         targets_.setGroups(span.first, span.count);
         appliedSpan_ = span;
     }
-    // The arpeggiator on or off: what's held is released the way it was
-    // played (through it, or past it), then it starts empty.
+    // The arpeggiator on or off: what's pressed is released the way it was
+    // played (through it, or past it); what Hold kept stays, silent while
+    // it's off, until Clear.
     if (!(settings_.arp == applied_.arp)) {
-        if (settings_.arp.enabled != applied_.arp.enabled) releaseAll();
+        if (settings_.arp.enabled != applied_.arp.enabled) performer_.releaseAll();
         arp_.setConfig(settings_.arp);
     }
     if (!(doc_.knobs == controls_.knobs())) controls_.setKnobs(doc_.knobs);
@@ -536,27 +614,46 @@ void KeyboardApp::open(const std::string& path) {
     settings_ = doc_.layout();
     resetEditor();
     path_ = imported ? "" : path;
+    restoreHeld_ = std::exchange(doc_.held, {});
+    applySettings();
+    rebuild(true);
+    restoreHeldNotes();
+}
+
+// A new, untitled document: one layout, at its defaults, as on a first
+// launch. What's held is let go, as on opening one.
+void KeyboardApp::newDocument() {
+    status_.clear();
+    releaseAll();
+    doc_ = Document{};
+    saved_ = doc_;
+    settings_ = doc_.layout();
+    resetEditor();
+    path_.clear();
     applySettings();
     rebuild(true);
 }
 
 bool KeyboardApp::save(const std::string& path) {
     storeLayout();
+    const Document document = documentNow();
     std::string error;
-    if (!saveDocument(path, doc_, &error)) {
+    if (!saveDocument(path, document, &error)) {
         status_ = error;
         return false;
     }
     status_.clear();
-    saved_ = doc_;
+    saved_ = document;
     path_ = path;
     return true;
 }
 
-// The document as it would be saved: the showing layout's settings stored.
+// The document as it would be saved: the showing layout's settings stored,
+// and the notes held.
 Document KeyboardApp::documentNow() const {
     Document d = doc_;
     d.layout() = settings_;
+    d.held = heldNow();
     return d;
 }
 
@@ -1085,6 +1182,8 @@ void KeyboardApp::drawToolbar() {
     if (iconButton("performance", Icon::Performance, icon, "Performance bar: bend, mod wheel, knobs, arpeggiator",
                    prefs_.barOpen))
         setBarOpen(!prefs_.barOpen);
+    ImGui::SameLine();
+    if (iconButton("new", Icon::New, icon, "New document (Cmd/Ctrl-N)")) newDocument();
     ImGui::SameLine();
     if (iconButton("open", Icon::Open, icon, "Open... (Cmd/Ctrl-O)")) showDialog(Dialog::Open);
     ImGui::SameLine();
@@ -1779,6 +1878,8 @@ float KeyboardApp::drawPanel() {
     if (prefs_.editing) endSection();
 
     if (section("File")) {
+        if (ImGui::Button("New")) newDocument();
+        ImGui::SameLine();
         if (ImGui::Button("Open...")) showDialog(Dialog::Open);
         ImGui::SameLine();
         if (ImGui::Button("Save")) {
@@ -2022,12 +2123,25 @@ void KeyboardApp::drawArpeggiator() {
     const float left = ImGui::GetCursorPosX();
     const float half = (ImGui::GetContentRegionAvail().x - gap) / 2;
 
+    // On, Hold and Clear, three across.
+    const float col = (ImGui::GetContentRegionAvail().x - 2 * gap) / 3;
     ImGui::Checkbox("On##arp", &a.enabled);
     ImGui::SetItemTooltip("Step through the notes held, one at a time (also the toolbar button)");
-    ImGui::SameLine(left + half + gap);
+    ImGui::SameLine(left + col + gap);
     ImGui::Checkbox("Hold", &a.hold);
-    ImGui::SetItemTooltip("Released notes keep playing, and new ones add to them.\n"
-                          "All Notes Off or Escape clears them; so does turning Hold off");
+    ImGui::SetItemTooltip("Released notes keep playing, and new ones add to them, kept while it's off.\n"
+                          "Click one again to let it go. Clear, All Notes Off or Escape clears them;\n"
+                          "so does turning Hold off");
+    ImGui::SameLine(left + 2 * (col + gap));
+    // Clear lets go of what's latched (Shift, or the toolbar's Latch) too:
+    // the latches let go first, so Hold keeps them, then it all goes.
+    ImGui::BeginDisabled(arp_.heldNotes().empty() && !performer_.hasLatched());
+    if (ImGui::Button("Clear##arp", {col, 0})) {
+        performer_.releaseAllLatched();
+        arp_.stop();
+    }
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("Let go of the notes Hold keeps, and those latched");
 
     const float combosTop = ImGui::GetCursorPosY();
     captionedCombo("Pattern", "##pattern", a.pattern, kPatterns, left, half, pink);

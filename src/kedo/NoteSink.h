@@ -17,6 +17,9 @@ public:
 
     virtual void noteOn(const Note& note, std::uint16_t velocity) = 0;
     virtual void noteOff(int id) = 0;
+    // A note let go on purpose (a latched note struck again): ended even
+    // where a release would be kept, as the arpeggiator's Hold keeps one.
+    virtual void letGo(int id) { noteOff(id); }
 
     // The sounding note `id` now has pitch `pitch` (semitones above MIDI
     // note 0), without being struck again.
