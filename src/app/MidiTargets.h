@@ -112,6 +112,7 @@ private:
 
     std::vector<uw::MidiDestinationInfo> list_;
     std::uint64_t listedAt_ = ~std::uint64_t(0);
+    std::uint64_t polledAt_ = ~std::uint64_t(0);   // changes() when poll() last looked
 };
 
 } // namespace kedo::app

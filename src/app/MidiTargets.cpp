@@ -141,7 +141,10 @@ void MidiTargets::poll() {
         answered_ = midi_->inquiries(pubHandle_);
         pub_.setup();
     }
-    if (!midi_ || midi_->changes() == listedAt_) return;
+    // Its own count, not destinations()': the toolbar lists them every frame,
+    // before this runs, and would leave nothing changed here.
+    if (!midi_ || midi_->changes() == polledAt_) return;
+    polledAt_ = midi_->changes();
     destinations();   // refresh the list
     if (destinationOpen() && !midi_->sync(destHandle_)) {
         // Gone: forget its notes, drop it, and wait for it to come back.
