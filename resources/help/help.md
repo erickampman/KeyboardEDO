@@ -24,7 +24,7 @@ KeyboardEDO is an on-screen MIDI keyboard controller for **equal divisions of th
 
 It's built on **MIDI 2.0** first. Each note carries its exact pitch (MIDI 2.0's Pitch 7.9), so a 31-EDO step sounds as a 31-EDO step on any receiver that honors it, with per-note pitch bend, per-note controllers and per-note pressure. For MIDI 1.0 receivers it falls back to MIDI 1.0 automatically.
 
-Its keyboards come from KeyEDO: a standard piano at 12-EDO, a **diamond piano** at other EDOs, isomorphic **tiled** layouts at any EDO, and **custom** layouts you build key by key. A document holds several layouts, each with its own tuning, so you can switch between them while you play.
+Its keyboards are a standard piano at 12-EDO, a **diamond piano** at other EDOs, isomorphic **tiled** layouts at any EDO, and **custom** layouts you build key by key. A document holds several layouts, each with its own tuning, so you can switch between them while you play.
 :::
 
 ::: {.callout .callout-note .card}
@@ -73,7 +73,7 @@ In both modes you choose which layout is showing from the toolbar's layout menu,
 ## Documents {#documents}
 A KeyboardEDO document (`.kedo`) holds **several layouts**, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go, the performance bar's knob assignments and scale, and the notes held when it was saved (latched, or kept by the arpeggiator's Hold), in the order played.
 - **Layouts** in Settings (Edit mode): **Add** a new layout after the current one, **Duplicate** it, **Remove** it, rename it (**Name**), or move it **earlier** or **later** in the list with the arrows.
-- **File** in Settings: **New**, **Open...**, **Save**, **Save As...**, and **Import KeyEDO...**, which reads a KeyEDO document (`.json`) as a new document of one layout; saving makes it a `.kedo`. Below them is where the document is saved, or "Not saved yet."
+- **File** in Settings: **New**, **Open...**, **Save**, and **Save As...**. Below them is where the document is saved, or "Not saved yet."
 - On the Mac a `.kedo` document is one file. On Linux it's a folder, and Open chooses it as a folder.
 - Dropping a document on the window opens it.
 - The window's title shows the document's name, and **(edited)** when it has unsaved changes.
@@ -85,7 +85,7 @@ A KeyboardEDO document (`.kedo`) holds **several layouts**, each with its own tu
 Under **Tuning** in Settings (Edit mode):
 - **EDO steps**: how many equal steps divide the octave, from 5 to 72.
 - **Origin note** and **Origin octave** (−1 to 7): the note the tuning is built from, A0 to start with. Its frequency is shown below, from A4 = 440 Hz: A0 is 27.50 Hz.
-- **Columns**: for the diamond piano only, which piano key's column each step goes in: **Semitone below** (the 12-EDO note at or below it, as KeyEDO) or **Nearest semitone**.
+- **Columns**: for the diamond piano only, which piano key's column each step goes in: **Semitone below** (the 12-EDO note at or below it) or **Nearest semitone**.
 
 Every key's pitch is a number of EDO steps from the origin. At 12-EDO every MIDI note plays. At any other EDO, keys play from the origin up to C8, at most 128 steps, each with its own MIDI 2.0 note number; keys outside that range are drawn grey and don't sound. A lower origin gives a wider range.
 :::
