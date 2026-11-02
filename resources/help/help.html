@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>help</title>
+    <title>help-KeyboardEDO</title>
     <style>
-    :root {
+:root {
   --bg: #0f1115;
   --page: #141823;
   --text: #e6e2d8;
@@ -249,271 +249,649 @@ h1.card, h2.card, h3.card {
 .breadcrumb a:hover { opacity: 1.0; }
 .breadcrumb .crumb-current { opacity: 1.0; }
 
-    </style>
+
+/* Tables (pipe tables from pandoc) */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  font-size: 0.95em;
+}
+
+th, td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+  vertical-align: top;
+}
+
+thead th {
+  border-bottom: 2px solid #bbb;
+  font-weight: 600;
+}
+
+tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.025);
+}    </style>
 </head>
 <body>
 <div class="page">
-<p><div style="display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0.5rem;"> <a href="https://www.unlikelyware.com" target="_blank" rel="noopener noreferrer"> <img src="Unlikelyware.png" alt="Unlikelyware" style="width: 56px; height: auto; border-radius: 10px; margin: 0; display: block;"> </a> <h1 style="margin: 0;">KeyboardEDO</h1> </div></p>
-<p><p> <em>KeyboardEDO runs on macOS and Linux. Shortcuts are written with Cmd, as on the Mac; on Linux, use Ctrl.</em> </p></p>
-<div class="callout callout-note card">
-<div class="callout-content">
+<div style="display: flex; align-items: center; gap: 0.75rem; margin: 1.5rem 0 0.5rem;">
+  <a href="https://www.unlikelyware.com" target="_blank" rel="noopener noreferrer">
+    <img src="Unlikelyware.png" alt="Unlikelyware" style="width: 56px; height: auto; border-radius: 10px; margin: 0; display: block;">
+  </a>
+  <h1 style="margin: 0;">KeyboardEDO</h1>
+</div>
+
+<p>
+  <em>KeyboardEDO runs on macOS and Linux. Shortcuts are written with Cmd, as on the Mac; on Linux, use Ctrl.</em>
+</p>
+
+<section id="on-this-page" class="callout callout-note card">
 <h2>On This Page</h2>
-<p><a href="#overview">Overview</a> · <a href="#getting-started">Getting Started</a> · <a href="#window">The Window</a> · <a href="#modes">Edit and Play</a> · <a href="#documents">Documents</a></p>
-<p><strong>Keyboards —</strong> <a href="#tuning">Tuning</a> · <a href="#layouts">Layouts</a> · <a href="#piano">Piano and Diamond Piano</a> · <a href="#tiled">Tiled</a> · <a href="#custom">Custom</a> · <a href="#computer-keys">Computer Keys</a></p>
-<p><strong>Playing —</strong> <a href="#playing">Playing</a> · <a href="#expression">Expression</a> · <a href="#performance">Performance Bar</a> · <a href="#arpeggiator">Arpeggiator</a> · <a href="#midi">MIDI Output</a> · <a href="#shortcuts">Shortcuts</a> · <a href="#troubleshooting">Troubleshooting</a></p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="overview">Overview</h2>
-<p>KeyboardEDO is an on-screen MIDI keyboard controller for <strong>equal divisions of the octave</strong> (EDOs): 12-EDO, 17, 19, 22, 31, 53, or anything else from a handful of steps to hundreds. You play it with a mouse, a trackpad, a touchscreen (multitouch), or your computer's keyboard, and it sends MIDI to a synth, a DAW, or another app.</p>
-<p>It's built on <strong>MIDI 2.0</strong> first. Each note carries its exact pitch (MIDI 2.0's Pitch 7.9), so a 31-EDO step sounds as a 31-EDO step on any receiver that honors it, with per-note pitch bend, per-note controllers and per-note pressure. For MIDI 1.0 receivers it falls back to MIDI 1.0 automatically.</p>
-<p>Its keyboards come from KeyEDO: a standard piano at 12-EDO, a <strong>diamond piano</strong> at other EDOs, isomorphic <strong>tiled</strong> layouts at any EDO, and <strong>custom</strong> layouts you build key by key. A document holds several layouts, each with its own tuning, so you can switch between them while you play.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="getting-started">Getting Started</h2>
-<ol>
-<li><strong>Choose where notes go.</strong> Click the antenna button at the right of the toolbar, then either pick a destination under <strong>Send to</strong> (a synth, a DAW's input, or a hardware port), or turn on <strong>Publish as "KeyboardEDO"</strong> so other apps can select KeyboardEDO as an input.</li>
-<li><strong>Check the badge</strong> in the middle of the toolbar. It shows <strong>MIDI 2.0</strong> or <strong>MIDI 1.0</strong> once notes are going somewhere, and <strong>not sending</strong> until then.</li>
-<li><strong>Pick a tuning and layout.</strong> Open Settings (the sliders button at the far right), set <strong>EDO steps</strong> under Tuning, and choose a <strong>Layout</strong>.</li>
-<li><strong>Play.</strong> Click or touch the keys, or turn on <strong>Computer keys</strong> under View and play from your keyboard.</li>
+<p><a href="#overview">Overview</a> · <a href="#getting-started">Getting
+Started</a> · <a href="#window">The Window</a> · <a href="#modes">Edit
+and Play</a> · <a href="#documents">Documents</a></p>
+<p><strong>Keyboards —</strong> <a href="#tuning">Tuning</a> · <a
+href="#layouts">Layouts</a> · <a href="#piano">Piano and Diamond
+Piano</a> · <a href="#tiled">Tiled</a> · <a href="#custom">Custom</a> ·
+<a href="#computer-keys">Computer Keys</a></p>
+<p><strong>Playing —</strong> <a href="#playing">Playing</a> · <a
+href="#expression">Expression</a> · <a href="#performance">Performance
+Bar</a> · <a href="#arpeggiator">Arpeggiator</a> · <a
+href="#scale">Scale</a> · <a href="#midi">MIDI Output</a> · <a
+href="#shortcuts">Shortcuts</a> · <a
+href="#troubleshooting">Troubleshooting</a></p>
+</section>
+<section id="overview" class="callout callout-note card">
+<h2>Overview</h2>
+<p>KeyboardEDO is an on-screen MIDI keyboard controller for
+<strong>equal divisions of the octave</strong> (EDOs): 12-EDO, 17, 19,
+22, 31, 53, or any other from 5 to 72 steps. You play it with a mouse, a
+trackpad, a touchscreen (multitouch), or your computer's keyboard, and
+it sends MIDI to a synth, a DAW, or another app.</p>
+<p>It's built on <strong>MIDI 2.0</strong> first. Each note carries its
+exact pitch (MIDI 2.0's Pitch 7.9), so a 31-EDO step sounds as a 31-EDO
+step on any receiver that honors it, with per-note pitch bend, per-note
+controllers and per-note pressure. For MIDI 1.0 receivers it falls back
+to MIDI 1.0 automatically.</p>
+<p>Its keyboards come from KeyEDO: a standard piano at 12-EDO, a
+<strong>diamond piano</strong> at other EDOs, isomorphic
+<strong>tiled</strong> layouts at any EDO, and <strong>custom</strong>
+layouts you build key by key. A document holds several layouts, each
+with its own tuning, so you can switch between them while you play.</p>
+</section>
+<section id="getting-started" class="callout callout-note card">
+<h2>Getting Started</h2>
+<ol type="1">
+<li><strong>Choose where notes go.</strong> Click the antenna button at
+the right of the toolbar, then either pick a destination under
+<strong>Send to</strong> (a synth, a DAW's input, or a hardware port),
+or turn on <strong>Publish as "KeyboardEDO"</strong> so other apps can
+select KeyboardEDO as an input.</li>
+<li><strong>Check the badge</strong> in the middle of the toolbar. It
+shows <strong>MIDI 2.0</strong> or <strong>MIDI 1.0</strong> once notes
+are going somewhere, and <strong>not sending</strong> until then.</li>
+<li><strong>Pick a tuning and layout.</strong> Click
+<strong>Edit</strong> in the toolbar, open Settings (the sliders button
+at the far right), set <strong>EDO steps</strong> under Tuning, and
+choose a <strong>Layout</strong>.</li>
+<li><strong>Play.</strong> Click or touch the keys, or turn on
+<strong>Computer keys</strong> under View and play from your
+keyboard.</li>
 </ol>
-<p>The line under the toolbar sums up what's playing: the EDO, the origin note, the layout, the drag mode, and where notes go.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="window">The Window</h2>
+<p>The line under the toolbar sums up what's playing: the EDO, the
+origin note, the layout, the drag mode and its expression, what's on
+(strike velocity, the arpeggiator, Latch, Lock), and where notes go. A
+file error shows at its end, in red.</p>
+</section>
+<section id="window" class="callout callout-note card">
+<h2>The Window</h2>
 <p><strong>The toolbar, left to right:</strong></p>
 <ul>
 <li><strong>Unlikelyware logo</strong>: opens unlikelyware.com.</li>
-<li><strong>Performance bar</strong>: shows or hides the bar on the left (bend, mod wheel, knobs, arpeggiator).</li>
-<li><strong>New</strong>, <strong>Open</strong> and <strong>Save</strong>: documents (Cmd-N, Cmd-O, Cmd-S; Shift-Cmd-S saves as).</li>
-<li><strong>Layout menu</strong>: the document's layouts. Switching releases any notes held.</li>
-<li><strong>Edit / Play</strong>: the mode (see <a href="#modes">Edit and Play</a>).</li>
+<li><strong>Performance bar</strong>: shows or hides the bar on the left
+(wheels, knobs, arpeggiator, scale).</li>
+<li><strong>New</strong>, <strong>Open</strong> and
+<strong>Save</strong>: documents (Cmd-N, Cmd-O, Cmd-S; Shift-Cmd-S saves
+as).</li>
+<li><strong>Layout menu</strong>: the document's layouts. Switching
+releases any notes held.</li>
+<li><strong>Edit</strong>: the mode; it reads <strong>Editing</strong>
+while it's on (see <a href="#modes">Edit and Play</a>).</li>
 <li><strong>Badge</strong>: the protocol notes are sent in.</li>
-<li><strong>Antenna</strong>: where notes go (<a href="#midi">MIDI Output</a>).</li>
-<li><strong>Lock</strong>: turns off scrolling and zooming, so a stray swipe can't move the keyboard. Keys still play.</li>
-<li><strong>Latch</strong>: released notes keep sounding until you turn Latch off or strike them again. Holding Shift while you play latches too.</li>
-<li><strong>Arpeggiator</strong>: on or off (<a href="#arpeggiator">Arpeggiator</a>).</li>
+<li><strong>Antenna</strong>: where notes go (<a href="#midi">MIDI
+Output</a>).</li>
+<li><strong>Lock</strong>: turns off scrolling and zooming, so a stray
+swipe can't move the keyboard. Keys still play.</li>
+<li><strong>Latch</strong>: released notes keep sounding until you turn
+Latch off or strike them again. Holding Shift while you play latches
+too.</li>
+<li><strong>Arpeggiator</strong>: on or off (<a
+href="#arpeggiator">Arpeggiator</a>).</li>
 <li><strong>Panic</strong>: All Notes Off.</li>
-<li><strong>Monitor</strong>: a list of every MIDI message sent, as UMP.</li>
+<li><strong>Monitor</strong>: the MIDI monitor under the keyboard, a
+list of every MIDI message sent, as UMP. <strong>Clear</strong> empties
+it; <strong>Follow</strong> keeps the newest in view.</li>
+<li><strong>Help</strong>: this page, in your browser (F1, or
+Cmd-?).</li>
 <li><strong>Settings</strong>: the settings panel on the right.</li>
 </ul>
-<p><strong>Moving around the keyboard:</strong> the scroll wheel scrolls, Shift-wheel scrolls sideways, and Ctrl-wheel or a pinch zooms. <strong>Reset View</strong> under View puts it back.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="modes">Edit and Play</h2>
-<p>KeyboardEDO has two modes, switched with the button beside the layout menu.</p>
+<p><strong>The settings panel</strong> has sections that fold by their
+titles: <strong>Layouts</strong>, <strong>Tuning</strong>,
+<strong>Layout</strong>, <strong>Keys</strong> (custom layouts),
+<strong>View</strong>, <strong>Playing</strong>, <strong>MIDI</strong>
+and <strong>File</strong>. In Play mode it shows only Layouts, View and
+File.</p>
+<p><strong>Moving around the keyboard:</strong> the scroll wheel scrolls
+(sideways, when the whole keyboard fits top to bottom), Shift-wheel
+scrolls sideways, and Cmd- or Ctrl-wheel or a pinch zooms. Cmd-= and
+Cmd-- zoom too, and Cmd-0 goes back to 100%. Under <strong>View</strong>
+in Settings, <strong>Reset View</strong> puts it back, and
+<strong>−</strong> and <strong>+</strong> zoom. While the keyboard is
+locked, none of these move it.</p>
+</section>
+<section id="modes" class="callout callout-note card">
+<h2>Edit and Play</h2>
+<p>KeyboardEDO has two modes, switched with the button beside the layout
+menu. It reads <strong>Edit</strong> in Play mode and
+<strong>Editing</strong> in Edit mode, and KeyboardEDO remembers which
+you were in.</p>
 <ul>
-<li><strong>Edit</strong> shows everything: Tuning, Layout, Playing and MIDI settings, and the layout editor for custom layouts. Use it to set up a document's layouts.</li>
-<li><strong>Play</strong> hides the setup, leaving the layout menu, the view, and the performance bar. Use it when performing, so nothing gets changed by accident.</li>
+<li><strong>Edit</strong> shows everything: Tuning, Layout, Playing and
+MIDI settings, managing the document's layouts, and the layout editor
+for custom layouts. A knob's name in the performance bar becomes a
+button that chooses what it sends. Use it to set up a document's
+layouts.</li>
+<li><strong>Play</strong> hides the setup, leaving the layouts to choose
+from, the view, the file buttons, and the performance bar (the
+arpeggiator and scale included). Use it when performing, so nothing gets
+changed by accident.</li>
 </ul>
-<p>In both modes you choose which layout is showing from the toolbar's layout menu.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="documents">Documents</h2>
-<p>A KeyboardEDO document (<code>.kedo</code>) holds <strong>several layouts</strong>, each with its own tuning, layout, playing settings, MIDI settings and arpeggiator. It also remembers where notes go, the performance bar's knob assignments, and the notes held when it was saved (latched, or kept by the arpeggiator's Hold), in the order played.</p>
+<p>In both modes you choose which layout is showing from the toolbar's
+layout menu, or the list under <strong>Layouts</strong> in Settings.</p>
+</section>
+<section id="documents" class="callout callout-note card">
+<h2>Documents</h2>
+<p>A KeyboardEDO document (<code>.kedo</code>) holds <strong>several
+layouts</strong>, each with its own tuning, layout, playing settings,
+MIDI settings and arpeggiator. It also remembers where notes go, the
+performance bar's knob assignments and scale, and the notes held when it
+was saved (latched, or kept by the arpeggiator's Hold), in the order
+played.</p>
 <ul>
-<li><strong>Layouts</strong> in Settings: <strong>Add</strong> a new layout after the current one, <strong>Duplicate</strong> it, <strong>Remove</strong> it, rename it, or move it <strong>earlier</strong> or <strong>later</strong> in the list.</li>
-<li><strong>Open</strong> reads a <code>.kedo</code> document, or a KeyEDO document (<code>.json</code>), which comes in as a new document of one layout.</li>
-<li>The window's title shows the document's name, and <strong>edited</strong> when it has unsaved changes.</li>
-<li>KeyboardEDO starts where it left off: the document you had when you quit, saved or not, with the notes you were holding. <strong>New</strong> starts an untitled one.</li>
+<li><strong>Layouts</strong> in Settings (Edit mode):
+<strong>Add</strong> a new layout after the current one,
+<strong>Duplicate</strong> it, <strong>Remove</strong> it, rename it
+(<strong>Name</strong>), or move it <strong>earlier</strong> or
+<strong>later</strong> in the list with the arrows.</li>
+<li><strong>File</strong> in Settings: <strong>New</strong>,
+<strong>Open...</strong>, <strong>Save</strong>, <strong>Save
+As...</strong>, and <strong>Import KeyEDO...</strong>, which reads a
+KeyEDO document (<code>.json</code>) as a new document of one layout;
+saving makes it a <code>.kedo</code>. Below them is where the document
+is saved, or "Not saved yet."</li>
+<li>On the Mac a <code>.kedo</code> document is one file. On Linux it's
+a folder, and Open chooses it as a folder.</li>
+<li>Dropping a document on the window opens it.</li>
+<li>The window's title shows the document's name, and
+<strong>(edited)</strong> when it has unsaved changes.</li>
+<li>KeyboardEDO starts where it left off: the document you had when you
+quit, saved or not, with the notes you were holding.
+<strong>New</strong> starts an untitled one.</li>
 </ul>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="tuning">Tuning</h2>
+</section>
+<section id="tuning" class="callout callout-note card">
+<h2>Tuning</h2>
 <p>Under <strong>Tuning</strong> in Settings (Edit mode):</p>
 <ul>
-<li><strong>EDO steps</strong>: how many equal steps divide the octave.</li>
-<li><strong>Origin note</strong> and <strong>Origin octave</strong>: the note the tuning is built from. Its frequency is shown below, from A4 = 440 Hz: A0 is 27.50 Hz.</li>
+<li><strong>EDO steps</strong>: how many equal steps divide the octave,
+from 5 to 72.</li>
+<li><strong>Origin note</strong> and <strong>Origin octave</strong> (−1
+to 7): the note the tuning is built from, A0 to start with. Its
+frequency is shown below, from A4 = 440 Hz: A0 is 27.50 Hz.</li>
+<li><strong>Columns</strong>: for the diamond piano only, which piano
+key's column each step goes in: <strong>Semitone below</strong> (the
+12-EDO note at or below it, as KeyEDO) or <strong>Nearest
+semitone</strong>.</li>
 </ul>
-<p>Every key's pitch is a number of EDO steps from the origin.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="layouts">Layouts</h2>
-<p>Under <strong>Layout</strong> in Settings, choose <strong>Piano</strong>, <strong>Tiled</strong> or <strong>Custom</strong>.</p>
+<p>Every key's pitch is a number of EDO steps from the origin. At 12-EDO
+every MIDI note plays. At any other EDO, keys play from the origin up to
+C8, at most 128 steps, each with its own MIDI 2.0 note number; keys
+outside that range are drawn grey and don't sound. A lower origin gives
+a wider range.</p>
+</section>
+<section id="layouts" class="callout callout-note card">
+<h2>Layouts</h2>
+<p>Under <strong>Layout</strong> in Settings (Edit mode), choose
+<strong>Piano</strong>, <strong>Tiled</strong> or
+<strong>Custom</strong>.</p>
 <ul>
-<li><strong>Piano</strong> is a piano keyboard at 12-EDO, and the <strong>diamond piano</strong> at any other EDO.</li>
-<li><strong>Tiled</strong> is an isomorphic grid of diamond keys: every interval has the same shape wherever you play it.</li>
-<li><strong>Custom</strong> is a layout of keys placed one by one, made by converting any other layout.</li>
+<li><strong>Piano</strong> is a piano keyboard at 12-EDO, and the
+<strong>diamond piano</strong> at any other EDO.</li>
+<li><strong>Tiled</strong> is an isomorphic grid of diamond keys: every
+interval has the same shape wherever you play it.</li>
+<li><strong>Custom</strong> is a layout of keys placed one by one, made
+by converting another layout or by adding keys yourself.</li>
 </ul>
-<p><strong>Convert to custom</strong> turns the current layout into a custom one, with every key in place, so you can start from a layout that's nearly right.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="piano">Piano and Diamond Piano</h2>
-<p>At <strong>12-EDO</strong>, the Piano layout is a standard piano keyboard.</p>
-<p>At any <strong>other EDO</strong> it becomes the <strong>diamond piano</strong>: each piano key's steps are stacked as diamonds, so the white and black keys keep their familiar places, and the extra steps of the EDO sit between them.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="tiled">Tiled Layouts</h2>
-<p>A tiled layout is a grid of diamond keys. Moving one key <strong>right</strong>, <strong>up-right</strong>, or <strong>up-left</strong> always moves by the same number of EDO steps, so a chord or scale has the same shape everywhere.</p>
-<p><strong>Generator</strong> chooses those steps. Each is worked out for the current EDO:</p>
+<p><strong>Convert to custom</strong> turns the current layout into a
+custom one, with every key keeping its place, look, pitch, note number
+and computer key, so it plays just as it did and you can start from a
+layout that's nearly right.</p>
+</section>
+<section id="piano" class="callout callout-note card">
+<h2>Piano and Diamond Piano</h2>
+<p>At <strong>12-EDO</strong>, the Piano layout is a standard piano
+keyboard.</p>
+<p>At any <strong>other EDO</strong> it becomes the <strong>diamond
+piano</strong>: each piano key's steps are stacked as diamonds, so the
+white and black keys keep their familiar places, and the extra steps of
+the EDO sit between them. <strong>Columns</strong> under Tuning chooses
+which piano key each step goes with.</p>
+<p>Both can show a scale on their keys (<a href="#scale">Scale</a>).</p>
+</section>
+<section id="tiled" class="callout callout-note card">
+<h2>Tiled Layouts</h2>
+<p>A tiled layout is a grid of diamond keys. Moving one key
+<strong>right</strong>, <strong>up-right</strong>, or
+<strong>up-left</strong> always moves by the same number of EDO steps,
+so a chord or scale has the same shape everywhere. Its lowest key, the
+origin note in octave −1, is at the bottom left, and it has as many rows
+as fit the window.</p>
+<p><strong>Generator</strong> chooses those steps. Each is worked out
+for the current EDO, and only those that work there are offered:</p>
 <ul>
-<li><strong>Wicki-Hayden</strong>: right is a whole tone, up-right a fifth.</li>
-<li><strong>Bosanquet</strong>: right is one step, up-right a fifth.</li>
-<li><strong>Janko</strong>: right is a whole tone, up-right one step.</li>
-<li><strong>Harmonic Table</strong>: neighbouring keys form major and minor thirds and fifths.</li>
-<li><strong>Guitar (fourths)</strong>: right is a whole tone, up-right a fourth.</li>
-<li><strong>Default</strong>: right is one step, up-right roughly a fifth.</li>
-<li><strong>Octave columns</strong>: each column holds one note in every octave, two octaves across, with a chromatic bottom row.</li>
+<li><strong>Wicki-Hayden</strong>: right is a whole tone, up-right a
+fifth.</li>
+<li><strong>Bosanquet</strong>: right is one step, up-right a
+fifth.</li>
+<li><strong>Janko</strong>: right is a whole tone, up-right one
+step.</li>
+<li><strong>Harmonic Table</strong>: up-right is a major third and
+up-left a minor third, so two rows up is a fifth.</li>
+<li><strong>Guitar (fourths)</strong>: right is a whole tone, up-right a
+fourth.</li>
+<li><strong>Default</strong>: right is one step, up-right roughly a
+fifth. Offered only when none of the above work.</li>
+<li><strong>Octave columns</strong>: each column holds one note in every
+octave, two octaves across, with a chromatic zigzag along the
+bottom.</li>
 </ul>
-<p>The steps for the chosen generator are shown under it. <strong>Tile colour</strong> colours the keys by <strong>Note</strong> (one colour per note name), by <strong>Octave</strong>, or not at all (<strong>Off</strong>).</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="custom">Custom Layouts</h2>
-<p>A custom layout is a set of keys, each with its own place, pitch, note number and look. Edit one in <strong>Edit</strong> mode.</p>
+<p>The steps for the chosen generator are shown under it. <strong>Tile
+colour</strong> colours the keys by <strong>Note</strong> (one colour
+per note name), by <strong>Octave</strong>, or not at all
+(<strong>Off</strong>).</p>
+</section>
+<section id="custom" class="callout callout-note card">
+<h2>Custom Layouts</h2>
+<p>A custom layout is a set of diamond keys, each with its own place,
+pitch, note number and look. Edit one in <strong>Edit</strong> mode,
+under <strong>Keys</strong> in Settings. While you edit, a click selects
+a key instead of playing it, and each change sounds the key briefly.</p>
 <ul>
-<li><strong>Select</strong>: click a key; Shift-click to add more; Cmd-A selects all.</li>
-<li><strong>Move</strong>: drag the selected keys, or use the arrow keys (Shift moves four times as far). <strong>Snap to grid</strong> keeps keys aligned; snapping to <strong>half</strong> the grid places them between keys.</li>
-<li><strong>Add key</strong>: adds a key in the middle of the view, or double-click empty space.</li>
-<li><strong>Duplicate</strong> (Cmd-D) and <strong>Delete</strong> (Delete or Backspace) the selected keys.</li>
-<li><strong>Undo</strong> (Cmd-Z) and <strong>Redo</strong> (Shift-Cmd-Z or Cmd-Y).</li>
+<li><strong>Select</strong>: click a key; Shift-click to add or remove
+one; click empty space to select none; Cmd-A selects all.</li>
+<li><strong>Move</strong>: drag the selected keys, or use the arrow keys
+(Shift moves four times as far). <strong>Snap to grid</strong> keeps
+keys aligned; <strong>Half steps</strong> snaps to half the grid,
+between keys.</li>
+<li><strong>Add key</strong>: adds a key in the middle of the view, or
+double-click empty space. It's a step above the selected key, if there
+is one.</li>
+<li><strong>Duplicate</strong> (Cmd-D) and <strong>Delete</strong>
+(Delete or Backspace) the selected keys.</li>
+<li><strong>Undo</strong> (Cmd-Z) and <strong>Redo</strong> (Shift-Cmd-Z
+or Cmd-Y).</li>
 </ul>
-<p>The inspector edits the selected key:</p>
+<p>The inspector edits the selected keys:</p>
 <ul>
-<li><strong>Pitch</strong>: EDO, octave, and steps above the origin note.</li>
-<li><strong>Note number</strong>: <strong>Suggest</strong> picks the nearest free number for the key's pitch.</li>
-<li><strong>Look</strong>: shade (white or black), its own colour, its width and height, and what its label shows (text, name and octave, name, degree, or frequency).</li>
-<li><strong>Computer key</strong>: click <strong>Assign</strong>, then press a letter, digit or punctuation key (Escape cancels). Each computer key plays one key.</li>
+<li><strong>Pitch</strong>: one key's <strong>EDO</strong>,
+<strong>Octave</strong>, and <strong>Degree</strong> (steps above the
+origin note), shown as a note name, cents and Hz. With several keys
+selected, <strong>− step</strong>, <strong>+ step</strong>, <strong>−
+octave</strong> and <strong>+ octave</strong> transpose them all. Each
+key keeps its own EDO, so changing <strong>EDO steps</strong> under
+Tuning doesn't change the keys; it's the EDO new keys get.</li>
+<li><strong>Note number</strong>: suggested (the nearest free number for
+the key's pitch) until you type one; <strong>Suggest</strong> goes back
+to that. A number shared with a key of another pitch is warned of, as
+they'd sound as one note.</li>
+<li><strong>Computer key</strong>: click <strong>Assign...</strong>,
+then press a letter, digit or punctuation key (Escape cancels);
+<strong>Clear</strong> removes it. Each computer key plays one key.</li>
+<li><strong>Group</strong> and <strong>Channel</strong>: the layout's
+(under MIDI), or the key's own.</li>
+<li><strong>Look</strong>: <strong>Shade</strong> (white or black),
+<strong>Own colour</strong>, <strong>Width</strong> and
+<strong>Height</strong> (50% to 200%), and what its
+<strong>Label</strong> and the line <strong>Under it</strong> show: text
+you type, <strong>Name and octave</strong>, <strong>Name</strong>,
+<strong>Degree</strong>, or <strong>Frequency</strong>.</li>
 </ul>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="computer-keys">Computer Keys</h2>
-<p>Turn on <strong>Computer keys</strong> under View to play from your computer's keyboard. Each key shows the computer key that plays it. Tiled and piano layouts come with a mapping; in a custom layout you assign each key yourself.</p>
+</section>
+<section id="computer-keys" class="callout callout-note card">
+<h2>Computer Keys</h2>
+<p>Turn on <strong>Computer keys</strong> under View to play from your
+computer's keyboard. Each key shows the computer key that plays it,
+named as your keyboard layout names it. Piano and tiled layouts come
+with a mapping, and converting to custom keeps it; in a custom layout
+you assign each key yourself.</p>
 <ul>
-<li><strong>Shift</strong> latches the notes you play, as the Latch button does.</li>
-<li><strong>Ctrl</strong> with the mouse sends expression for the notes your computer keys are holding: move the mouse as you would drag a key (<a href="#expression">Expression</a>).</li>
+<li><strong>Shift</strong> latches the notes you play, as the Latch
+button does.</li>
+<li><strong>Ctrl</strong> with the mouse sends expression for the notes
+your computer keys are holding: move the mouse as you would drag a key
+(<a href="#expression">Expression</a>).</li>
 <li><strong>Escape</strong> releases every note.</li>
+<li>With Cmd or Ctrl held, a key is a shortcut, not a note.</li>
 </ul>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="playing">Playing</h2>
+</section>
+<section id="playing" class="callout callout-note card">
+<h2>Playing</h2>
 <p>Under <strong>Playing</strong> in Settings (Edit mode):</p>
 <ul>
-<li><strong>Drag</strong> sets what happens when you drag across keys:</li>
+<li><strong>Drag</strong> sets what happens when you drag across keys:
 <ul>
-<li><strong>Gliss</strong>: each key you pass over plays, as a glissando. The drag stops at the keyboard's edges, so keys hidden under the side bars don't sound.</li>
-<li><strong>Fixed</strong>: the note you struck stays; dragging sends <strong>expression</strong> instead.</li>
-<li><strong>Glide (Pitch 7.25)</strong>, with Gliss: instead of striking each key, one note's pitch moves from key to key (MIDI 2.0). It lands on each key's exact pitch rather than sliding between them.</li>
-<li><strong>Strike velocity</strong>: a key plays louder toward its top and softer toward its bottom, down to the <strong>Minimum</strong> you set. Off, every note plays at full velocity.</li>
+<li><strong>Gliss</strong>: each key you pass over plays, as a
+glissando. The drag stops at the keyboard's edges, so keys hidden under
+the side bars don't sound.</li>
+<li><strong>Fixed</strong>: the note you struck stays; dragging sends
+<strong>expression</strong> instead.</li>
+</ul></li>
+<li><strong>Glide (Pitch 7.25)</strong>, with Gliss: instead of striking
+each key, one note's pitch moves from key to key (MIDI 2.0). It lands on
+each key's exact pitch rather than sliding between them.</li>
+<li><strong>Horizontal</strong> and <strong>Vertical</strong>: the
+expression a drag sends (<a href="#expression">Expression</a>).</li>
+<li><strong>Strike velocity</strong>: a key plays louder toward its top
+and softer toward its bottom, down to the <strong>Minimum</strong> you
+set (1 to 126). Off, every note plays at full velocity.</li>
 </ul>
-</ul>
-<p>Two fingers on two keys that play the same pitch hold one note, which ends when the last finger lets go.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="expression">Expression</h2>
-<p>With <strong>Fixed</strong> drag, moving a finger or the mouse after striking a key sends expression for that note. <strong>Horizontal</strong> and <strong>Vertical</strong> choose what each direction sends:</p>
+<p>Two fingers on two keys that play the same pitch hold one note, which
+ends when the last finger lets go.</p>
+</section>
+<section id="expression" class="callout callout-note card">
+<h2>Expression</h2>
+<p>With <strong>Fixed</strong> drag, moving a finger or the mouse after
+striking a key sends expression for that note. In either drag mode, so
+does moving the mouse with Ctrl held while computer keys hold notes.
+<strong>Horizontal</strong> and <strong>Vertical</strong> choose what
+each direction sends:</p>
 <ul>
-<li><strong>Horizontal</strong>: Off or <strong>Pitch Bend</strong>.</li>
-<li><strong>Vertical</strong>: Off, <strong>Controller</strong> (choose its number), <strong>Pressure</strong>, or <strong>Pitch Bend</strong>.</li>
+<li><strong>Horizontal</strong>: Off or <strong>Pitch
+Bend</strong>.</li>
+<li><strong>Vertical</strong>: Off, <strong>Controller</strong> (choose
+its number), <strong>Pressure</strong>, or <strong>Pitch
+Bend</strong>.</li>
 </ul>
 <p>Each has a <strong>scope</strong>:</p>
 <ul>
-<li><strong>Bend scope</strong> and <strong>Controller scope</strong>: <strong>Per note</strong> bends or changes only the finger's own note (MIDI 2.0 per-note pitch bend and per-note controllers); <strong>Channel</strong> uses ordinary channel messages, driven by the first finger down.</li>
-<li><strong>Pressure scope</strong>: <strong>Poly</strong> is each finger's own note (polyphonic key pressure); <strong>Channel</strong> is channel pressure from the first finger.</li>
+<li><strong>Bend scope</strong> and <strong>Controller scope</strong>:
+<strong>Per note</strong> bends or changes only the finger's own note
+(MIDI 2.0 per-note pitch bend and per-note controllers);
+<strong>Channel</strong> uses ordinary channel messages, driven by the
+first finger down.</li>
+<li><strong>Pressure scope</strong>: <strong>Poly</strong> is each
+finger's own note (polyphonic key pressure); <strong>Channel</strong> is
+channel pressure from the first finger.</li>
 </ul>
-<p>When <strong>Expression as MIDI 1.0</strong> is on (under MIDI), MIDI 1.0 has no per-note form, so expression is channel-wide.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="performance">Performance Bar</h2>
-<p>The bar on the left, shown and hidden with the toolbar's first button, has controls that act on the whole channel, like a keyboard's wheels and knobs. It's the same for every layout.</p>
+<p>When <strong>Expression as MIDI 1.0</strong> is on (under MIDI),
+pitch bend and controllers are channel-wide, as MIDI 1.0 has no per-note
+form for them, and their scopes are set to Channel. Poly pressure is
+MIDI 1.0 too, so its scope still applies.</p>
+</section>
+<section id="performance" class="callout callout-note card">
+<h2>Performance Bar</h2>
+<p>The bar on the left, shown and hidden with the toolbar's Performance
+bar button, works in both modes. Its sections, <strong>Wheels</strong>,
+<strong>Knobs</strong>, <strong>Arpeggiator</strong> and
+<strong>Scale</strong>, fold by their titles, and stay as you leave
+them.</p>
+<p>The wheels and knobs act on the whole channel, like a keyboard's, and
+are the same for every layout:</p>
 <ul>
-<li><strong>Bend</strong>: a pitch-bend fader over the bend range set under MIDI. It springs back to the centre when you let go.</li>
+<li><strong>Bend</strong>: a pitch-bend fader over the bend range set
+under MIDI. It springs back to the centre when you let go.</li>
 <li><strong>Mod</strong>: the mod wheel (CC 1).</li>
-<li><strong>Four knobs</strong>, by default <strong>Timbre</strong> (CC 74), <strong>Pressure</strong> (channel pressure), <strong>CC 71</strong> and <strong>CC 7</strong>. Drag up or down to turn one; double-click to set it back. Click its name to choose what it sends: any controller (with your own label) or channel pressure.</li>
+<li><strong>Four knobs</strong>, by default <strong>Timbre</strong> (CC
+74), <strong>Pressure</strong> (channel pressure), <strong>CC
+71</strong> and <strong>CC 7</strong>. Drag up or down to turn one (Cmd
+or Ctrl for finer); double-click to set it back. To choose what one
+sends, right-click it, or in Edit mode click its name:
+<strong>Sends</strong> a controller (with its <strong>CC</strong>
+number) or channel pressure, with your own <strong>Label</strong>;
+<strong>Default</strong> puts it back.</li>
 </ul>
-<p>The knob assignments are saved with the document. Their positions aren't: nothing is sent until you move a knob, so opening a document never changes your synth's settings.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="arpeggiator">Arpeggiator</h2>
-<p>The arpeggiator steps through the notes you hold, one at a time. Its controls are in the performance bar; the toolbar's Arpeggiator button turns it on and off too.</p>
+<p>Click the value under Mod or a knob to type one (0 to 127).</p>
+<p>The knob assignments are saved with the document. Their positions
+aren't: nothing is sent until you move a knob, so opening a document
+never changes your synth's settings.</p>
+</section>
+<section id="arpeggiator" class="callout callout-note card">
+<h2>Arpeggiator</h2>
+<p>The arpeggiator steps through the notes you hold, one at a time, and
+puts a pink dot on the key it's playing. Its controls are in the
+performance bar, in both modes; <strong>On</strong>, or the toolbar's
+Arpeggiator button, turns it on and off.</p>
 <ul>
-<li><strong>Pattern</strong>: Up, Down, Up-Down, Down-Up, As Played, or Random.</li>
-<li><strong>Division</strong>: a step's length, from a whole note to 1/32, with triplets (T).</li>
-<li><strong>Tempo</strong>: in beats per minute.</li>
-<li><strong>Gate</strong>: how much of its step each note sounds.</li>
-<li><strong>Octaves</strong>: plays the pattern, then again an octave higher for each octave more (1 to 4).</li>
-<li><strong>Velocity</strong>: as played, a fixed velocity you set, or random.</li>
-<li><strong>Hold</strong>: released notes keep playing, and new ones add to them; click one again to let it go. Turning the arpeggiator off keeps them, silent, to play again when it&rsquo;s back on, and they&rsquo;re still there the next time KeyboardEDO starts. <strong>Clear</strong> lets go of them, and of notes latched with Shift or Latch; so do All Notes Off, Escape, and turning Hold off.</li>
+<li><strong>Pattern</strong>: Up, Down, Up-Down, Down-Up, As Played, or
+Random.</li>
+<li><strong>Division</strong>: a step's length, from a whole note (1/1)
+to 1/32, with triplets (1/2T to 1/16T).</li>
+<li><strong>Tempo</strong>: 1 to 999 beats per minute.</li>
+<li><strong>Gate</strong>: how much of its step each note sounds, 1% to
+100%.</li>
+<li><strong>Octaves</strong>: plays the pattern, then again an octave
+higher for each octave more (1 to 4).</li>
+<li><strong>Swing</strong>: every second step comes late; how much of a
+pair of steps the first takes, from 50% (straight) to 75%. 67% is a
+triplet feel.</li>
+<li><strong>Slop</strong>: each step early or late at random, by up to 0
+to 50 ms (never more than a quarter of a step).</li>
+<li><strong>Velocity</strong>: <strong>As played</strong>,
+<strong>Fixed</strong> at a velocity you set with the knob beside it, or
+<strong>Random</strong>.</li>
+<li><strong>Hold</strong>: released notes keep playing, and new ones add
+to them; click one again to let it go. Turning the arpeggiator off keeps
+them, silent, to play again when it's back on, and they're still there
+the next time KeyboardEDO starts. <strong>Clear</strong> lets go of
+them, and of notes latched with Shift or Latch; so do All Notes Off,
+Escape, and turning Hold off.</li>
 </ul>
-<p>A pink dot marks the key the arpeggiator is playing, including the higher octaves' keys.</p>
-<p>Each layout has its own arpeggiator settings.</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="midi">MIDI Output</h2>
+<p>As with the knobs, double-click a knob to set it back, and click its
+value to type one. Each layout has its own arpeggiator settings.</p>
+</section>
+<section id="scale" class="callout callout-note card">
+<h2>Scale</h2>
+<p>The <strong>Scale</strong> section of the performance bar tints the
+keys of a familiar scale, its key note stronger. The scale's key is the
+tuning's origin note, so with an A origin, <strong>Dorian</strong> is A
+Dorian.</p>
+<ul>
+<li><strong>Scale</strong>: <strong>None</strong>, or one of the modes
+of the major, melodic minor, harmonic minor and harmonic major scales,
+the major and minor pentatonics, or the whole-tone scale.</li>
+<li><strong>Map</strong>: how the scale's notes find steps of the EDO:
+<strong>By fifths</strong> (stacking the EDO's own fifth) or
+<strong>Nearest</strong> (the step nearest each 12-EDO note). At 12-EDO
+both give the familiar scale.</li>
+</ul>
+<p>It shows on the Piano layout (the standard piano and the diamond
+piano) only. The scale is saved with the document.</p>
+</section>
+<section id="midi" class="callout callout-note card">
+<h2>MIDI Output</h2>
 <p><strong>Where notes go</strong> is set from the antenna button:</p>
 <ul>
-<li><strong>Send to</strong>: a destination (a synth, a DAW's input, or a hardware port). The menu shows whether each takes MIDI 2.0 or 1.0, and KeyboardEDO sends what it takes.</li>
-<li><strong>Publish as "KeyboardEDO"</strong>: offers a MIDI source other apps can choose as an input. It keeps the same identity from one launch to the next, and the setting is remembered. On macOS 15 and later it's a MIDI 2.0 (UMP) endpoint that identifies itself to apps that ask.</li>
+<li><strong>Send to</strong>: <strong>None</strong>, or a destination (a
+synth, a DAW's input, or a hardware port). The menu shows whether each
+takes MIDI 2.0 or 1.0, and KeyboardEDO sends what it takes. The
+destination is saved with the document; one that isn't there now shows
+as <strong>(not found)</strong>, and is opened when it appears.</li>
+<li><strong>Publish as "KeyboardEDO"</strong>: offers a MIDI source
+other apps can choose as an input. It keeps the same identity from one
+launch to the next, and the setting is remembered. On macOS 15 and later
+it's a MIDI 2.0 (UMP) endpoint that identifies itself to apps that ask;
+on Linux it's an ALSA sequencer port.</li>
 </ul>
+<p>Send to and Publish can both be on: notes go to each.</p>
 <p>Under <strong>MIDI</strong> in Settings (Edit mode):</p>
 <ul>
-<li><strong>Group</strong> and <strong>Channel</strong>: where this layout's notes are sent.</li>
-<li><strong>Bend range</strong>: the channel pitch-bend range in semitones, sent to the receiver when notes start going to it.</li>
-<li><strong>Per-note bend</strong>: the range of per-note pitch bend (MIDI 2.0).</li>
-<li><strong>Expression as MIDI 1.0</strong>: sends pitch bend, controllers and pressure as MIDI 1.0 messages, even to a MIDI 2.0 receiver; notes stay MIDI 2.0, with exact pitch. Logic Pro and some other DAWs mishandle MIDI 2.0 bend and controllers, so this is on by default. Turn it off for receivers that handle MIDI 2.0 fully, to get 32-bit and per-note expression.</li>
-<li><strong>Per-Note Management</strong>: resets a note's per-note bend and controllers when it's struck again (MIDI 2.0).</li>
+<li><strong>Group</strong> and <strong>Channel</strong> (1 to 16): where
+this layout's notes are sent. A custom layout's keys can have their
+own.</li>
+<li><strong>Bend range</strong>: the channel pitch-bend range in
+semitones (0 to 96, 2 to start with), sent to the receiver when notes
+start going to it.</li>
+<li><strong>Per-note bend</strong>: the range of per-note pitch bend
+(MIDI 2.0), likewise.</li>
+<li><strong>Expression as MIDI 1.0</strong>: sends pitch bend,
+controllers and pressure as MIDI 1.0 messages, even to a MIDI 2.0
+receiver; notes stay MIDI 2.0, with exact pitch. Logic Pro and some
+other DAWs mishandle MIDI 2.0 bend and controllers, so this is on by
+default. Turn it off for receivers that handle MIDI 2.0 fully, such as
+StageHand and Umpire, to get 32-bit and per-note expression.</li>
+<li><strong>Per-Note Management</strong>: resets a note's per-note bend
+and controllers when it's struck again (MIDI 2.0). On by default.</li>
 </ul>
-</div>
-</div>
+</section>
 <details class="disclosure">
 <summary class="disclosure-title subtle">MIDI 2.0, MIDI 1.0, and microtonal pitch</summary>
+
 <div class="disclosure-content">
-<p>KeyboardEDO sends each note's exact pitch with MIDI 2.0's <strong>Pitch 7.9</strong> note attribute, so a receiver that honours it plays every EDO step exactly, with nothing else to set up.</p>
-<p><strong>MIDI 1.0 has no way to give one note its own exact pitch.</strong> Sent to a MIDI 1.0 receiver, notes go to the nearest 12-EDO note, and per-note expression becomes channel-wide. For microtonal playing, use a MIDI 2.0 receiver.</p>
-<p>KeyboardEDO doesn't send <strong>MPE</strong>. MPE is a MIDI 1.0 workaround for per-note expression, and MIDI 2.0 does the same job directly. Synths that accept MPE, such as Unlikelyware's, also accept MIDI 2.0's per-note messages.</p>
+<p>KeyboardEDO sends each note's exact pitch with MIDI 2.0's
+<strong>Pitch 7.9</strong> note attribute, so a receiver that honours it
+plays every EDO step exactly, with nothing else to set up.</p>
+<p><strong>MIDI 1.0 has no way to give one note its own exact
+pitch.</strong> Sent to a MIDI 1.0 receiver, notes go to the nearest
+12-EDO note, a glide strikes each key instead, and per-note expression
+becomes channel-wide. For microtonal playing, use a MIDI 2.0
+receiver.</p>
+<p>KeyboardEDO doesn't send <strong>MPE</strong>. MPE is a MIDI 1.0
+workaround for per-note expression, and MIDI 2.0 does the same job
+directly. Synths that accept MPE, such as Unlikelyware's, also accept
+MIDI 2.0's per-note messages.</p>
 </div>
 </details>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="shortcuts">Shortcuts</h2>
-<p>| Key | Action | |---|---| | Cmd-N | New document | | Cmd-O | Open a document | | Cmd-S | Save (Shift-Cmd-S: Save As) | | Cmd-= and Cmd-- | Zoom in and out | | Cmd-0 | Zoom back to 100% | | Escape | Release every note | | Shift (while playing) | Latch the notes played | | Ctrl (with the mouse) | Expression for notes held by computer keys |</p>
+
+<section id="shortcuts" class="callout callout-note card">
+<h2>Shortcuts</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cmd-N</td>
+<td>New document</td>
+</tr>
+<tr>
+<td>Cmd-O</td>
+<td>Open a document</td>
+</tr>
+<tr>
+<td>Cmd-S</td>
+<td>Save (Shift-Cmd-S: Save As)</td>
+</tr>
+<tr>
+<td>Cmd-= and Cmd--</td>
+<td>Zoom in and out</td>
+</tr>
+<tr>
+<td>Cmd-0</td>
+<td>Zoom back to 100%</td>
+</tr>
+<tr>
+<td>F1 or Cmd-?</td>
+<td>This help page</td>
+</tr>
+<tr>
+<td>Escape</td>
+<td>Release every note, and what the arpeggiator holds</td>
+</tr>
+<tr>
+<td>Shift (while playing)</td>
+<td>Latch the notes played</td>
+</tr>
+<tr>
+<td>Ctrl (with the mouse)</td>
+<td>Expression for notes held by computer keys</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Editing a custom layout:</strong></p>
-<p>| Key | Action | |---|---| | Cmd-A | Select all keys | | Cmd-D | Duplicate the selected keys | | Delete or Backspace | Delete the selected keys | | Arrow keys | Move the selected keys (Shift: four times as far) | | Cmd-Z | Undo | | Shift-Cmd-Z or Cmd-Y | Redo | | Escape | Clear the selection |</p>
-</div>
-</div>
-<div class="callout callout-note card">
-<div class="callout-content">
-<h2 id="troubleshooting">Troubleshooting</h2>
+<table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cmd-A</td>
+<td>Select all keys</td>
+</tr>
+<tr>
+<td>Cmd-D</td>
+<td>Duplicate the selected keys</td>
+</tr>
+<tr>
+<td>Delete or Backspace</td>
+<td>Delete the selected keys</td>
+</tr>
+<tr>
+<td>Arrow keys</td>
+<td>Move the selected keys (Shift: four times as far)</td>
+</tr>
+<tr>
+<td>Cmd-Z</td>
+<td>Undo</td>
+</tr>
+<tr>
+<td>Shift-Cmd-Z or Cmd-Y</td>
+<td>Redo</td>
+</tr>
+<tr>
+<td>Escape</td>
+<td>Clear the selection (and release every note)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="troubleshooting" class="callout callout-note card">
+<h2>Troubleshooting</h2>
 <ul>
-<li><strong>No sound.</strong> Check the badge: <strong>not sending</strong> means no destination is chosen and Publish is off (the antenna button). If you publish, make sure the receiving app has KeyboardEDO selected as an input.</li>
-<li><strong>An app doesn't see "KeyboardEDO".</strong> An app that was already running when KeyboardEDO started publishing may need to rescan its MIDI devices. In REAPER: Preferences > MIDI Inputs > Reset all MIDI devices.</li>
-<li><strong>"No MIDI output".</strong> The system's MIDI couldn't be reached. The monitor still shows what would be sent.</li>
-<li><strong>Pitch bend or controllers misbehave in a DAW.</strong> Turn on <strong>Expression as MIDI 1.0</strong> under MIDI.</li>
-<li><strong>Notes stuck on.</strong> Press <strong>Panic</strong>, or Escape.</li>
-<li><strong>Microtones play as 12-EDO notes.</strong> The receiver is getting MIDI 1.0; see the MIDI 2.0 note under <a href="#midi">MIDI Output</a>.</li>
+<li><strong>No sound.</strong> Check the badge: <strong>not
+sending</strong> means no destination is chosen and Publish is off (the
+antenna button). If you publish, make sure the receiving app has
+KeyboardEDO selected as an input.</li>
+<li><strong>The destination shows "(not found)".</strong> Its device is
+unplugged or its app isn't running. KeyboardEDO opens it as soon as it
+appears.</li>
+<li><strong>An app doesn't see "KeyboardEDO".</strong> An app that was
+already running when KeyboardEDO started publishing may need to rescan
+its MIDI devices. In REAPER: Preferences &gt; MIDI Inputs &gt; Reset all
+MIDI devices.</li>
+<li><strong>The badge reads "no MIDI output".</strong> The system's MIDI
+couldn't be reached (on Linux: no <code>/dev/snd/seq</code>, or a kernel
+or alsa-lib without MIDI 2.0 support). The monitor still shows what
+would be sent.</li>
+<li><strong>Pitch bend or controllers misbehave in a DAW.</strong> Turn
+on <strong>Expression as MIDI 1.0</strong> under MIDI.</li>
+<li><strong>Notes stuck on.</strong> Press <strong>Panic</strong>, or
+Escape.</li>
+<li><strong>Microtones play as 12-EDO notes.</strong> The receiver is
+getting MIDI 1.0; see the MIDI 2.0 note under <a href="#midi">MIDI
+Output</a>.</li>
+<li><strong>Keys are grey and don't sound.</strong> They're outside the
+tuning's range: at EDOs other than 12, keys play from the origin up to
+C8 (<a href="#tuning">Tuning</a>).</li>
 </ul>
-</div>
-</div>
+</section>
 </div>
 </body>
 </html>
