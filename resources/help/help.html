@@ -316,10 +316,10 @@ step on any receiver that honors it, with per-note pitch bend, per-note
 controllers and per-note pressure. For MIDI 1.0 receivers it falls back
 to MIDI 1.0 automatically.</p>
 <p>Its keyboards are a standard piano at 12-EDO, a <strong>diamond
-piano</strong> at other EDOs, isomorphic <strong>tiled</strong> layouts
-at any EDO, and <strong>custom</strong> layouts you build key by key. A
-document holds several layouts, each with its own tuning, so you can
-switch between them while you play.</p>
+piano</strong> at other EDOs, <strong>tiled</strong> layouts of diamond
+keys at any EDO, most of them isomorphic, and <strong>custom</strong>
+layouts you build key by key. A document holds several layouts, each
+with its own tuning, so you can switch between them while you play.</p>
 </section>
 <section id="getting-started" class="callout callout-note card">
 <h2>Getting Started</h2>
@@ -466,8 +466,9 @@ a wider range.</p>
 <ul>
 <li><strong>Piano</strong> is a piano keyboard at 12-EDO, and the
 <strong>diamond piano</strong> at any other EDO.</li>
-<li><strong>Tiled</strong> is an isomorphic grid of diamond keys: every
-interval has the same shape wherever you play it.</li>
+<li><strong>Tiled</strong> is a grid of diamond keys. With every
+generator but Octave columns it's isomorphic: every interval has the
+same shape wherever you play it.</li>
 <li><strong>Custom</strong> is a layout of keys placed one by one, made
 by converting another layout or by adding keys yourself.</li>
 </ul>
@@ -489,12 +490,12 @@ which piano key each step goes with.</p>
 </section>
 <section id="tiled" class="callout callout-note card">
 <h2>Tiled Layouts</h2>
-<p>A tiled layout is a grid of diamond keys. Moving one key
-<strong>right</strong>, <strong>up-right</strong>, or
-<strong>up-left</strong> always moves by the same number of EDO steps,
-so a chord or scale has the same shape everywhere. Its lowest key, the
-origin note in octave −1, is at the bottom left, and it has as many rows
-as fit the window.</p>
+<p>A tiled layout is a grid of diamond keys. With every generator but
+Octave columns, moving one key <strong>right</strong>,
+<strong>up-right</strong>, or <strong>up-left</strong> always moves by
+the same number of EDO steps, so a chord or scale has the same shape
+everywhere. Its lowest key, the origin note in octave −1, is at the
+bottom left, and it has as many rows as fit the window.</p>
 <p><strong>Generator</strong> chooses those steps. Each is worked out
 for the current EDO, and only those that work there are offered:</p>
 <ul>
@@ -511,8 +512,9 @@ fourth.</li>
 <li><strong>Default</strong>: right is one step, up-right roughly a
 fifth. Offered only when none of the above work.</li>
 <li><strong>Octave columns</strong>: each column holds one note in every
-octave, two octaves across, with a chromatic zigzag along the
-bottom.</li>
+octave, two octaves across, with a chromatic zigzag along the bottom. It
+isn't isomorphic: a chord's shape changes from one column to the
+next.</li>
 </ul>
 <p>The steps for the chosen generator are shown under it. <strong>Tile
 colour</strong> colours the keys by <strong>Note</strong> (one colour

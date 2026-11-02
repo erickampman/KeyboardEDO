@@ -24,7 +24,7 @@ KeyboardEDO is an on-screen MIDI keyboard controller for **equal divisions of th
 
 It's built on **MIDI 2.0** first. Each note carries its exact pitch (MIDI 2.0's Pitch 7.9), so a 31-EDO step sounds as a 31-EDO step on any receiver that honors it, with per-note pitch bend, per-note controllers and per-note pressure. For MIDI 1.0 receivers it falls back to MIDI 1.0 automatically.
 
-Its keyboards are a standard piano at 12-EDO, a **diamond piano** at other EDOs, isomorphic **tiled** layouts at any EDO, and **custom** layouts you build key by key. A document holds several layouts, each with its own tuning, so you can switch between them while you play.
+Its keyboards are a standard piano at 12-EDO, a **diamond piano** at other EDOs, **tiled** layouts of diamond keys at any EDO, most of them isomorphic, and **custom** layouts you build key by key. A document holds several layouts, each with its own tuning, so you can switch between them while you play.
 :::
 
 ::: {.callout .callout-note .card}
@@ -94,7 +94,7 @@ Every key's pitch is a number of EDO steps from the origin. At 12-EDO every MIDI
 ## Layouts {#layouts}
 Under **Layout** in Settings (Edit mode), choose **Piano**, **Tiled** or **Custom**.
 - **Piano** is a piano keyboard at 12-EDO, and the **diamond piano** at any other EDO.
-- **Tiled** is an isomorphic grid of diamond keys: every interval has the same shape wherever you play it.
+- **Tiled** is a grid of diamond keys. With every generator but Octave columns it's isomorphic: every interval has the same shape wherever you play it.
 - **Custom** is a layout of keys placed one by one, made by converting another layout or by adding keys yourself.
 
 **Convert to custom** turns the current layout into a custom one, with every key keeping its place, look, pitch, note number and computer key, so it plays just as it did and you can start from a layout that's nearly right.
@@ -111,7 +111,7 @@ Both can show a scale on their keys ([Scale](#scale)).
 
 ::: {.callout .callout-note .card}
 ## Tiled Layouts {#tiled}
-A tiled layout is a grid of diamond keys. Moving one key **right**, **up-right**, or **up-left** always moves by the same number of EDO steps, so a chord or scale has the same shape everywhere. Its lowest key, the origin note in octave −1, is at the bottom left, and it has as many rows as fit the window.
+A tiled layout is a grid of diamond keys. With every generator but Octave columns, moving one key **right**, **up-right**, or **up-left** always moves by the same number of EDO steps, so a chord or scale has the same shape everywhere. Its lowest key, the origin note in octave −1, is at the bottom left, and it has as many rows as fit the window.
 
 **Generator** chooses those steps. Each is worked out for the current EDO, and only those that work there are offered:
 - **Wicki-Hayden**: right is a whole tone, up-right a fifth.
@@ -120,7 +120,7 @@ A tiled layout is a grid of diamond keys. Moving one key **right**, **up-right**
 - **Harmonic Table**: up-right is a major third and up-left a minor third, so two rows up is a fifth.
 - **Guitar (fourths)**: right is a whole tone, up-right a fourth.
 - **Default**: right is one step, up-right roughly a fifth. Offered only when none of the above work.
-- **Octave columns**: each column holds one note in every octave, two octaves across, with a chromatic zigzag along the bottom.
+- **Octave columns**: each column holds one note in every octave, two octaves across, with a chromatic zigzag along the bottom. It isn't isomorphic: a chord's shape changes from one column to the next.
 
 The steps for the chosen generator are shown under it. **Tile colour** colours the keys by **Note** (one colour per note name), by **Octave**, or not at all (**Off**).
 :::
