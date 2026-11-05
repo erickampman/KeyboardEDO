@@ -139,4 +139,4 @@ same package list, the same `build/` folder, the same option names (`<PROJECT>_B
 - The option prefix is `KEDO_`, the short name its code uses throughout.
 - The app icon on macOS needs full Xcode 26 (as StageHand's); without it the app builds with no icon.
 - No `_WERROR` option: the seven synths have one and their CI turns it on; this project's build still has a few warnings in its own sources, so it comes once they're fixed.
-- No CI yet (ReleaseUMP R1-3, from November 2026).
+- CI (`.github/workflows/ci.yml`) runs on `ubuntu-24.04`, the oldest Ubuntu supported, not `ubuntu-latest`, and on `macos-26`.
