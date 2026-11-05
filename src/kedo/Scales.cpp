@@ -59,7 +59,7 @@ const std::vector<FamiliarScale>& familiarScales() {
         {"Diminished (whole-half)", 8, {0, 2, -3, -1, -6, -4, 3, 5}},
         {"Diminished (half-whole)", 8, {0, -5, -3, 4, 6, 1, 3, -2}},
         {"Diminished (from the 2nd)", 8, {-5, 2, 4, -1, 1, -4, -2, 5}},
-        {"Blues", 6, {0, -3, -1, 6, 1, -2}},
+        {"Blues", 6, {0, -3, -1, -6, 1, -2}},
     };
     return scales;
 }
