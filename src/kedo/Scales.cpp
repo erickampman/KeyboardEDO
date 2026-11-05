@@ -54,6 +54,12 @@ const std::vector<FamiliarScale>& familiarScales() {
         {"Major pentatonic", 5, {0, 2, 4, 1, 3}},
         {"Minor pentatonic", 5, {0, -3, -1, 1, -2}},
         {"Whole tone", 6, {0, 2, 4, 6, 8, 10}},
+        // The diminished scale's three sets, a half step apart; the third
+        // leaves out the key.
+        {"Diminished (whole-half)", 8, {0, 2, -3, -1, -6, -4, 3, 5}},
+        {"Diminished (half-whole)", 8, {0, -5, -3, 4, 6, 1, 3, -2}},
+        {"Diminished (from the 2nd)", 8, {-5, 2, 4, -1, 1, -4, -2, 5}},
+        {"Blues", 6, {0, -3, -1, 6, 1, -2}},
     };
     return scales;
 }
@@ -71,9 +77,14 @@ std::vector<ScaleMark> scaleMarks(const ScaleChoice& choice, const Tuning& tunin
 
     const int edo = tuning.edo;
     std::vector<ScaleMark> marks(std::size_t(edo), ScaleMark::Off);
-    for (int i = 0; i < scale->count; ++i)
-        marks[std::size_t(stepsOf(scale->fifths[i], edo, choice.map))] = ScaleMark::Degree;
-    marks[0] = ScaleMark::Tonic;
+    for (int i = 0; i < scale->count; ++i) {
+        const int place = scale->fifths[i];
+        // The key (place 0) is the Tonic; a scale without it, as Diminished
+        // (from the 2nd), marks no Tonic.
+        ScaleMark& m = marks[std::size_t(stepsOf(place, edo, choice.map))];
+        if (place == 0) m = ScaleMark::Tonic;
+        else if (m == ScaleMark::Off) m = ScaleMark::Degree;
+    }
     return marks;
 }
 

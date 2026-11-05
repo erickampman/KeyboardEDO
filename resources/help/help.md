@@ -210,7 +210,7 @@ As with the knobs, double-click a knob to set it back, and click its value to ty
 ::: {.callout .callout-note .card}
 ## Scale {#scale}
 The **Scale** section of the performance bar tints the keys of a familiar scale, its key note stronger. The scale's key is the tuning's origin note, so with an A origin, **Dorian** is A Dorian.
-- **Scale**: **None**, or one of the modes of the major, melodic minor, harmonic minor and harmonic major scales, the major and minor pentatonics, or the whole-tone scale.
+- **Scale**: **None**, or one of the modes of the major, melodic minor, harmonic minor and harmonic major scales, the major and minor pentatonics, the whole-tone scale, the three diminished scales (whole-half, half-whole, and from the 2nd, which leaves out the key note, so no key shows stronger), or the blues scale.
 - **Map**: how the scale's notes find steps of the EDO: **By fifths** (stacking the EDO's own fifth) or **Nearest** (the step nearest each 12-EDO note). At 12-EDO both give the familiar scale.
 
 It shows on the Piano layout (the standard piano and the diamond piano) only. The scale is saved with the document.

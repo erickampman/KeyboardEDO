@@ -108,7 +108,30 @@ void testScaleMarks() {
         const auto m = scaleMarks(fifths, t);
         CHECK(m == scaleMarks(nearest, t));
         CHECK(std::count(m.begin(), m.end(), Off) == 12 - s.count);
+        // The key is the Tonic, except in the one scale without it.
+        const bool keyless = std::string(s.name) == "Diminished (from the 2nd)";
+        CHECK(m[0] == (keyless ? Off : Tonic));
+        CHECK(std::count(m.begin(), m.end(), Tonic) == (keyless ? 0 : 1));
     }
+    // The menu: NoteGran Chords' 25, then the three diminished sets and Blues.
+    CHECK(familiarScales().size() == 29);
+    CHECK(std::string(familiarScales()[24].name) == "Whole tone");
+    CHECK(std::string(familiarScales()[25].name) == "Diminished (whole-half)");
+    CHECK(std::string(familiarScales()[26].name) == "Diminished (half-whole)");
+    CHECK(std::string(familiarScales()[27].name) == "Diminished (from the 2nd)");
+    CHECK(std::string(familiarScales()[28].name) == "Blues");
+    // Their semitones from the key at 12-EDO.
+    auto semitones = [&](const char* name) {
+        std::vector<int> on;
+        const auto m = scaleMarks({.scale = name}, t);
+        for (int i = 0; i < 12; ++i)
+            if (m[std::size_t(i)] != Off) on.push_back(i);
+        return on;
+    };
+    CHECK((semitones("Diminished (whole-half)") == std::vector<int>{0, 2, 3, 5, 6, 8, 9, 11}));
+    CHECK((semitones("Diminished (half-whole)") == std::vector<int>{0, 1, 3, 4, 6, 7, 9, 10}));
+    CHECK((semitones("Diminished (from the 2nd)") == std::vector<int>{1, 2, 4, 5, 7, 8, 10, 11}));
+    CHECK((semitones("Blues") == std::vector<int>{0, 3, 5, 6, 7, 10}));
 
     // 19-EDO by fifths (the fifth is 11 steps): the major scale's steps are
     // 0 3 6 8 11 14 17.
