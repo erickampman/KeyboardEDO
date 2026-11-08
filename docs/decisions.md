@@ -1033,6 +1033,14 @@ it maps into the EDO. Settled with the author:
   fill read better.)
 - **Per document**, as the knobs, saved in document.json by the scale's name,
   so adding a scale to the menu moves no saved choice.
+- **29 scales** (decided 2026-11-04): NoteGran Chords' 25, then the three
+  diminished scales and Blues, as EDOSpread12 has them, so all three products
+  share one list: Diminished (whole-half) C D Eb F Gb Ab A B, Diminished
+  (half-whole) C Db Eb E F# G A Bb, Diminished (from the 2nd) Db D E F G Ab
+  Bb B, and Blues C Eb F Gb G Bb. All three diminished sets are there because
+  the origin isn't always in the scale: **from the 2nd leaves out the key**,
+  so its origin is unmarked and no key is the stronger Tonic. (A scale holds
+  up to 8 degrees.) The menu is tall enough for all 30 entries unscrolled.
 
 ## Diamond piano columns (decided 2026-10-25)
 

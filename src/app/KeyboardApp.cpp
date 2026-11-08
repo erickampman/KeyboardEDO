@@ -2296,7 +2296,13 @@ void KeyboardApp::drawScale() {
     // Named with its key, the origin note: "A Dorian".
     const char* key = pitchClassName(settings_.tuning.originPitchClass);
     const std::string named = c.scale.empty() ? "None" : std::string(key) + " " + c.scale;
-    if (ImGui::BeginCombo("##scale", named.c_str(), ImGuiComboFlags_HeightLarge)) {
+    // Tall enough for None and every scale (30), unscrolled where the screen allows.
+    {
+        const float rows = float(familiarScales().size() + 1);
+        const float tall = rows * ImGui::GetTextLineHeightWithSpacing() + 2 * ImGui::GetStyle().WindowPadding.y;
+        ImGui::SetNextWindowSizeConstraints({0, 0}, {FLT_MAX, tall});
+    }
+    if (ImGui::BeginCombo("##scale", named.c_str())) {
         if (ImGui::Selectable("None", c.scale.empty())) c.scale.clear();
         for (const FamiliarScale& s : familiarScales()) {
             const bool chosen = c.scale == s.name;

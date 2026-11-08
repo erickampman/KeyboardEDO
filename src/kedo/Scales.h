@@ -25,7 +25,8 @@ namespace kedo {
 struct FamiliarScale {
     const char* name;
     int count;
-    int fifths[7];   // ascending in 12-EDO pitch from the key
+    int fifths[8];   // ascending in 12-EDO pitch from the key (or, if the key
+                     // isn't in it, from the step above); `count` used
 };
 
 // The menu, in order.
@@ -48,8 +49,9 @@ struct ScaleChoice {
 enum class ScaleMark { Off, Degree, Tonic };
 
 // Each step's mark, by its step above the origin mod the EDO (so index
-// mod(step, edo)); the origin is the Tonic. Empty when no scale, or one not in familiarScales(), is
-// chosen.
+// mod(step, edo)); the origin is the Tonic when the scale holds its key, as
+// all but Diminished (from the 2nd) do. Empty when no scale, or one not in
+// familiarScales(), is chosen.
 std::vector<ScaleMark> scaleMarks(const ScaleChoice& choice, const Tuning& tuning);
 
 } // namespace kedo
