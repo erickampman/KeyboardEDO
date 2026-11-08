@@ -47,8 +47,9 @@ tools/fetch_deps.sh
 ```
 
 `tools/fetch_deps.sh` checks out the git submodules at their pinned commits (uw-core, SDL, Dear
-ImGui and nlohmann/json). Run it again after a `git pull` that moves, adds or re-points a submodule:
-a plain pull leaves them where they were.
+ImGui and nlohmann/json). SDL, ImGui and json come as their pinned commit alone, without history,
+so a fresh checkout is about 130 MB; uw-core comes with its full history. Run it again after a
+`git pull` that moves, adds or re-points a submodule: a plain pull leaves them where they were.
 
 ## Build and test
 
@@ -134,7 +135,7 @@ commands under "Build and test", and for a plugin `cmake --build build --target 
 same package list, the same `build/` folder, the same option names (`<PROJECT>_BUILD_VST3`,
 `<PROJECT>_UW_CORE_DIR` and so on). What's different here, and why:
 
-- The UI is SDL3 and Dear ImGui, not DPF, so it has SDL as a submodule (large: most of a clone's size) and `KEDO_SYSTEM_SDL` to use an installed SDL3 instead.
+- The UI is SDL3 and Dear ImGui, not DPF, so it has SDL as a submodule (fetched as one commit, so a clone stays small) and `KEDO_SYSTEM_SDL` to use an installed SDL3 instead.
 - An app, not a plugin: no `install-clap`. On Linux it installs with `cmake --install` (as StageHand does); on macOS it's `build/KeyboardEDO.app`, copied to Applications to keep.
 - The option prefix is `KEDO_`, the short name its code uses throughout.
 - The app icon on macOS needs full Xcode 26 (as StageHand's); without it the app builds with no icon.
