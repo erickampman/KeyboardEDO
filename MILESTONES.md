@@ -44,9 +44,9 @@
 - [x] macOS app bundle with its icon (Icon Composer source, compiled by actool)
 - [x] Linux icon PNGs and .desktop entry; window icon; `cmake --install`
 - [x] Unlikelyware logo and two-colour wordmark (Karla) at the toolbar's left, as the plugins have
-- [ ] About box: version, Unlikelyware, MIT license, Ko-fi link, Product Instance ID
+- [x] About box: version, Unlikelyware, MIT license, Ko-fi link, Product Instance ID
 - [x] Bundled help.html, opened in the default browser (toolbar button, F1, Cmd-?); shortcuts in it
-- [ ] .kedo documents open from the Finder (document type and SDL's open-file event)
+- [x] .kedo documents open from the Finder (document type and SDL's open-file event)
 
 ## M8: Look and feel
 - [x] The plugins' glowing knobs, group boxes and value boxes, in KeyboardEDO's colours
