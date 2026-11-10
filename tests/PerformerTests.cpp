@@ -371,6 +371,64 @@ void testHoverExpression() {
     CHECK((r.sink.take() == Log{"bend 0"}));
 }
 
+// Hover expression drives latched notes too (Shift-click, or a key let go
+// with Shift), and what the app adds (the arpeggiator's Hold), each once;
+// a note a pointer holds is the pointer's (ReleaseUMP R2-30).
+void testHoverLatchedAndAlso() {
+    Rig r;
+    PlayConfig c;   // Gliss
+    c.horizontal = HorizontalControl::PitchBend;
+    c.vertical = VerticalControl::Controller;
+    c.verticalController = 74;
+    c.controllerScope = ExpressionScope::Channel;
+    c.expressionDistance = 100;
+    r.performer.setConfig(c);
+
+    r.performer.pointerDown(1, r.at(0, 0));          // Shift-click: 0 latched
+    r.performer.pointerUp(1, {.latch = true});
+    r.performer.pointerDown(2, r.at(1, 0));          // 3, under the mouse
+    r.sink.take();
+    r.performer.hoverBegin({0, 0});
+    r.performer.hoverMove({50, 0});
+    CHECK((r.sink.take() == Log{"bend 0", "cc ch 74"}));
+    r.performer.pointerUp(2);
+    r.sink.take();
+
+    std::vector<int> also{7, 0};
+    r.performer.setHoverAlso([&] { return also; });
+    r.performer.hoverMove({0, -50});
+    CHECK((r.sink.take() == Log{"bend 0", "cc ch 74", "bend 7"}));
+
+    // A key let go with Shift latches, and stays driven: no reset.
+    r.performer.keyDown(20, r.tuning.note(10));
+    r.sink.take();
+    r.performer.keyUp(20, {.latch = true});
+    CHECK(r.sink.take().empty());
+    r.performer.hoverMove({0, -50});
+    CHECK((r.sink.take() == Log{"bend 0", "cc ch 74", "bend 10", "bend 7"}));
+    // A key on a note Hold keeps: let go, it isn't reset.
+    r.performer.keyDown(21, r.tuning.note(7));
+    r.sink.take();
+    r.performer.keyUp(21);
+    CHECK((r.sink.take() == Log{"off 7"}));
+
+    // Ctrl released: every note reset.
+    r.performer.hoverEnd();
+    CHECK((r.sink.take() == Log{"bend 0", "cc ch 74", "bend 10", "bend 7"}));
+
+    // Every note gone while hovering: Ctrl released resets the channel alone.
+    also.clear();
+    r.performer.releaseAllLatched();
+    r.performer.latch(r.tuning.note(0), 0xFFFF);
+    r.performer.hoverBegin({0, 0});
+    r.performer.hoverMove({0, -50});
+    r.sink.take();
+    r.performer.releaseAllLatched();
+    CHECK((r.sink.take() == Log{"off 0"}));
+    r.performer.hoverEnd();
+    CHECK((r.sink.take() == Log{"cc ch 74"}));
+}
+
 } // namespace
 
 int main() {
@@ -388,5 +446,6 @@ int main() {
     testNotesPassThrough();
     testDiamondGaps();
     testHoverExpression();
+    testHoverLatchedAndAlso();
     return kedo::test::finish("Performer");
 }

@@ -146,7 +146,7 @@ The inspector edits the selected keys:
 ## Computer Keys {#computer-keys}
 Turn on **Computer keys** under View to play from your computer's keyboard. Each key shows the computer key that plays it, named as your keyboard layout names it. Piano and tiled layouts come with a mapping, and converting to custom keeps it; in a custom layout you assign each key yourself.
 - **Shift** latches the notes you play, as the Latch button does.
-- **Ctrl** with the mouse sends expression for the notes your computer keys are holding: move the mouse as you would drag a key ([Expression](#expression)).
+- **Ctrl** with the mouse sends expression for the notes your computer keys are holding, and for latched notes and those the arpeggiator's Hold keeps: move the mouse as you would drag a key ([Expression](#expression)).
 - **Escape** releases every note.
 - With Cmd or Ctrl held, a key is a shortcut, not a note.
 :::
@@ -158,7 +158,7 @@ Under **Playing** in Settings (Edit mode):
   - **Gliss**: each key you pass over plays, as a glissando. The drag stops at the keyboard's edges, so keys hidden under the side bars don't sound.
   - **Fixed**: the note you struck stays; dragging sends **expression** instead.
 - **Glide (Pitch 7.25)**, with Gliss: instead of striking each key, one note's pitch moves from key to key (MIDI 2.0). It lands on each key's exact pitch rather than sliding between them.
-- **Horizontal** and **Vertical**: the expression a Fixed drag sends ([Expression](#expression)). A Gliss drag sends none; with Gliss they show under **Ctrl + mouse**, as they're still what moving the mouse with Ctrl held sends for notes your computer keys hold.
+- **Horizontal** and **Vertical**: the expression a Fixed drag sends ([Expression](#expression)). A Gliss drag sends none; with Gliss they show under **Ctrl + mouse**, as they're still what moving the mouse with Ctrl held sends (below).
 - **Strike velocity**: a key plays louder toward its top and softer toward its bottom, down to the **Minimum** you set (1 to 126). Off, every note plays at full velocity.
 
 Two fingers on two keys that play the same pitch hold one note, which ends when the last finger lets go.
@@ -166,7 +166,7 @@ Two fingers on two keys that play the same pitch hold one note, which ends when 
 
 ::: {.callout .callout-note .card}
 ## Expression {#expression}
-With **Fixed** drag, moving a finger or the mouse after striking a key sends expression for that note. In either drag mode, so does moving the mouse with Ctrl held while computer keys hold notes. **Horizontal** and **Vertical** choose what each direction sends:
+With **Fixed** drag, moving a finger or the mouse after striking a key sends expression for that note. In either drag mode, so does moving the mouse with Ctrl held, for every note held without a finger or the mouse on it: notes your computer keys hold, latched notes (Shift-click, or Latch), and notes the arpeggiator's Hold keeps, whose expression goes to each step that plays them. It's measured from where the mouse was when Ctrl went down; letting go of Ctrl sets it back to centre, as does letting go of a key, unless the note stays latched or held. **Horizontal** and **Vertical** choose what each direction sends:
 - **Horizontal**: Off or **Pitch Bend**.
 - **Vertical**: Off, **Controller** (choose its number), **Pressure**, or **Pitch Bend**.
 
@@ -258,7 +258,7 @@ KeyboardEDO doesn't send **MPE**. MPE is a MIDI 1.0 workaround for per-note expr
 | F1 or Cmd-? | This help page |
 | Escape | Release every note, and what the arpeggiator holds |
 | Shift (while playing) | Latch the notes played |
-| Ctrl (with the mouse) | Expression for notes held by computer keys |
+| Ctrl (with the mouse) | Expression for notes held by computer keys, latched, or kept by Hold |
 
 **Editing a custom layout:**
 

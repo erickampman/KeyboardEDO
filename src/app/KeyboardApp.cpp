@@ -64,6 +64,16 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
       arp_(targets_.sink(), [] { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }),
       performer_(arp_),
       controls_(targets_.sink()) {
+    // Hover expression also drives what the arpeggiator's Hold keeps (or
+    // will keep, once let go). Called under the play lock, as every
+    // Performer call is.
+    performer_.setHoverAlso([this] {
+        std::vector<int> ids;
+        if (!arp_.config().enabled) return ids;
+        for (const auto& n : arp_.pool())
+            if (n.kept || arp_.config().hold) ids.push_back(n.note.id);
+        return ids;
+    });
     if (start.ownPreferences) {
         // A check run (--snapshot): defaults, read from and saved to nowhere,
         // so it neither depends on nor changes the preferences of the
@@ -1814,7 +1824,8 @@ float KeyboardApp::drawPanel() {
         if (ImGui::Checkbox("Computer keys", &prefs_.showComputerKeys) && !prefsPath_.empty())
             savePreferences(prefsPath_, prefs_);
         ImGui::SetItemTooltip("Show each key's computer key. Shift latches; Ctrl with the mouse\n"
-                              "sends expression (Playing) for the notes they hold");
+                              "sends expression (Playing) for the notes they hold, latched notes\n"
+                              "and those the arpeggiator's Hold keeps");
     }
     endSection();
 
@@ -1825,7 +1836,8 @@ float KeyboardApp::drawPanel() {
             ImGui::SetItemTooltip("Slide one note's pitch from key to key instead of striking each (MIDI 2.0)");
         }
         // What a Fixed drag sends, and in either mode, moving the mouse with
-        // Ctrl held while computer keys hold notes (hover expression). A
+        // Ctrl held while notes are held without a pointer: computer keys',
+        // latched notes, Hold's (hover expression). A
         // Gliss drag plays from key to key and sends none of it, so in Gliss
         // they're headed as hover expression's alone (ReleaseUMP R2-28).
         const bool gliss = p.drag == DragBehavior::Gliss;
@@ -1834,14 +1846,16 @@ float KeyboardApp::drawPanel() {
                 ImGui::SeparatorText("Ctrl + mouse");
                 ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
                 ImGui::TextWrapped("A Gliss drag sends none of these: they're what moving the mouse "
-                                   "with Ctrl held sends, while computer keys hold notes.");
+                                   "with Ctrl held sends, to notes held by computer keys, latched "
+                                   "(Shift or Latch), or kept by the arpeggiator's Hold.");
                 ImGui::PopStyleColor();
             }
             enumCombo("Horizontal", p.horizontal, kHorizontal, ImGui::CalcItemWidth());
-            ImGui::SetItemTooltip("%s", gliss ? "What moving the mouse with Ctrl held sends, while computer\n"
-                                                "keys hold notes (a Gliss drag sends none of it)"
-                                              : "What dragging sends, and moving the mouse with Ctrl held\n"
-                                                "while computer keys hold notes");
+            ImGui::SetItemTooltip("%s", gliss ? "What moving the mouse with Ctrl held sends, to notes held by\n"
+                                                "computer keys, latched, or kept by Hold (a Gliss drag sends\n"
+                                                "none of it)"
+                                              : "What dragging sends, and moving the mouse with Ctrl held, to\n"
+                                                "notes held by computer keys, latched, or kept by Hold");
             enumCombo("Vertical", p.vertical, kVertical, ImGui::CalcItemWidth());
             if (p.vertical == VerticalControl::Controller &&
                 ImGui::InputInt("Controller", &p.verticalController))

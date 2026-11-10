@@ -591,6 +591,15 @@ As built (2026-10-13):
   line saying a Gliss drag sends none of them (the author, 2026-11-10), so
   they don't look like they should change a drag. Left enabled, not
   disabled, as hover expression needs them in either mode.
+- Hover expression drives every note held without a pointer (the author,
+  2026-11-10): computer keys' notes, latched notes (Shift-click, Shift on
+  a key's release, or Latch), and, while the arpeggiator is on with Hold,
+  its pool, through the app's `Performer::setHoverAlso`. The arpeggiator
+  already keeps per-note expression per pool note and gives it to each
+  step. Each note gets it once; a note under a finger or the mouse is left
+  to the pointer. Releasing Ctrl resets them all; a key let go resets its
+  note only if nothing else (another key, a latch, Hold) still holds it.
+  With every note gone, releasing Ctrl resets the channel alone.
 ## Arpeggiator (decided 2026-10-15, roadmap milestone 10)
 
 KeyEDO's `ArpeggiatorEngine`, as `Arpeggiator` (`src/kedo/Arpeggiator.*`), a

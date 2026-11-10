@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <optional>
 #include <set>
@@ -91,13 +92,18 @@ public:
     void keyUp(int key, Modifiers mods = {});
 
     // Hover expression (decisions.md, "Computer keyboard"): while Ctrl is held,
-    // the mouse drives the expression of the notes computer keys hold, as a
+    // the mouse drives the expression of the notes computer keys hold, latched
+    // notes and hoverAlso's (each once; not a pointer's), as a
     // Fixed drag would, measured from where it was when Ctrl went down. Ending
     // it, or releasing a key, resets that expression.
     void hoverBegin(Point p);
     void hoverMove(Point p);
     void hoverEnd();
     bool hovering() const { return hoverStart_.has_value(); }
+    // More notes hover expression drives, by Note::id, besides computer
+    // keys' and latched ones: the app gives the arpeggiator's, while its
+    // Hold keeps them. Notes a pointer holds are left to the pointer.
+    void setHoverAlso(std::function<std::vector<int>()> also) { hoverAlso_ = std::move(also); }
 
     void releaseAllLatched();
     void releaseAll();
@@ -130,7 +136,8 @@ private:
     // Sends expression, `right` and `up` in full deflections, where `to`
     // says each scope goes (false: nowhere).
     template <typename To> void send(double right, double up, To&& to);
-    void hoverSend(double right, double up, const Touch* only = nullptr, bool channel = true);
+    std::vector<int> hoverTargets(int exceptKey = -1) const;
+    void hoverSend(double right, double up, const std::vector<int>& ids, bool channel = true);
     bool target(ExpressionScope scope, int id, const Touch& t, std::optional<int>& out) const;
     void resetExpression(int id, const Touch& t);
     std::uint16_t velocityFor(const Key& key, Point p) const;
@@ -151,6 +158,8 @@ private:
     std::map<int, std::uint16_t> velocities_;   // Note::id -> what it was struck with, while held
     std::optional<int> expressionOwner_; // channel-scope expression: the pointer driving it
     std::optional<Point> hoverStart_;    // where the mouse was when hover expression began
+    bool hoverChannelSet_ = false;       // hover left channel expression off centre
+    std::function<std::vector<int>()> hoverAlso_;
 };
 
 } // namespace kedo

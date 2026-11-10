@@ -579,8 +579,9 @@ you assign each key yourself.</p>
 <li><strong>Shift</strong> latches the notes you play, as the Latch
 button does.</li>
 <li><strong>Ctrl</strong> with the mouse sends expression for the notes
-your computer keys are holding: move the mouse as you would drag a key
-(<a href="#expression">Expression</a>).</li>
+your computer keys are holding, and for latched notes and those the
+arpeggiator's Hold keeps: move the mouse as you would drag a key (<a
+href="#expression">Expression</a>).</li>
 <li><strong>Escape</strong> releases every note.</li>
 <li>With Cmd or Ctrl held, a key is a shortcut, not a note.</li>
 </ul>
@@ -604,7 +605,7 @@ each key's exact pitch rather than sliding between them.</li>
 expression a Fixed drag sends (<a href="#expression">Expression</a>). A
 Gliss drag sends none; with Gliss they show under <strong>Ctrl +
 mouse</strong>, as they're still what moving the mouse with Ctrl held
-sends for notes your computer keys hold.</li>
+sends (below).</li>
 <li><strong>Strike velocity</strong>: a key plays louder toward its top
 and softer toward its bottom, down to the <strong>Minimum</strong> you
 set (1 to 126). Off, every note plays at full velocity.</li>
@@ -616,9 +617,14 @@ ends when the last finger lets go.</p>
 <h2>Expression</h2>
 <p>With <strong>Fixed</strong> drag, moving a finger or the mouse after
 striking a key sends expression for that note. In either drag mode, so
-does moving the mouse with Ctrl held while computer keys hold notes.
-<strong>Horizontal</strong> and <strong>Vertical</strong> choose what
-each direction sends:</p>
+does moving the mouse with Ctrl held, for every note held without a
+finger or the mouse on it: notes your computer keys hold, latched notes
+(Shift-click, or Latch), and notes the arpeggiator's Hold keeps, whose
+expression goes to each step that plays them. It's measured from where
+the mouse was when Ctrl went down; letting go of Ctrl sets it back to
+centre, as does letting go of a key, unless the note stays latched or
+held. <strong>Horizontal</strong> and <strong>Vertical</strong> choose
+what each direction sends:</p>
 <ul>
 <li><strong>Horizontal</strong>: Off or <strong>Pitch
 Bend</strong>.</li>
@@ -823,7 +829,8 @@ MIDI 2.0's per-note messages.</p>
 </tr>
 <tr>
 <td>Ctrl (with the mouse)</td>
-<td>Expression for notes held by computer keys</td>
+<td>Expression for notes held by computer keys, latched, or kept by
+Hold</td>
 </tr>
 </tbody>
 </table>

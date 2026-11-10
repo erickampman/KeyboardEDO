@@ -470,6 +470,35 @@ void withPerformer() {
     CHECK(r.out.count("on") == r.out.count("off"));
 }
 
+// Hover expression reaches a note Hold keeps once the key is let go, as
+// the app wires it: the step playing it bends (ReleaseUMP R2-30).
+void hoverThroughHold() {
+    const Tuning t;
+    const PianoLayout piano(t, 21, 108);
+    Rig r({.enabled = true, .hold = true});
+    Performer p(r.arp);
+    p.setLayout(&piano);
+    p.setHoverAlso([&] {
+        std::vector<int> ids;
+        for (const auto& n : r.arp.pool()) ids.push_back(n.note.id);
+        return ids;
+    });
+    PlayConfig c;
+    c.horizontal = HorizontalControl::PitchBend;
+    p.setConfig(c);
+    const Note a = t.note(36);
+    p.keyDown(1, a);
+    p.keyUp(1);
+    CHECK(r.arp.heldByHold(a.id));
+    r.run(0.01);
+    const int before = r.out.count("bend");
+    p.hoverBegin({0, 0});
+    p.hoverMove({75, 0});   // half the default 150
+    CHECK(r.out.count("bend") == before + 1 && near(r.out.calls.back().value, 0.5));
+    p.hoverEnd();
+    CHECK(near(r.out.calls.back().value, 0));
+}
+
 } // namespace
 
 int main() {
@@ -488,5 +517,6 @@ int main() {
     toggling();
     expression();
     withPerformer();
+    hoverThroughHold();
     return test::finish("Arpeggiator");
 }

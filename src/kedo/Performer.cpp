@@ -186,16 +186,35 @@ void Performer::resetExpression(int id, const Touch& t) {
 
 // --- Hover expression ---------------------------------------------------------------
 //
-// Per-note messages go to each note a computer key holds (or only `only`'s);
-// channel ones once, if `channel` and no pointer is driving the channel.
+// It drives every note held without a pointer: computer keys' notes, latched
+// ones (Shift-click, or Latch), and those the app adds (the arpeggiator's
+// Hold), each once, by the Note::id it was struck as (ReleaseUMP R2-30).
 
-void Performer::hoverSend(double right, double up, const Touch* only, bool channel) {
+// A note a pointer holds is left to the pointer. `exceptKey`: leave out that
+// computer key's hold, as if it were up.
+std::vector<int> Performer::hoverTargets(int exceptKey) const {
+    std::vector<int> ids;
+    auto add = [&](int id) {
+        const bool pointer = std::any_of(touches_.begin(), touches_.end(),
+                                         [&](const auto& t) { return t.second.note && t.second.note->id == id; });
+        if (!pointer && std::find(ids.begin(), ids.end(), id) == ids.end()) ids.push_back(id);
+    };
+    for (const auto& [key, t] : keys_)
+        if (t.note && key != exceptKey) add(t.note->id);
+    for (const int id : latchOrder_) add(id);
+    if (hoverAlso_)
+        for (const int id : hoverAlso_()) add(id);
+    return ids;
+}
+
+// Per-note messages to each of `ids`; channel ones once, if `channel` and no
+// pointer is driving the channel.
+void Performer::hoverSend(double right, double up, const std::vector<int>& ids, bool channel) {
     bool channelSent = !channel || expressionOwner_.has_value();
-    for (const auto& [key, t] : keys_) {
-        if (!t.note || (only && &t != only)) continue;
+    for (const int id : ids) {
         send(right, up, [&](ExpressionScope scope, std::optional<int>& out) {
             if (scope == ExpressionScope::Note) {
-                out = t.note->id;
+                out = id;
                 return true;
             }
             if (channelSent) return false;
@@ -204,27 +223,31 @@ void Performer::hoverSend(double right, double up, const Touch* only, bool chann
         });
         channelSent = true;
     }
-    if (!channelSent)   // no key to go with: the channel alone
+    if (!channelSent)   // no note to go with: the channel alone
         send(right, up, [](ExpressionScope scope, std::optional<int>& out) {
             out.reset();
             return scope == ExpressionScope::Channel;
         });
+    if (channel && !expressionOwner_) hoverChannelSet_ = right != 0 || up != 0;
 }
 
 void Performer::hoverBegin(Point p) { hoverStart_ = p; }
 
 void Performer::hoverMove(Point p) {
     if (!hoverStart_) return;
-    if (std::none_of(keys_.begin(), keys_.end(), [](const auto& k) { return k.second.note.has_value(); })) return;
+    const auto ids = hoverTargets();
+    if (ids.empty()) return;
     const double d = config_.expressionDistance > 0 ? config_.expressionDistance : 150;
-    hoverSend((p.x - hoverStart_->x) / d, -(p.y - hoverStart_->y) / d);
+    hoverSend((p.x - hoverStart_->x) / d, -(p.y - hoverStart_->y) / d, ids);
 }
 
 void Performer::hoverEnd() {
     if (!hoverStart_) return;
     hoverStart_.reset();
-    if (std::any_of(keys_.begin(), keys_.end(), [](const auto& k) { return k.second.note.has_value(); }))
-        hoverSend(0, 0);
+    const auto ids = hoverTargets();
+    // With every note gone (Hold cleared, latches released), the channel
+    // may still be bent: reset it alone.
+    if (!ids.empty() || hoverChannelSet_) hoverSend(0, 0, ids);
 }
 
 // --- Computer keys ---------------------------------------------------------------
@@ -239,13 +262,16 @@ void Performer::keyDown(int key, const Note& note, Modifiers) {
 void Performer::keyUp(int key, Modifiers mods) {
     const auto it = keys_.find(key);
     if (it == keys_.end()) return;
-    if (hoverStart_ && it->second.note) {
-        // Its own expression reset; the channel's too if it was the last.
-        const bool last = std::count_if(keys_.begin(), keys_.end(),
-                                        [](const auto& k) { return k.second.note.has_value(); }) == 1;
-        hoverSend(0, 0, &it->second, last);
+    const bool latching = mods.latch || latchMode_;
+    if (hoverStart_ && it->second.note && !latching) {
+        // Its own expression reset, unless something else still holds it
+        // (another key, a latch, Hold), so hover still drives it; the
+        // channel's too if no note is left to drive.
+        const int id = it->second.note->id;
+        const auto others = hoverTargets(key);
+        if (std::find(others.begin(), others.end(), id) == others.end()) hoverSend(0, 0, {id}, others.empty());
     }
-    finish(it->second, mods.latch || latchMode_);
+    finish(it->second, latching);
     keys_.erase(it);
 }
 
