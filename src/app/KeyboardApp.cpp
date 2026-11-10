@@ -1825,11 +1825,23 @@ float KeyboardApp::drawPanel() {
             ImGui::SetItemTooltip("Slide one note's pitch from key to key instead of striking each (MIDI 2.0)");
         }
         // What a Fixed drag sends, and in either mode, moving the mouse with
-        // Ctrl held while computer keys hold notes (hover expression).
+        // Ctrl held while computer keys hold notes (hover expression). A
+        // Gliss drag plays from key to key and sends none of it, so in Gliss
+        // they're headed as hover expression's alone (ReleaseUMP R2-28).
+        const bool gliss = p.drag == DragBehavior::Gliss;
         {
+            if (gliss) {
+                ImGui::SeparatorText("Ctrl + mouse");
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                ImGui::TextWrapped("A Gliss drag sends none of these: they're what moving the mouse "
+                                   "with Ctrl held sends, while computer keys hold notes.");
+                ImGui::PopStyleColor();
+            }
             enumCombo("Horizontal", p.horizontal, kHorizontal, ImGui::CalcItemWidth());
-            ImGui::SetItemTooltip("What dragging sends (Fixed), and moving the mouse with Ctrl held\n"
-                                  "while computer keys hold notes");
+            ImGui::SetItemTooltip("%s", gliss ? "What moving the mouse with Ctrl held sends, while computer\n"
+                                                "keys hold notes (a Gliss drag sends none of it)"
+                                              : "What dragging sends, and moving the mouse with Ctrl held\n"
+                                                "while computer keys hold notes");
             enumCombo("Vertical", p.vertical, kVertical, ImGui::CalcItemWidth());
             if (p.vertical == VerticalControl::Controller &&
                 ImGui::InputInt("Controller", &p.verticalController))
@@ -1862,6 +1874,7 @@ float KeyboardApp::drawPanel() {
                                       "Channel: channel pressure, from the first finger");
             }
         }
+        if (gliss) ImGui::Separator();   // the rest is every drag's
         ImGui::Checkbox("Strike velocity", &p.strikeVelocity);
         ImGui::SetItemTooltip("Louder toward the top of a key");
         if (p.strikeVelocity) ui::sliderRow("Minimum", p.strikeVelocityMin, 1, 126, ui::colour::kAccent);

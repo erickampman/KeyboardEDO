@@ -587,6 +587,10 @@ As built (2026-10-13):
 - Hover expression uses the Playing section's Horizontal and Vertical
   controls, now shown in Gliss mode too. Releasing a key resets its own
   note's expression, and the channel's if it was the last one held.
+- In Gliss mode those controls sit under a "Ctrl + mouse" heading with a
+  line saying a Gliss drag sends none of them (the author, 2026-11-10), so
+  they don't look like they should change a drag. Left enabled, not
+  disabled, as hover expression needs them in either mode.
 ## Arpeggiator (decided 2026-10-15, roadmap milestone 10)
 
 KeyEDO's `ArpeggiatorEngine`, as `Arpeggiator` (`src/kedo/Arpeggiator.*`), a

@@ -158,7 +158,7 @@ Under **Playing** in Settings (Edit mode):
   - **Gliss**: each key you pass over plays, as a glissando. The drag stops at the keyboard's edges, so keys hidden under the side bars don't sound.
   - **Fixed**: the note you struck stays; dragging sends **expression** instead.
 - **Glide (Pitch 7.25)**, with Gliss: instead of striking each key, one note's pitch moves from key to key (MIDI 2.0). It lands on each key's exact pitch rather than sliding between them.
-- **Horizontal** and **Vertical**: the expression a drag sends ([Expression](#expression)).
+- **Horizontal** and **Vertical**: the expression a Fixed drag sends ([Expression](#expression)). A Gliss drag sends none; with Gliss they show under **Ctrl + mouse**, as they're still what moving the mouse with Ctrl held sends for notes your computer keys hold.
 - **Strike velocity**: a key plays louder toward its top and softer toward its bottom, down to the **Minimum** you set (1 to 126). Off, every note plays at full velocity.
 
 Two fingers on two keys that play the same pitch hold one note, which ends when the last finger lets go.
