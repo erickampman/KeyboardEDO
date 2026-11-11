@@ -182,7 +182,9 @@ if(KEDO_APP)
     # the bundle has no icon. build/keyboardedo is a link to the executable
     # inside, so command lines (--snapshot and the rest) stay as they were.
     if(APPLE)
-        set(KEDO_MACOS_MINIMUM 11.0)
+        # The Info.plist's minimum and the icon's follow the binary's (macOS 26), so Finder
+        # says it needs a newer macOS instead of a launch that fails (ReleaseUMP R4-16).
+        set(KEDO_MACOS_MINIMUM ${CMAKE_OSX_DEPLOYMENT_TARGET})
         configure_file(cmake/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
         set_target_properties(keyboardedo PROPERTIES
             MACOSX_BUNDLE TRUE
