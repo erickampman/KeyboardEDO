@@ -65,8 +65,7 @@ The same three commands on both platforms. Everything goes in `build/` (ignored 
 
 On the Mac the build makes `build/KeyboardEDO.app`. `open build/KeyboardEDO.app` starts it as an
 app, and `build/keyboardedo` is a link to the executable inside, for command lines. To keep it in
-Applications (and after deleting the clone), copy the app there; an app you built yourself has no
-quarantine flag, so it opens without the steps a downloaded one needs:
+Applications (and after deleting the clone), copy the app there:
 
 ```bash
 rm -rf /Applications/KeyboardEDO.app
