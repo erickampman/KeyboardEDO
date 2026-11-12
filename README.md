@@ -57,6 +57,31 @@ ln -sf ~/.local/lib/keyboardedo/keyboardedo ~/.local/bin/keyboardedo
 What each platform needs is in the downloads repo's
 [install notes](https://github.com/erickampman/unlikelyware#installing).
 
+### Playing a DAW on Linux
+
+Some Linux DAWs don't see KeyboardEDO's own MIDI port, so send it to a port they do see, with
+**Send to** in the routing menu:
+
+- **REAPER** (its audio system set to JACK, run through PipeWire): REAPER lists only hardware
+  ports. Send to **Midi Through Port-0** and enable `Midi Through` in REAPER's MIDI inputs.
+- **Bitwig**: Bitwig sees only raw MIDI devices. Load the virtual MIDI module, send to
+  **VirMIDI 1-0**, and pick `VirtualRawMIDI/1` as the track's input:
+
+  ```bash
+  sudo modprobe snd-virmidi
+  ```
+
+  To load it at every boot:
+
+  ```bash
+  echo snd-virmidi | sudo tee /etc/modules-load.d/virmidi.conf
+  ```
+
+Both take MIDI 1.0, so KeyboardEDO sends each note as the nearest 12-EDO note. For microtones there,
+play a 12-EDO layout into a note effect that makes them, such as
+[EDOSpread12](https://github.com/erickampman/EDOSpread12), in front of the synth.
+[StageHand](https://github.com/erickampman/StageHand) takes MIDI 2.0 and plays every layout exactly.
+
 ## Building from source
 
 ```bash
