@@ -46,15 +46,17 @@ help page (Help in the app, or [resources/help/help.md](resources/help/help.md))
 **macOS:** drag `KeyboardEDO.app` into Applications. The first time you open it, macOS asks whether to
 open an app downloaded from the internet: click Open.
 
-**Linux:** unpack the download anywhere you'll keep it, such as `~/.local/lib/keyboardedo`, and keep
-`keyboardedo` and its `help` folder together (Help looks for `help/` beside the executable). To run
-it as plain `keyboardedo`, link it into a directory on your `PATH`:
+**Linux:** the download is an install tree (`bin/`, `share/`). Unpack it into `~/.local`; that puts
+`keyboardedo` on your `PATH` and KeyboardEDO, with its icon, in your desktop's app list:
 
 ```bash
-ln -sf ~/.local/lib/keyboardedo/keyboardedo ~/.local/bin/keyboardedo
+tar -xzf KeyboardEDO-0.9.0-linux-x86_64.tar.gz -C ~/.local --strip-components=1
 ```
 
-What each platform needs is in the downloads repo's
+For every user, unpack into `/usr/local` with `sudo` instead. If `~/.local/bin` didn't exist before,
+log out and back in once so it's on your `PATH`.
+
+What each platform needs, and how to uninstall, is in the downloads repo's
 [install notes](https://github.com/erickampman/unlikelyware#installing).
 
 ### Playing a DAW on Linux
