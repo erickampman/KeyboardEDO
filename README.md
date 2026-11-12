@@ -2,7 +2,7 @@
 
 An on-screen MIDI 2.0 keyboard from Unlikelyware for any equal division of the octave: 12-EDO, 17,
 19, 22, 31, 53 or any other from 5 to 72 steps. Play it with a mouse, a trackpad, a touchscreen
-(multitouch) or your computer's keyboard, and it sends MIDI to a synth, a host or another app.
+or your computer's keyboard, and it sends MIDI to a synth, a host or another app.
 
 ![KeyboardEDO's window](docs/screenshot.png)
 
@@ -33,6 +33,13 @@ The Unlikelyware synths play its notes at their exact pitch, and through
 help page (Help in the app, or [resources/help/help.md](resources/help/help.md)) covers it all.
 [docs/decisions.md](docs/decisions.md) says why it's built this way, and
 [docs/roadmap.md](docs/roadmap.md) what comes next.
+
+## Known gaps
+
+- **One finger at a time on a Mac touchscreen.** macOS passes a touch on the screen to the app as
+  a mouse click, so a touchscreen plays like a mouse: one key at a time. Several fingers at once
+  need a change to SDL, planned before 1.0. On Linux, SDL passes every finger on, so several keys
+  should play at once; that hasn't been checked by hand on a touchscreen yet.
 
 ## Installing
 

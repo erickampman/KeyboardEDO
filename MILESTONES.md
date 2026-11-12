@@ -56,6 +56,7 @@
 - [x] Checked by hand on the Mac, and typing a value (2026-11-07; Esc doesn't close the typing field, clicking away does)
 
 ## M9: Before 1.0 (after the 0.9 previews; left from M5)
+- [ ] Several fingers at once on a Mac touchscreen (ReleaseUMP R2-29, a known gap in 0.9): SDL 3.4.18's Cocoa backend skips `NSTouchTypeDirect`, and screen touches reach only an `NSGestureRecognizer` (`NSEventTypeDirectTouch`), so patch SDL to add a recognizer to its view. macOS also cancels three fingers landing together after about 260 ms (probed 2026-11-10)
 - [ ] Stream Configuration (protocol negotiation)
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 

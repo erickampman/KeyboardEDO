@@ -15,3 +15,7 @@ First public preview.
 - Several layouts in one `.kedo` document, each with its own tuning; play with a mouse, trackpad,
   touchscreen or the computer keyboard.
 - App for Linux (x86-64) and macOS 26 or later (Apple Silicon).
+
+### Known gaps
+
+- See the README's Known gaps section.

@@ -20,7 +20,7 @@
 
 ::: {.callout .callout-note .card}
 ## Overview {#overview}
-KeyboardEDO is an on-screen MIDI keyboard controller for **equal divisions of the octave** (EDOs): 12-EDO, 17, 19, 22, 31, 53, or any other from 5 to 72 steps. You play it with a mouse, a trackpad, a touchscreen (multitouch), or your computer's keyboard, and it sends MIDI to a synth, a DAW, or another app.
+KeyboardEDO is an on-screen MIDI keyboard controller for **equal divisions of the octave** (EDOs): 12-EDO, 17, 19, 22, 31, 53, or any other from 5 to 72 steps. You play it with a mouse, a trackpad, a touchscreen (one finger at a time on a Mac), or your computer's keyboard, and it sends MIDI to a synth, a DAW, or another app.
 
 It's built on **MIDI 2.0** first. Each note carries its exact pitch (MIDI 2.0's Pitch 7.9), so a 31-EDO step sounds as a 31-EDO step on any receiver that honors it, with per-note pitch bend, per-note controllers and per-note pressure. For MIDI 1.0 receivers it falls back to MIDI 1.0 automatically.
 
