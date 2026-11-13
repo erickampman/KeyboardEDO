@@ -14,6 +14,9 @@
 #include <SDL3/SDL.h>
 
 #include "MidiTargets.h"
+#ifndef __APPLE__
+#include "uw/base/HelpServer.h"
+#endif
 #include "kedo/Arpeggiator.h"
 #include "kedo/Controls.h"
 #include "kedo/Document.h"
@@ -200,6 +203,9 @@ private:
     std::mutex dialogLock_;
     std::vector<std::pair<Dialog, std::string>> dialogResults_;
     std::string status_;      // the last file error, shown in the bar
+#ifndef __APPLE__
+    uw::HelpServer helpServer_;   // openHelp()'s, for as long as the app runs
+#endif
 
     // The editor's state. Undo keeps the keys and the selection.
     struct EditState {

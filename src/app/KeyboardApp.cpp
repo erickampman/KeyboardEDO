@@ -1106,13 +1106,22 @@ void KeyboardApp::setPanes(bool panel, bool monitor) {
 // The help page (docs/decisions.md, "Identity and help"): help/help.html, which
 // the build puts beside the app (in the bundle's Resources on the Mac, next to
 // the executable elsewhere) with the logo it shows, opened in the default
-// browser. A missing page is said in the synopsis line.
+// browser (on Linux over loopback HTTP, as a snap browser can't read the file). A missing page is said in the synopsis line.
 void KeyboardApp::openHelp() {
     const char* base = SDL_GetBasePath();
     const std::string dir = base ? base : "";
     for (const std::string& path : {dir + "help/help.html", dir + "../share/keyboardedo/help/help.html"}) {
         std::error_code error;
         if (!std::filesystem::exists(path, error)) continue;
+#ifndef __APPLE__
+        // Served over loopback (uw-core's HelpServer): a snap or Flatpak
+        // browser can't read the installed file in ~/.local or /usr/local.
+        const std::string folder = std::filesystem::weakly_canonical(path, error).parent_path().string();
+        const std::string served = helpServer_.serve(uw::HelpServer::readDirectory(folder, "help.html"));
+        if (served.empty()) status_ = "Couldn't serve the help page to a browser";
+        else if (!SDL_OpenURL(served.c_str())) status_ = std::string("Couldn't open the help page: ") + SDL_GetError();
+        return;
+#endif
         // A file URL, with anything but a path's plain characters escaped.
         std::string url = "file://";
         for (unsigned char c : std::filesystem::weakly_canonical(path, error).string()) {
