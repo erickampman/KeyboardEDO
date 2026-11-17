@@ -325,6 +325,38 @@ void hold() {
     CHECK(r.out.count("on") == r.out.count("off"));
 }
 
+// A rest keeps its note's steps, and its octave copies', in silence; it goes
+// with the note, and comes back with keep().
+void rests() {
+    Rig r({.enabled = true, .octaves = 2, .hold = true});
+    r.arp.noteOn(note(1, 60), 1000);
+    r.arp.noteOn(note(2, 64), 1000);
+    r.arp.noteOff(1);
+    r.arp.noteOff(2);
+    r.arp.setRest(2, true);
+    CHECK(r.arp.resting(2) && !r.arp.resting(1) && r.arp.pool()[1].rest);
+    r.run(0.99);   // eight 1/16 steps at 120: 1 2 1+12 2+12, twice
+    const int up = Arpeggiator::octaveAbove(note(1, 60), 1).id;
+    CHECK((r.out.ons() == std::vector<int>{1, up, 1, up}));
+    // The steps keep their times: the second 1 at the fifth step.
+    std::vector<double> at;
+    for (const auto& c : r.out.calls)
+        if (c.what == "on") at.push_back(c.at);
+    CHECK(near(at[1] - at[0], 0.25) && near(at[2] - at[0], 0.5));
+    r.arp.toggleRest(2);
+    CHECK(!r.arp.resting(2));
+    r.arp.toggleRest(1);
+    r.run(0.5);
+    CHECK((r.out.ons() == std::vector<int>{1, up, 1, up, 2, Arpeggiator::octaveAbove(note(2, 64), 1).id}));
+    // Struck again it's let go, rest and all; played once more, it sounds.
+    r.arp.noteOn(note(1, 60), 1000);
+    CHECK(!r.arp.inPool(1) && !r.arp.resting(1));
+    r.arp.keep(note(1, 60), 1000, true);
+    CHECK(r.arp.resting(1) && r.arp.heldByHold(1));
+    r.arp.stop();
+    CHECK(r.out.count("on") == r.out.count("off"));
+}
+
 // Off, it keeps what Hold kept, silent, and plays it when on again; keep()
 // fills it as a session restores it, on or off.
 void holdKeptWhileOff() {
@@ -511,6 +543,7 @@ int main() {
     octaves();
     release();
     hold();
+    rests();
     holdKeptWhileOff();
     velocity();
     tempo();

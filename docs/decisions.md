@@ -675,6 +675,15 @@ As built (2026-10-15):
   while rendering or presenting, so a step can wait at most for one frame's
   build. MIDI timestamps (milestone 11) would let steps be sent ahead and
   land exactly.
+- **Rests (2026-11-17, our own):** a note in the pool can be made a rest:
+  its steps, and its octave copies', keep their time and play nothing.
+  Right-click its key toggles it, or Alt (Option) with its computer key,
+  as both were free (Shift latches, Ctrl is hover expression, Cmd/Ctrl
+  shortcuts). Its key gets an orange slash, edged dark: corner to corner,
+  edge to edge on a diamond, and across the part of a white piano key the
+  black keys leave. The rest goes with the note: letting it go (striking it
+  again, Clear, Hold off) ends it. Saved with the held notes, as a fourth
+  element (`[id, velocity, latched, true]`).
 - Not done: MIDI clock or Flex Data tempo (KeyEDO's `rateSource` hook;
   controller roadmap 12), swing, and latching a new chord on a fresh press.
 

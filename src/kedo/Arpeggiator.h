@@ -102,6 +102,13 @@ public:
     bool heldByHold(int id) const;
     bool sounding(int id) const { return active_ && active_->out.id == id; }
 
+    // A rest: the note stays in the pool and keeps its steps, but they sound
+    // nothing (right-click, or Alt with its computer key). It goes with the
+    // note, so playing it again after it's let go plays it.
+    bool resting(int id) const;
+    void setRest(int id, bool rest);
+    void toggleRest(int id) { setRest(id, !resting(id)); }
+
     // The notes Hold keeps (not those still pressed), in the order played,
     // with their velocities: the app's session saves them, and keep()s them
     // when it's restored.
@@ -111,11 +118,12 @@ public:
         Note          note;
         std::uint16_t velocity;
         bool          kept;
+        bool          rest;
     };
     std::vector<PoolNote> pool() const;
     // A note into the pool as Hold keeps it, without its being played: on or
     // off, as it was when the session was saved.
-    void keep(const Note& note, std::uint16_t velocity);
+    void keep(const Note& note, std::uint16_t velocity, bool rest = false);
 
     // NoteSink
     void noteOn(const Note& note, std::uint16_t velocity) override;
@@ -133,6 +141,7 @@ private:
         Note          note;
         std::uint16_t velocity = 0;
         bool          pressed = true;   // false: Hold keeps it
+        bool          rest = false;     // its steps sound nothing
         std::optional<double> bend, pressure;
         std::map<int, double> controllers;
     };

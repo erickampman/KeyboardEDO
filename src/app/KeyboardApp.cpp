@@ -187,9 +187,9 @@ std::vector<Document::HeldNote> KeyboardApp::heldNow() const {
     for (const auto& [id, velocity] : performer_.latchedNotes()) latched[id] = velocity;
     for (const auto& p : arp_.pool()) {
         if (p.kept) {
-            held.push_back({p.note.id, p.velocity, false});
+            held.push_back({p.note.id, p.velocity, false, p.rest});
         } else if (const auto it = latched.find(p.note.id); it != latched.end()) {
-            held.push_back({it->first, it->second, true});
+            held.push_back({it->first, it->second, true, p.rest});
             latched.erase(it);
         }
     }
@@ -212,8 +212,12 @@ void KeyboardApp::restoreHeldNotes() {
     for (const auto& h : held) {
         const auto it = notes.find(h.id);
         if (it == notes.end()) continue;
-        if (h.latched) performer_.latch(it->second, h.velocity);
-        else if (settings_.arp.hold) arp_.keep(it->second, h.velocity);
+        if (h.latched) {
+            performer_.latch(it->second, h.velocity);
+            arp_.setRest(h.id, h.rest);   // in its pool if it's on
+        } else if (settings_.arp.hold) {
+            arp_.keep(it->second, h.velocity, h.rest);
+        }
     }
 }
 
@@ -325,6 +329,12 @@ bool KeyboardApp::computerKey(const SDL_KeyboardEvent& key) {
     if (io.WantTextInput || (key.mod & (SDL_KMOD_GUI | SDL_KMOD_CTRL))) return false;
     const auto it = computerKeys_.find(code);
     if (it == computerKeys_.end()) return false;
+    // Alt (Option) with the key of a note the arpeggiator is stepping
+    // through: a rest, or not, as right-clicking it.
+    if ((key.mod & SDL_KMOD_ALT) && arp_.inPool(it->second.note.id)) {
+        if (!key.repeat) arp_.toggleRest(it->second.note.id);
+        return true;
+    }
     if (!key.repeat && heldKeys_.insert(code).second) performer_.keyDown(code, it->second.note, modifiers());
     return true;
 }
@@ -366,8 +376,15 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
         if (e.drop.data) open(e.drop.data);
         break;
     case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-        if (e.button.button != SDL_BUTTON_LEFT) break;
         const Point p{e.button.x, e.button.y};
+        // Right-click a key the arpeggiator is stepping through: a rest, or
+        // not (decisions.md, "Arpeggiator").
+        if (e.button.button == SDL_BUTTON_RIGHT && !editingKeys() && inKeyboard(p) && !io.WantCaptureMouse) {
+            if (const auto key = layout_->keyAt(viewport_.toLayout(p)); key && arp_.inPool(key->note.id))
+                arp_.toggleRest(key->note.id);
+            break;
+        }
+        if (e.button.button != SDL_BUTTON_LEFT) break;
         if (!inKeyboard(p) || io.WantCaptureMouse) break;
         // Editing a custom layout: the editor's, touches included (SDL's
         // mouse copies of them).
@@ -1018,6 +1035,12 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
         float radius;
     };
     std::vector<Dot> dots;
+    // A rest's key is slashed, orange edged dark, drawn with the dots.
+    struct Slash {
+        ImVec2 from, to;
+        float width;
+    };
+    std::vector<Slash> slashes;
     for (const Key& k : keys) {
         // The arpeggiator's step, played or an octave copy, is a dot over the
         // key's own colour; what its Hold keeps shows latched.
@@ -1039,6 +1062,17 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
             const float radius = std::max(2.5f, std::min({hw * (k.shape == KeyShape::Diamond ? 0.4f : 0.7f),
                                                           hh * 0.4f, 9 * zoom}));
             dots.push_back({{c.x, whiteRect ? c.y + hh * 0.45f : c.y}, radius});
+        }
+        if (arp_.resting(k.note.id)) {
+            // Corner to corner; across a diamond, edge to edge; on a white
+            // piano key, across what the black keys leave showing.
+            const float width = std::max(3.0f, std::min(hw, hh) * 0.2f);
+            if (k.shape == KeyShape::Diamond)
+                slashes.push_back({{c.x - hw / 2, c.y + hh / 2}, {c.x + hw / 2, c.y - hh / 2}, width});
+            else if (k.shade != KeyShade::Black && settings_.layout.kind == LayoutKind::Piano)
+                slashes.push_back({{c.x - hw * 0.8f, c.y + hh * 0.9f}, {c.x + hw * 0.8f, c.y + hh * 0.05f}, width});
+            else
+                slashes.push_back({{c.x - hw * 0.8f, c.y + hh * 0.9f}, {c.x + hw * 0.8f, c.y - hh * 0.9f}, width});
         }
 
         float titleY;
@@ -1087,6 +1121,11 @@ void KeyboardApp::drawKeyboard(ImDrawList* list) {
         }
     }
     // Pink, edged dark so it shows on pink, orange and white keys alike.
+    for (const Slash& sl : slashes) {
+        // A deeper orange than a latched key's, so it shows on one.
+        list->AddLine(sl.from, sl.to, IM_COL32(50, 20, 5, 255), sl.width + 3);
+        list->AddLine(sl.from, sl.to, IM_COL32(230, 85, 0, 255), sl.width);
+    }
     for (const Dot& d : dots) {
         list->AddCircleFilled(d.at, d.radius, ImGui::ColorConvertFloat4ToU32(ui::colour::kPink));
         list->AddCircle(d.at, d.radius, IM_COL32(60, 20, 40, 255), 0, std::max(1.0f, d.radius * 0.18f));

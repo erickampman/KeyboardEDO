@@ -81,9 +81,18 @@ bool Arpeggiator::heldByHold(int id) const {
     return std::any_of(pool_.begin(), pool_.end(), [&](const Slot& s) { return s.note.id == id && !s.pressed; });
 }
 
+bool Arpeggiator::resting(int id) const {
+    return std::any_of(pool_.begin(), pool_.end(), [&](const Slot& s) { return s.note.id == id && s.rest; });
+}
+
+// From the next step: one sounding now plays out its gate.
+void Arpeggiator::setRest(int id, bool rest) {
+    if (Slot* s = slot(id)) s->rest = rest;
+}
+
 std::vector<Arpeggiator::PoolNote> Arpeggiator::pool() const {
     std::vector<PoolNote> notes;
-    for (const Slot& s : pool_) notes.push_back({s.note, s.velocity, !s.pressed});
+    for (const Slot& s : pool_) notes.push_back({s.note, s.velocity, !s.pressed, s.rest});
     return notes;
 }
 
@@ -207,10 +216,13 @@ void Arpeggiator::fire(double at, double grid) {
         index_ = 0;
     }
 
-    const Note out = step.octave == 0 ? s.note : octave_ ? octave_(s.note, step.octave) : octaveAbove(s.note, step.octave);
-    out_.noteOn(out, velocityFor(s));
-    reapply(s, out.id);
-    active_ = Active{step.id, step.octave, out};
+    // A rest takes its step, and its octave copies theirs, in silence.
+    if (!s.rest) {
+        const Note out = step.octave == 0 ? s.note : octave_ ? octave_(s.note, step.octave) : octaveAbove(s.note, step.octave);
+        out_.noteOn(out, velocityFor(s));
+        reapply(s, out.id);
+        active_ = Active{step.id, step.octave, out};
+    }
     last_ = grid;
     grid_ = grid + config_.stepLength();
     ++count_;
@@ -270,9 +282,9 @@ void Arpeggiator::start() {
     advance();
 }
 
-void Arpeggiator::keep(const Note& note, std::uint16_t velocity) {
+void Arpeggiator::keep(const Note& note, std::uint16_t velocity, bool rest) {
     if (slot(note.id)) return;
-    pool_.push_back(Slot{.note = note, .velocity = velocity, .pressed = false});
+    pool_.push_back(Slot{.note = note, .velocity = velocity, .pressed = false, .rest = rest});
     rebuild();
     if (on() && !running_) start();
 }

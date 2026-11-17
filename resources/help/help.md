@@ -146,6 +146,7 @@ The inspector edits the selected keys:
 ## Computer Keys {#computer-keys}
 Turn on **Computer keys** under View to play from your computer's keyboard. Each key shows the computer key that plays it, named as your keyboard layout names it. Piano and tiled layouts come with a mapping, and converting to custom keeps it; in a custom layout you assign each key yourself.
 - **Shift** latches the notes you play, as the Latch button does.
+- **Alt** (Option on the Mac) with a key the arpeggiator is playing makes it a rest, or plays it again ([Arpeggiator](#arpeggiator)).
 - **Ctrl** with the mouse sends expression for the notes your computer keys are holding, and for latched notes and those the arpeggiator's Hold keeps: move the mouse as you would drag a key ([Expression](#expression)).
 - **Escape** releases every note.
 - With Cmd or Ctrl held, a key is a shortcut, not a note.
@@ -203,6 +204,7 @@ The arpeggiator steps through the notes you hold, one at a time, and puts a pink
 - **Slop**: each step early or late at random, by up to 0 to 50 ms (never more than a quarter of a step).
 - **Velocity**: **As played**, **Fixed** at a velocity you set with the knob beside it, or **Random**.
 - **Hold**: released notes keep playing, and new ones add to them; click one again to let it go. Turning the arpeggiator off keeps them, silent, to play again when it's back on, and they're still there the next time KeyboardEDO starts. **Clear** lets go of them, and of notes latched with Shift or Latch; so do All Notes Off, Escape, and turning Hold off.
+- **Rests**: right-click a note the arpeggiator is playing, or press Alt (Option on the Mac) with its computer key, and it becomes a rest: its steps keep their time but play nothing, and an orange slash crosses its key. Do it again to hear it once more. Letting go of the note ends its rest.
 
 As with the knobs, double-click a knob to set it back, and click its value to type one. Each layout has its own arpeggiator settings.
 :::

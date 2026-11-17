@@ -218,7 +218,8 @@ void testBundleRoundTrip() {
     d.knobs[2] = {.pressure = true, .label = "Squeeze"};
     d.scale = {.scale = "Dorian", .map = ScaleMap::Nearest};
     d.held = {{.id = 7, .velocity = 0xFFFF}, {.id = 12, .velocity = 500, .latched = true},
-              {.id = -3, .velocity = 1000}};   // the session's
+              {.id = -3, .velocity = 1000}, {.id = 4, .velocity = 9, .rest = true},
+              {.id = 5, .velocity = 9, .latched = true, .rest = true}};   // the session's
 
     std::string error;
     CHECK(saveDocument(path, d, &error));
