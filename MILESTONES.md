@@ -57,11 +57,11 @@
 
 ## M9: Before 1.0 (after the 0.9 previews; left from M5)
 - [ ] Several fingers at once on a Mac touchscreen (ReleaseUMP R2-29, a known gap in 0.9): SDL 3.4.18's Cocoa backend skips `NSTouchTypeDirect`, and screen touches reach only an `NSGestureRecognizer` (`NSEventTypeDirectTouch`), so patch SDL to add a recognizer to its view. macOS also cancels three fingers landing together after about 260 ms (probed 2026-11-10)
-- [ ] Stream Configuration (protocol negotiation)
+- [ ] Stream Configuration: answer a Request with a Notification of the current protocol (MIDI 2.0, no JR timestamps), refusing a change (uw-core M8's first item)
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 
 ## M10: Later
-- [ ] Network MIDI 2.0 (netmidi2)
+- [ ] Network MIDI 2.0 through uw-core M8 (netmidi2): send to a network peer; switch to MIDI 1.0 when a peer asks (end held notes, resend the bend-range setup; non-12 layouts round to the nearest note, and the status line says so)
 - [ ] Tuning as Property Exchange resource; arpeggiator tempo from Flex Data
 - [ ] Continuous glide between keys
 - [ ] Pressure from Force Touch and pen tablets

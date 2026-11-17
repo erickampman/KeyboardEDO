@@ -429,7 +429,8 @@ the Mac.
 
 ## Later
 
-- Network MIDI 2.0 through netmidi2 (a C library, not yet public).
+- Network MIDI 2.0 through netmidi2 (github.com/erickampman/netmidi2, a C
+  library), as uw-core's M8: a network port behind `MidiOutput`.
 - Tuning as a Property Exchange resource for Umpire (`X-` prefix), and
   arpeggiator tempo from Flex Data (controller roadmap 11, 12).
 - Not planned: an MPE fallback or MIDI Tuning Standard SysEx for MIDI 1.0
