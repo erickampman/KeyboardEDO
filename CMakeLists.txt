@@ -142,18 +142,21 @@ if(KEDO_APP)
         KEDO_VERSION_MAJOR=${PROJECT_VERSION_MAJOR} KEDO_VERSION_MINOR=${PROJECT_VERSION_MINOR}
         KEDO_VERSION_PATCH=${PROJECT_VERSION_PATCH})
 
-    # The help page: resources/help/help.html, generated from help.md (beside it)
-    # by pandoc with the Unlikelyware products' shared template:
+    # The help page: resources/help/help.md, which Help shows in a window of the
+    # app's own (uw-core's HelpPanel), and the logo it shows, as
+    # Unlikelyware.png. Copied to build/help, beside the executable, where the
+    # app looks for it; on the Mac they also go in the bundle's Resources/help
+    # (below). resources/help/help.html, for the web and not installed, is
+    # generated from help.md by pandoc with the Unlikelyware products' shared
+    # template:
     #   pandoc -f commonmark_x-smart -t html5 \
     #     --template ../../Dev-Audio/Shared/Help/help-template.html \
     #     --metadata pagetitle=help-KeyboardEDO \
     #     resources/help/help.md -o resources/help/help.html
     # (run from here; the template, in Dev-Audio beside Dev-MIDI, inlines its
-    # help.css), and the logo it shows, as Unlikelyware.png. Copied
-    # to build/help, beside the executable, where the app looks for it; on the
-    # Mac they also go in the bundle's Resources/help (below).
-    set(help_files ${CMAKE_CURRENT_BINARY_DIR}/help/help.html ${CMAKE_CURRENT_BINARY_DIR}/help/Unlikelyware.png)
-    configure_file(resources/help/help.html ${CMAKE_CURRENT_BINARY_DIR}/help/help.html COPYONLY)
+    # help.css).
+    set(help_files ${CMAKE_CURRENT_BINARY_DIR}/help/help.md ${CMAKE_CURRENT_BINARY_DIR}/help/Unlikelyware.png)
+    configure_file(resources/help/help.md ${CMAKE_CURRENT_BINARY_DIR}/help/help.md COPYONLY)
     configure_file(resources/brand/Unlikelyware-logo-144.png ${CMAKE_CURRENT_BINARY_DIR}/help/Unlikelyware.png COPYONLY)
     if(TARGET uw::midi)
         target_link_libraries(keyboardedo PRIVATE uw::midi)

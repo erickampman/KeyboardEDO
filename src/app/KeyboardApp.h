@@ -14,9 +14,7 @@
 #include <SDL3/SDL.h>
 
 #include "MidiTargets.h"
-#ifndef __APPLE__
-#include "uw/base/HelpServer.h"
-#endif
+#include "uw/imgui/HelpPanel.h"
 #include "kedo/Arpeggiator.h"
 #include "kedo/Controls.h"
 #include "kedo/Document.h"
@@ -130,7 +128,7 @@ private:
     PlayConfig playConfig() const;
     int  tiledRowsFor(double height) const;
     void drawToolbar();
-    void openHelp();   // help/help.html beside the app, in the default browser
+    void openHelp();   // help/help.md beside the app, in a window of the app's own
     void drawBrand(float height, float rowY);   // the logo and wordmark, the toolbar's start
     void drawRoutingMenu();
     float drawPanel();                 // returns its width
@@ -203,9 +201,7 @@ private:
     std::mutex dialogLock_;
     std::vector<std::pair<Dialog, std::string>> dialogResults_;
     std::string status_;      // the last file error, shown in the bar
-#ifndef __APPLE__
-    uw::HelpServer helpServer_;   // openHelp()'s, for as long as the app runs
-#endif
+    uw::help::HelpPanel help_;   // openHelp()'s window, drawn by frame()
 
     // The editor's state. Undo keeps the keys and the selection.
     struct EditState {

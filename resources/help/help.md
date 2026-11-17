@@ -52,7 +52,7 @@ The line under the toolbar sums up what's playing: the EDO, the origin note, the
 - **Arpeggiator**: on or off ([Arpeggiator](#arpeggiator)).
 - **Panic**: All Notes Off.
 - **Monitor**: the MIDI monitor under the keyboard, a list of every MIDI message sent, as UMP. **Clear** empties it; **Follow** keeps the newest in view.
-- **Help**: this page, in your browser (F1, or Cmd-?).
+- **Help**: this page, in a window of its own (F1, or Cmd-?).
 - **Settings**: the settings panel on the right.
 
 **The settings panel** has sections that fold by their titles: **Layouts**, **Tuning**, **Layout**, **Keys** (custom layouts), **View**, **Playing**, **MIDI** and **File**. In Play mode it shows only Layouts, View and File.

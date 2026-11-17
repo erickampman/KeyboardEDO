@@ -844,7 +844,11 @@ beyond README and `--help`. Settled with the author:
 - **Help is a bundled `help.html` opened in the default browser**
   (`SDL_OpenURL`), as the synths' help pages are HTML: the same on both
   platforms, and no WebView in an SDL/ImGui app. A keyboard-shortcuts page
-  with it; tooltips stay for quick lookups.
+  with it; tooltips stay for quick lookups. *Changed 2026-11-17:* the bundled
+  page is `help.md`, shown in an ImGui window of the app's own (uw-core's
+  HelpPanel), as every Unlikelyware product now shows its help: no browser,
+  and no web server in the process (Linux's snap browsers needed one, uw-core's
+  HelpServer, which is gone).
 - **The icon is KeyEDO's** (three diamond keys and a wave) **in an "Ember"
   palette**: pink, orange and yellow keys on a plum background, chosen to sit
   with Unlikelyware's warm colours and to tell it apart from KeyEDO's blues.
