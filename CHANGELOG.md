@@ -5,6 +5,12 @@ All notable changes to KeyboardEDO. Versions follow the git tags; the format is
 
 ## [Unreleased]
 
+### Added
+
+- Arpeggiator rests: right-click a note the arpeggiator is playing, or press Alt (Option on
+  the Mac) with its computer key, and its steps keep their time but play nothing. An orange
+  slash crosses its key. Rests are saved with the held notes.
+
 ### Changed
 
 - Help opens the help page in a window of the app's own, not in the web browser. Nothing is
