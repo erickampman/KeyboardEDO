@@ -848,7 +848,9 @@ beyond README and `--help`. Settled with the author:
   page is `help.md`, shown in an ImGui window of the app's own (uw-core's
   HelpPanel), as every Unlikelyware product now shows its help: no browser,
   and no web server in the process (Linux's snap browsers needed one, uw-core's
-  HelpServer, which is gone).
+  HelpServer, which is gone). The help window stays inside the app's, not a
+  second OS window: its title bar is kept on screen (uw-core `0fdfb18`), so
+  it can't be dragged where it can't be dragged back (2026-11-17).
 - **The icon is KeyEDO's** (three diamond keys and a wave) **in an "Ember"
   palette**: pink, orange and yellow keys on a plum background, chosen to sit
   with Unlikelyware's warm colours and to tell it apart from KeyEDO's blues.
