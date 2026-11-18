@@ -996,6 +996,16 @@ How it's set up:
 - **Input:** touchscreen fingers go to the Performer by finger id; the mouse
   is pointer 0. SDL's mouse copies of touches (`SDL_TOUCH_MOUSEID`) are left
   to ImGui, so panels still work by touch and no note is played twice.
+  On the Mac, SDL 3.4's Cocoa backend skips direct (screen) touches, and
+  macOS gives them only to a gesture recognizer, so `src/app/MacTouch.mm`
+  adds one to SDL's view and pushes each touch as an SDL finger event
+  (device `mac::kTouchID`), not patching SDL. With the recognizer there,
+  macOS makes no mouse clicks from the touches, so nothing is played twice,
+  but ImGui gets nothing from them either: the panels need the trackpad or
+  mouse (accepted 2026-11-17). Fingers macOS takes for a gesture of its own
+  (three landing together, after about 260 ms) and fingers down when the
+  window loses focus are cancelled, so no key stays held.
+  `KEDO_TOUCH_LOG=1` prints every touch on stderr.
   Trackpad fingers (indirect touch devices) are ignored: they have no place
   on the screen. Wheel scrolls, Ctrl or Cmd with the wheel zooms, and a
   trackpad pinch zooms (SDL 3.4's pinch events). Lock stops both. A

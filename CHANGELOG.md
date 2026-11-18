@@ -7,6 +7,8 @@ All notable changes to KeyboardEDO. Versions follow the git tags; the format is
 
 ### Added
 
+- Several fingers at once on a Mac touchscreen, each its own note. The bar's controls still
+  need the trackpad or mouse there.
 - Arpeggiator rests: right-click a note the arpeggiator is playing, or press Alt (Option on
   the Mac) with its computer key, and its steps keep their time but play nothing. An orange
   slash crosses its key. Rests are saved with the held notes.

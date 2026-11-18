@@ -56,7 +56,8 @@
 - [x] Checked by hand on the Mac, and typing a value (2026-11-07; Esc doesn't close the typing field, clicking away does)
 
 ## M9: Before 1.0 (after the 0.9 previews; left from M5)
-- [ ] Several fingers at once on a Mac touchscreen (ReleaseUMP R2-29, a known gap in 0.9): SDL 3.4.18's Cocoa backend skips `NSTouchTypeDirect`, and screen touches reach only an `NSGestureRecognizer` (`NSEventTypeDirectTouch`), so patch SDL to add a recognizer to its view. macOS also cancels three fingers landing together after about 260 ms (probed 2026-11-10)
+- [x] Several fingers at once on a Mac touchscreen (ReleaseUMP R2-29, a known gap in 0.9): SDL 3.4.18's Cocoa backend skips `NSTouchTypeDirect`, and screen touches reach only an `NSGestureRecognizer` (`NSEventTypeDirectTouch`). Done 2026-11-17 without patching SDL: `src/app/MacTouch.mm` adds the recognizer to SDL's view and pushes SDL finger events; fingers macOS takes away are cancelled. Checked by hand on the touchscreen MacBook Pro: up to six fingers held. The bar's controls don't work by touch on the Mac (accepted)
+- [ ] Three fingers landing together on a Mac touchscreen: macOS takes them after about 260 ms (cancelled cleanly, but the notes stop). Try `NSView.exclusiveGestureBehavior`, `NSApplicationPresentationDisableScreenCornerInteractions` or a system setting; check four and five fingers
 - [ ] Stream Configuration: answer a Request with a Notification of the current protocol (MIDI 2.0, no JR timestamps), refusing a change (uw-core M8's first item)
 - [ ] Timestamps (CoreMIDI host time, ALSA real-time events)
 

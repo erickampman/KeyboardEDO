@@ -14,6 +14,7 @@
 #include <utility>
 
 #include "Icons.h"
+#include "MacTouch.h"
 #include "Widgets.h"
 #include "imgui_impl_sdlrenderer3.h"
 #include "imgui.h"
@@ -418,7 +419,9 @@ void KeyboardApp::handleEvent(const SDL_Event& e) {
     case SDL_EVENT_FINGER_DOWN: {
         // Only touchscreens: a trackpad's fingers have no place on the screen.
         // Editing keys, the editor has them as the mouse.
-        if (editingKeys() || SDL_GetTouchDeviceType(e.tfinger.touchID) != SDL_TOUCH_DEVICE_DIRECT) break;
+        if (editingKeys()) break;
+        if (e.tfinger.touchID != mac::kTouchID && SDL_GetTouchDeviceType(e.tfinger.touchID) != SDL_TOUCH_DEVICE_DIRECT)
+            break;
         int w = 0, h = 0;
         SDL_GetWindowSize(window_, &w, &h);
         const Point p{e.tfinger.x * w, e.tfinger.y * h};

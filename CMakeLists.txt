@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_OSX_DEPLOYMENT_TARGET 26.0 CACHE STRING "macOS 26 or later")
 set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "Apple Silicon only")
 project(KeyboardEDO VERSION 0.9.0 LANGUAGES CXX)
+if(APPLE)
+    enable_language(OBJCXX)   # src/app/MacTouch.mm
+endif()
 
 # KeyboardEDO: a cross-platform, UMP-first EDO keyboard controller, after KeyEDO
 # (Unlikelyware's earlier app). docs/decisions.md says why it's built this way and
@@ -187,6 +190,10 @@ if(KEDO_APP)
     if(APPLE)
         # The Info.plist's minimum and the icon's follow the binary's (macOS 26), so Finder
         # says it needs a newer macOS instead of a launch that fails (ReleaseUMP R4-16).
+        # A touchscreen's fingers, which SDL's Cocoa backend skips (src/app/MacTouch.h).
+        target_sources(keyboardedo PRIVATE src/app/MacTouch.mm)
+        set_source_files_properties(src/app/MacTouch.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+        target_link_libraries(keyboardedo PRIVATE "-framework AppKit")
         set(KEDO_MACOS_MINIMUM ${CMAKE_OSX_DEPLOYMENT_TARGET})
         configure_file(cmake/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
         set_target_properties(keyboardedo PROPERTIES

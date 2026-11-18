@@ -10,6 +10,7 @@
 #include <SDL3/SDL.h>
 
 #include "KeyboardApp.h"
+#include "MacTouch.h"
 #include "Widgets.h"
 #include "kedo/Document.h"
 #include "imgui.h"
@@ -308,6 +309,7 @@ int main(int argc, char** argv) {
     }
     SDL_SetRenderVSync(renderer, 1);
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+    kedo::app::mac::attach(window);   // a Mac touchscreen's fingers (MacTouch.h)
     SDL_ShowWindow(window);
 
     IMGUI_CHECKVERSION();

@@ -37,10 +37,11 @@ help page (Help in the app, or [resources/help/help.md](resources/help/help.md))
 
 ## Known gaps
 
-- **One finger at a time on a Mac touchscreen.** macOS passes a touch on the screen to the app as
-  a mouse click, so a touchscreen plays like a mouse: one key at a time. Several fingers at once
-  need a change to SDL, planned before 1.0. On Linux, SDL passes every finger on, so several keys
-  should play at once; that hasn't been checked by hand on a touchscreen yet.
+- **A Mac touchscreen plays only the keys.** Several fingers play at once, but the bar's buttons
+  and menus need the trackpad or mouse. Three fingers landing together at the same moment are
+  taken by macOS for a gesture of its own after about a quarter of a second, and their notes stop;
+  put them down one after another. On Linux, SDL passes every finger on, so several keys should
+  play at once; that hasn't been checked by hand on a touchscreen yet.
 
 ## Installing
 
