@@ -240,7 +240,9 @@ Under **MIDI** in Settings (Edit mode):
 ::: disclosure-content
 KeyboardEDO sends each note's exact pitch with MIDI 2.0's **Pitch 7.9** note attribute, so a receiver that honours it plays every EDO step exactly, with nothing else to set up.
 
-**MIDI 1.0 has no way to give one note its own exact pitch.** Sent to a MIDI 1.0 receiver, notes go to the nearest 12-EDO note, a glide strikes each key instead, and per-note expression becomes channel-wide. For microtonal playing, use a MIDI 2.0 receiver.
+**MIDI 1.0 has no way to give one note its own exact pitch.** Sent to a MIDI 1.0 receiver, notes go to the nearest 12-EDO note, a glide strikes each key instead, and per-note expression becomes channel-wide. For microtonal playing, use a MIDI 2.0 receiver, such as StageHand.
+
+**In a DAW**, notes arrive as MIDI 1.0 (REAPER and Bitwig both take MIDI 1.0 from KeyboardEDO). In Bitwig, a note effect such as EDOSpread12, in front of the synth, can make the microtones again from a 12-EDO layout. In REAPER it can't: the note effect gets MIDI 1.0 too, and its notes play as the nearest semitone. Logic Pro takes MIDI 2.0, so every layout plays exactly there, and EDOSpread12's AUv2 in a MIDI FX slot keeps its microtones too.
 
 KeyboardEDO doesn't send **MPE**. MPE is a MIDI 1.0 workaround for per-note expression, and MIDI 2.0 does the same job directly. Synths that accept MPE, such as Unlikelyware's, also accept MIDI 2.0's per-note messages.
 :::

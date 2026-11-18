@@ -81,9 +81,12 @@ Some Linux DAWs don't see KeyboardEDO's own MIDI port, so send it to a port they
   echo snd-virmidi | sudo tee /etc/modules-load.d/virmidi.conf
   ```
 
-Both take MIDI 1.0, so KeyboardEDO sends each note as the nearest 12-EDO note. For microtones there,
-play a 12-EDO layout into a note effect that makes them, such as
-[EDOSpread12](https://github.com/erickampman/EDOSpread12), in front of the synth.
+Both take MIDI 1.0, so KeyboardEDO sends each note as the nearest 12-EDO note. In Bitwig, for
+microtones, play a 12-EDO layout into a note effect that makes them, such as
+[EDOSpread12](https://github.com/erickampman/EDOSpread12), in front of the synth. In REAPER that
+doesn't help: the note effect gets MIDI 1.0 too, and its notes play as the nearest semitone.
+(On the Mac, Logic Pro takes MIDI 2.0 and plays every layout exactly, and EDOSpread12's AUv2 keeps
+its microtones there too.)
 [StageHand](https://github.com/erickampman/StageHand) takes MIDI 2.0 and plays every layout exactly.
 
 ## Building from source
