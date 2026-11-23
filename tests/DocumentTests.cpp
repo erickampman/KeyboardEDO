@@ -96,6 +96,7 @@ void testRoundTrip() {
     d.play.vertical = VerticalControl::Controller;
     d.play.verticalController = 74;
     d.play.glide = true;
+    d.play.glideRate = 2400;
     d.play.bendScope = ExpressionScope::Channel;
     d.play.pressureScope = ExpressionScope::Channel;
     d.output.channel = 4;

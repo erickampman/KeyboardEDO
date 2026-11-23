@@ -22,6 +22,7 @@
 #include "kedo/KeyStyle.h"
 #include "kedo/Layout.h"
 #include "kedo/Performer.h"
+#include "kedo/Slew.h"
 #include "kedo/Viewport.h"
 
 struct ImDrawList;
@@ -178,6 +179,7 @@ private:
     bool assigning_ = false;            // the inspector's Assign: the next key pressed
     MidiTargets targets_;     // before arp_ and performer_, which play into it
     Arpeggiator arp_;         // between the Performer and the outputs
+    Slew slew_;               // between the Performer and the arpeggiator: glides slide
     Performer performer_;
     PerformanceControls controls_;   // the performance bar's: channel-wide, past the arpeggiator
     // The arpeggiator steps on a thread of its own, as the frame loop waits

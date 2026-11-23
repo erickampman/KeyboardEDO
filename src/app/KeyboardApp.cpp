@@ -29,6 +29,11 @@ namespace kedo::app {
 
 namespace {
 
+// Seconds on the steady clock: the arpeggiator's and the slew's time.
+double steadySeconds() {
+    return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 constexpr float kMonitorHeight = 170;
 constexpr size_t kMonitorLines = 1000;
 constexpr double kWheelPoints = 30;   // scroll distance per wheel unit
@@ -64,8 +69,9 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
       appliedDestination_(start.document.destination),
       path_(start.path),
       targets_(settings_.output),
-      arp_(targets_.sink(), [] { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }),
-      performer_(arp_),
+      arp_(targets_.sink(), steadySeconds),
+      slew_(arp_, steadySeconds),
+      performer_(slew_),
       controls_(targets_.sink()) {
     // Hover expression also drives what the arpeggiator's Hold keeps (or
     // will keep, once let go). Called under the play lock, as every
@@ -104,6 +110,7 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
     targets_.setGroups(appliedSpan_.first, appliedSpan_.count);
     targets_.setPublish(prefs_.publish || start.publish);
     arp_.setConfig(settings_.arp);
+    slew_.setRate(settings_.play.glideRate);
     controls_.setKnobs(doc_.knobs);
     restoreHeldNotes();
     updateTitle();
@@ -113,9 +120,12 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
 void KeyboardApp::arpLoop() {
     std::unique_lock lock(playLock_);
     while (!quitting_) {
+        slew_.advance();
         arp_.advance();
         flush();
-        if (const auto next = arp_.nextEvent())
+        auto next = arp_.nextEvent();
+        if (const auto slide = slew_.nextEvent()) next = next ? std::min(*next, *slide) : *slide;
+        if (next)
             arpWake_.wait_until(lock, std::chrono::steady_clock::time_point(
                                           std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                                               std::chrono::duration<double>(*next))));
@@ -126,7 +136,8 @@ void KeyboardApp::arpLoop() {
 
 bool KeyboardApp::animating() const {
     std::lock_guard lock(playLock_);
-    return !pointers_.empty() || mouseDown_ || dragging_ || auditionId_.has_value() || arp_.running();
+    return !pointers_.empty() || mouseDown_ || dragging_ || auditionId_.has_value() || arp_.running() ||
+           slew_.running();
 }
 
 void KeyboardApp::releaseAll() {
@@ -621,6 +632,7 @@ void KeyboardApp::applySettings() {
     const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
     if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
         performer_.setConfig(playConfig());
+    if (settings_.play.glideRate != applied_.play.glideRate) slew_.setRate(settings_.play.glideRate);
     if (keysChanged) {
         // Becoming custom isn't new keys: converting keeps them where they are.
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
@@ -1880,6 +1892,14 @@ float KeyboardApp::drawPanel() {
         if (p.drag == DragBehavior::Gliss) {
             ImGui::Checkbox("Glide (Pitch 7.25)", &p.glide);
             ImGui::SetItemTooltip("Slide one note's pitch from key to key instead of striking each (MIDI 2.0)");
+            if (p.glide) {
+                // Logarithmic: the slow rates (a few hundred cents a second) want room.
+                const double lo = 0, hi = Slew::kMaxRate;
+                ImGui::SliderScalar("Slew", ImGuiDataType_Double, &p.glideRate, &lo, &hi,
+                                    p.glideRate == 0 ? "Off" : "%.0f cents/s", ImGuiSliderFlags_Logarithmic);
+                ImGui::SetItemTooltip("How fast a glide slides between keys, in cents a second.\n"
+                                      "Off: it jumps to each key's pitch. 1200 is an octave a second.");
+            }
         }
         // What a Fixed drag sends, and in either mode, moving the mouse with
         // Ctrl held while notes are held without a pointer: computer keys',

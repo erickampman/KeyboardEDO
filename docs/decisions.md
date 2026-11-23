@@ -292,8 +292,17 @@ items in brackets):
   7 [2].
 - Gliss with **glide** (a setting): the struck note keeps its number and its
   pitch moves to each key passed over, with registered per-note controller 3
-  (Pitch 7.25), instead of a new note per key [3]. Stepwise for now: it lands
-  on each key's exact pitch, without sliding between them.
+  (Pitch 7.25), instead of a new note per key [3]. It lands on each key's
+  exact pitch; with **Slew** it slides there.
+- **Glide slew** (2026-11-23, the `Slew` setting, `glideRate` in the file):
+  a glide slides from the note's pitch to the key reached at a rate in cents
+  a second (0, the default, is Off: it jumps, as before; up to 20000). A
+  NoteSink of its own (`Slew`) between the Performer and the arpeggiator
+  sends the pitch every 5 ms on the way, timed as the arpeggiator is, on its
+  thread. A glide that comes before the last got there goes on from where
+  the note is, so a drag across several keys is one slide at the one rate.
+  Cents rather than EDO steps, so a rate sounds the same in every EDO. For
+  a MIDI 1.0 destination, each nearest-note change on the way is restruck.
 - All Notes Off: a note-off for each sounding note, then CC 123, as KeyEDO.
 
 For a MIDI 1.0 destination it makes MT 0x2 messages: notes at the nearest
@@ -456,7 +465,7 @@ KeyEDO format, which becomes one layout's file and what KeyEDO imports read.)
   opens. Fields this version doesn't use (hover expression, the
   arpeggiator's rate source) are kept and written back unchanged.
 - Every key KeyEDO reads is written, with KeyEDO's defaults where we have no
-  value, so KeyEDO can open our files. Our own fields (`glide`,
+  value, so KeyEDO can open our files. Our own fields (`glide`, `glideRate`,
   `perNoteExpression`, `perNoteManagement`, `bendRange`, `perNoteBendRange`,
   `locked`, `pianoLowest`, `pianoHighest`) are extra keys, which KeyEDO
   ignores.

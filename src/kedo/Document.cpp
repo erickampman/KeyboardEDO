@@ -1,6 +1,7 @@
 #include "kedo/Document.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cctype>
 #include <cstdio>
 #include <filesystem>
@@ -199,6 +200,8 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     read(j, "strikeVelocityMin", d.play.strikeVelocityMin);
     d.play.strikeVelocityMin = std::clamp(d.play.strikeVelocityMin, 1, 126);
     read(j, "glide", d.play.glide);
+    read(j, "glideRate", d.play.glideRate);
+    d.play.glideRate = std::isfinite(d.play.glideRate) ? std::clamp(d.play.glideRate, 0.0, 20000.0) : 0.0;
     // Each expression message's scope, "note" or "channel". An earlier
     // KeyboardEDO wrote one switch for all three, perNoteExpression.
     bool perNote = true;
@@ -257,7 +260,7 @@ std::optional<LayoutSetup> parseLayoutSetup(const std::string& text, std::string
     static const std::set<std::string> known = {
         "name", "edoSteps", "originNoteName", "originOctave", "keyLayoutViewType", "selectedPresetIndex",
         "pianoLowest", "pianoHighest", "diamondColumns", "tileColorMode", "locked", "dragBehavior", "horizontalControl",
-        "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide",
+        "verticalControl", "verticalCCNumber", "isStrikeVelocityEnabled", "strikeVelocityMin", "glide", "glideRate",
         "perNoteExpression", "bendScope", "controllerScope", "pressureScope", "midiChannel", "midiGroup", "perNoteManagement", "bendRange",
         "perNoteBendRange", "midiDestinationName", "midi1Expression", "customKeys",
         "arpIsEnabled", "arpBpm", "arpGate", "arpOctaveSpan", "arpHold", "arpFixedVelocity", "arpPattern",
@@ -303,6 +306,7 @@ std::string writeLayoutSetup(const LayoutSetup& d) {
     j["isStrikeVelocityEnabled"] = d.play.strikeVelocity;
     j["strikeVelocityMin"] = d.play.strikeVelocityMin;
     j["glide"] = d.play.glide;
+    j["glideRate"] = d.play.glideRate;
     auto scopeName = [](ExpressionScope s) { return s == ExpressionScope::Note ? "note" : "channel"; };
     j["bendScope"] = scopeName(d.play.bendScope);
     j["controllerScope"] = scopeName(d.play.controllerScope);

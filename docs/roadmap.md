@@ -435,6 +435,7 @@ the Mac.
   arpeggiator tempo from Flex Data (controller roadmap 11, 12).
 - Not planned: an MPE fallback or MIDI Tuning Standard SysEx for MIDI 1.0
   synths (decisions.md, "No MPE").
-- Glide that slides continuously between keys, not only from key to key.
+- Glide that slides continuously with the finger between keys (Slew,
+  2026-11-23, slides from key to key at a rate).
 - Pressure from Force Touch trackpads and pen tablets.
 - iPad and Android, if the toolkit chosen in milestone 2 allows.

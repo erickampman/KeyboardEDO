@@ -53,6 +53,7 @@ add_library(kedo-core STATIC
     src/kedo/UmpOutput.cpp
     src/kedo/Performer.cpp
     src/kedo/Arpeggiator.cpp
+    src/kedo/Slew.cpp
     src/kedo/Controls.cpp
     src/kedo/Viewport.cpp
     src/kedo/KeyStyle.cpp
@@ -74,7 +75,7 @@ target_link_libraries(kedo-layout-svg PRIVATE kedo::core kedo-warnings)
 
 if(KEDO_TESTS)
     enable_testing()
-    foreach(t TuningTests LayoutTests UmpOutputTests PerformerTests ArpeggiatorTests ControlsTests ViewTests DocumentTests)
+    foreach(t TuningTests LayoutTests UmpOutputTests PerformerTests ArpeggiatorTests SlewTests ControlsTests ViewTests DocumentTests)
         add_executable(${t} tests/${t}.cpp)
         target_link_libraries(${t} PRIVATE kedo::core kedo-warnings)
         target_include_directories(${t} SYSTEM PRIVATE external/json/single_include)
