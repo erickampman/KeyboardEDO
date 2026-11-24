@@ -7,11 +7,11 @@
 #include "kedo/NoteSink.h"
 
 // Glide slew: a NoteSink between the Performer and the arpeggiator that slides
-// a glide from the note's pitch to the key reached at a rate, in cents a
-// second, instead of jumping there (decisions.md, "Glide slew"). It sends the
-// pitch every kInterval while a note is on its way; a glide that comes before
-// it gets there starts from where it is. Rate 0 passes glides straight
-// through. Everything else passes as it came.
+// a glide from the note's pitch to the key reached at a steady rate, given as
+// the seconds an octave takes, instead of jumping there (decisions.md, "Glide
+// slew"). It sends the pitch every kInterval while a note is on its way; a
+// glide that comes before it gets there starts from where it is. Time 0
+// passes glides straight through. Everything else passes as it came.
 //
 // Like the arpeggiator it has no timer: the caller says what time it is and
 // calls advance() at nextEvent().
@@ -22,14 +22,15 @@ public:
     using Clock = std::function<double()>;   // seconds on a steady clock
 
     static constexpr double kInterval = 0.005;   // seconds between pitches sent while sliding
-    static constexpr double kMaxRate  = 20000;   // cents a second
+    static constexpr double kMaxTime  = 10;      // seconds an octave takes, the slowest
 
     Slew(NoteSink& out, Clock clock);
 
-    // 0..kMaxRate. Notes on their way when it changes go on at the new rate
-    // (0: straight to where they're going).
-    void setRate(double centsPerSecond);
-    double rate() const { return rate_; }
+    // Seconds an octave takes, 0..kMaxTime: the larger, the slower. Notes on
+    // their way when it changes go on at the new rate (0, Off: straight to
+    // where they're going).
+    void setTime(double secondsPerOctave);
+    double time() const { return time_; }
 
     // Sends each sliding note's pitch now, and ends the slides that got there.
     void advance();
@@ -60,7 +61,8 @@ private:
 
     NoteSink& out_;
     Clock clock_;
-    double rate_ = 0;
+    double time_ = 0;   // seconds an octave takes; 0: Off
+    double rate_ = 0;   // semitones a second, 12 / time_ (0 while Off)
     std::map<int, double> pitch_;    // each sounding note's pitch, as last sent (semitones)
     std::map<int, Slide> sliding_;   // the notes on their way
 };

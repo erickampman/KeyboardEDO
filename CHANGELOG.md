@@ -12,8 +12,9 @@ All notable changes to KeyboardEDO. Versions follow the git tags; the format is
 - Arpeggiator rests: right-click a note the arpeggiator is playing, or press Alt (Option on
   the Mac) with its computer key, and its steps keep their time but play nothing. An orange
   slash crosses its key. Rests are saved with the held notes.
-- Glide slew: with Glide on, the Slew setting (Playing) slides a glide from key to key at a
-  rate in cents a second instead of jumping. Off by default; saved in the document.
+- Glide slew: with Glide on, the Slew setting (Playing) slides a glide from key to key
+  instead of jumping, taking the seconds it shows for an octave (up to 10). Off at the
+  slider's left, slower to the right. Off by default; saved in the document.
 
 ### Changed
 

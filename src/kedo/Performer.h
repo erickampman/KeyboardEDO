@@ -38,10 +38,11 @@ struct PlayConfig {
     // Gliss: move the struck note's pitch with Pitch 7.25 instead of striking
     // each key passed over (MIDI 2.0; UmpOutput restrikes for MIDI 1.0).
     bool glide = false;
-    // Glide slew, cents a second: how fast a glide slides from key to key
-    // (the Slew between the Performer and the arpeggiator does it). 0: it
-    // jumps to each key's pitch, as before. Not the Performer's own.
-    double glideRate = 0;
+    // Glide slew, the seconds a glide takes to slide an octave (the Slew
+    // between the Performer and the arpeggiator does it): the larger, the
+    // slower. 0: it jumps to each key's pitch, as before. Not the
+    // Performer's own.
+    double glideTime = 0;
 
     // Fixed: what dragging sends; also what hover expression sends, in
     // either drag mode. A full deflection is `expressionDistance`

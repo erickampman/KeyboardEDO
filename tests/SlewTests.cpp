@@ -1,4 +1,4 @@
-// Slew: a glide slides at its rate in cents a second, sent every kInterval,
+// Slew: a glide slides at its rate, the seconds an octave takes, sent every kInterval,
 // with time stepped by hand.
 
 #include <string>
@@ -65,11 +65,11 @@ void off() {
     CHECK(!r.slew.nextEvent() && !r.slew.running());
 }
 
-// 1200 cents a second: two semitones take a sixth of a second, in steps of
+// An octave a second: two semitones take a sixth of a second, in steps of
 // kInterval, each where the rate says, the last exactly at the key.
 void slides() {
     Rig r;
-    r.slew.setRate(1200);
+    r.slew.setTime(1);
     r.slew.noteOn(note(1, 60), 100);
     r.slew.glide(1, 62);
     CHECK(r.out.glides().empty() && r.slew.running());
@@ -94,7 +94,7 @@ void slides() {
 // is: a slide over several keys never jumps back.
 void retarget() {
     Rig r;
-    r.slew.setRate(1200);
+    r.slew.setTime(1);
     r.slew.noteOn(note(1, 60), 100);
     r.slew.glide(1, 61);
     r.run(100 + 10 * Slew::kInterval);   // 0.6 of a semitone up
@@ -118,7 +118,7 @@ void retarget() {
 // A note let go mid-slide stops: nothing more is sent for it.
 void endsMidSlide() {
     Rig r;
-    r.slew.setRate(600);
+    r.slew.setTime(2);
     r.slew.noteOn(note(1, 60), 100);
     r.slew.noteOn(note(2, 64), 100);
     r.slew.glide(1, 62);
@@ -137,24 +137,38 @@ void endsMidSlide() {
 }
 
 // Turning it off mid-slide sends the note where it was going.
-void rateChange() {
+void timeChange() {
     Rig r;
-    r.slew.setRate(1200);
+    r.slew.setTime(1);
     r.slew.noteOn(note(1, 60), 100);
     r.slew.glide(1, 64);
     r.run(100 + 5 * Slew::kInterval);
-    r.slew.setRate(0);
+    r.slew.setTime(0);
     CHECK(r.out.glides().back() == 64 && !r.slew.running());
-    r.slew.setRate(-5);
-    CHECK(r.slew.rate() == 0);
-    r.slew.setRate(1e9);
-    CHECK(r.slew.rate() == Slew::kMaxRate);
+    r.slew.setTime(-5);
+    CHECK(r.slew.time() == 0);
+    r.slew.setTime(1e9);
+    CHECK(r.slew.time() == Slew::kMaxTime);
+}
+
+// The larger the time, the slower: a semitone at 2 s an octave takes a sixth
+// of a second, at 6 s half a second.
+void slower() {
+    for (const double t : {2.0, 6.0}) {
+        Rig r;
+        r.slew.setTime(t);
+        r.slew.noteOn(note(1, 60), 100);
+        r.slew.glide(1, 61);
+        r.run();
+        CHECK(near(r.now - 100, t / 12, Slew::kInterval));
+        CHECK(r.out.glides().back() == 61);
+    }
 }
 
 // Expression passes as it came.
 void passes() {
     Rig r;
-    r.slew.setRate(1200);
+    r.slew.setTime(1);
     r.slew.pitchBend(3, 0.5);
     r.slew.controller(std::nullopt, 74, 0.25);
     r.slew.pressure(3, 1);
@@ -169,7 +183,8 @@ int main() {
     slides();
     retarget();
     endsMidSlide();
-    rateChange();
+    timeChange();
+    slower();
     passes();
     return test::finish("Slew");
 }

@@ -8,11 +8,12 @@ namespace kedo {
 
 Slew::Slew(NoteSink& out, Clock clock) : out_(out), clock_(std::move(clock)) {}
 
-void Slew::setRate(double centsPerSecond) {
+void Slew::setTime(double secondsPerOctave) {
     const double now = clock_();
     // The slides so far at the old rate, then on at the new one.
     for (auto& [id, s] : sliding_) move(id, s, now);
-    rate_ = std::isfinite(centsPerSecond) ? std::clamp(centsPerSecond, 0.0, kMaxRate) : 0.0;
+    time_ = std::isfinite(secondsPerOctave) ? std::clamp(secondsPerOctave, 0.0, kMaxTime) : 0.0;
+    rate_ = time_ > 0 ? 12 / time_ : 0.0;
     if (rate_ == 0) {
         for (auto& [id, s] : sliding_) {
             pitch_[id] = s.target;
@@ -24,7 +25,7 @@ void Slew::setRate(double centsPerSecond) {
 
 bool Slew::move(int id, Slide& s, double now) {
     double&      pitch = pitch_[id];
-    const double step  = rate_ / 100 * std::max(0.0, now - s.at);   // semitones
+    const double step  = rate_ * std::max(0.0, now - s.at);   // semitones
     s.at               = now;
     if (std::abs(s.target - pitch) <= step) {
         pitch = s.target;

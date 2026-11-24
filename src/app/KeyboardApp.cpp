@@ -110,7 +110,7 @@ KeyboardApp::KeyboardApp(SDL_Window* window, ImFont* monoFont, ImFont* brandFont
     targets_.setGroups(appliedSpan_.first, appliedSpan_.count);
     targets_.setPublish(prefs_.publish || start.publish);
     arp_.setConfig(settings_.arp);
-    slew_.setRate(settings_.play.glideRate);
+    slew_.setTime(settings_.play.glideTime);
     controls_.setKnobs(doc_.knobs);
     restoreHeldNotes();
     updateTitle();
@@ -632,7 +632,7 @@ void KeyboardApp::applySettings() {
     const bool keysChanged = !(settings_.tuning == applied_.tuning) || !(settings_.layout == applied_.layout);
     if (!(settings_.play == applied_.play) || settings_.output.midi1Expression != applied_.output.midi1Expression)
         performer_.setConfig(playConfig());
-    if (settings_.play.glideRate != applied_.play.glideRate) slew_.setRate(settings_.play.glideRate);
+    if (settings_.play.glideTime != applied_.play.glideTime) slew_.setTime(settings_.play.glideTime);
     if (keysChanged) {
         // Becoming custom isn't new keys: converting keeps them where they are.
         const bool newKeys = settings_.tuning.edo != applied_.tuning.edo ||
@@ -1893,12 +1893,13 @@ float KeyboardApp::drawPanel() {
             ImGui::Checkbox("Glide (Pitch 7.25)", &p.glide);
             ImGui::SetItemTooltip("Slide one note's pitch from key to key instead of striking each (MIDI 2.0)");
             if (p.glide) {
-                // Logarithmic: the slow rates (a few hundred cents a second) want room.
-                const double lo = 0, hi = Slew::kMaxRate;
-                ImGui::SliderScalar("Slew", ImGuiDataType_Double, &p.glideRate, &lo, &hi,
-                                    p.glideRate == 0 ? "Off" : "%.0f cents/s", ImGuiSliderFlags_Logarithmic);
-                ImGui::SetItemTooltip("How fast a glide slides between keys, in cents a second.\n"
-                                      "Off: it jumps to each key's pitch. 1200 is an octave a second.");
+                // Off at the left, slower to the right. Logarithmic: the quick
+                // slides (well under a second an octave) want room.
+                const double lo = 0, hi = Slew::kMaxTime;
+                ImGui::SliderScalar("Slew", ImGuiDataType_Double, &p.glideTime, &lo, &hi,
+                                    p.glideTime == 0 ? "Off" : "%.2f s/octave", ImGuiSliderFlags_Logarithmic);
+                ImGui::SetItemTooltip("How long a glide takes to slide an octave between keys, in seconds:\n"
+                                      "the further right, the slower. Off: it jumps to each key's pitch.");
             }
         }
         // What a Fixed drag sends, and in either mode, moving the mouse with
