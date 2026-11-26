@@ -5,6 +5,8 @@ All notable changes to KeyboardEDO. Versions follow the git tags; the format is
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-26
+
 ### Added
 
 - Several fingers at once on a Mac touchscreen, each its own note. The bar's controls still
